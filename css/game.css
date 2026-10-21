@@ -1494,7 +1494,7 @@ details.adult summary::-webkit-details-marker {
   opacity: 0.25;
   animation: none;
 }
-.ghost {
+.drag-ghost {
   position: fixed;
   z-index: 60;
   pointer-events: none;

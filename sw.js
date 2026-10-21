@@ -12,9 +12,11 @@
  */
 'use strict';
 
-const VERSION = '1.2.0';
-const SHELL_CACHE = `lhq-shell-${VERSION}`;
-const AUDIO_CACHE = 'lhq-audio-v1'; // keep across app updates; change only if the audio files change
+const VERSION = '1.3.0';
+// v1 now lives in its own folder (v1/) next to newer versions on the same site, so its cache names
+// start with "lhq1-": newer versions never touch them, and this worker never touches theirs.
+const SHELL_CACHE = `lhq1-shell-${VERSION}`;
+const AUDIO_CACHE = 'lhq1-audio'; // keep across app updates; change only if the audio files change
 
 const SHELL_FILES = [
   './',
@@ -45,7 +47,7 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => k.startsWith('lhq-shell-') && k !== SHELL_CACHE).map((k) => caches.delete(k))),
+        Promise.all(keys.filter((k) => k.startsWith('lhq1-shell-') && k !== SHELL_CACHE).map((k) => caches.delete(k))),
       )
       .then(() => self.clients.claim()),
   );

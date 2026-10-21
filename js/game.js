@@ -21,7 +21,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '1.2.0';
+  const VERSION = '1.3.0';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const AUDIO_DIR = 'audio/';
@@ -637,7 +637,7 @@
     }).join('');
     return `<div class="screen">
     <header class="top">
-      <div class="logo"><span class="moon">🌙</span><div><h1>Little Hafiz Quest<span class="ver">v${VERSION}</span></h1><p>Juz ‘Amma by heart · 37 sūrahs</p></div></div>
+      <div class="logo"><span class="moon">🌙</span><div><h1>Little Hafiz Quest<button class="ver" data-act="versions" aria-label="Choose version">v${VERSION}</button></h1><p>Juz ‘Amma by heart · 37 sūrahs</p></div></div>
       <button class="icon-btn" data-act="settings" aria-label="Grown-up corner">${ICON.gear}</button>
     </header>
     <div class="starbar"><span>⭐ <b>${total}</b> / ${max}</span><button class="btn small gold gift" data-act="mystery">🎁 Mystery Box</button></div>
@@ -1040,6 +1040,10 @@
     </div>
     ${offlineSheet()}
     <div class="sheet">
+      <h3>🧭 Version</h3>
+      <div class="setrow"><span>Classic v${VERSION}<small>A newer version with a quest map, an explorer to dress up and gifts is available</small></span><button class="btn small" data-act="versions">Change</button></div>
+    </div>
+    <div class="sheet">
       <h3>📖 How to use it</h3>
       <ol class="tips">
         <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Finish a part before starting the next.</li>
@@ -1056,7 +1060,7 @@
 
   /* ================= offline (service worker + saved recitations) ================= */
   const OFFLINE_OK = 'serviceWorker' in navigator && 'caches' in window && /^https?:$/.test(location.protocol);
-  const AUDIO_CACHE = 'lhq-audio-v1'; // must match sw.js
+  const AUDIO_CACHE = 'lhq1-audio'; // must match sw.js
   const AUDIO_FILES = Object.keys(AUDIO_SEGMENTS).map((n) => `${AUDIO_DIR}${pad(+n)}.mp3`);
   let offline = { saved: null, busy: false, done: 0 };
   function registerOffline() {
@@ -1153,9 +1157,26 @@
     <div class="ar" lang="ar">${BISM}</div>
     ${prefs.translit ? '<div class="tr">Bismillāhir-raḥmānir-raḥīm</div>' : ''}
     ${prefs.meaning ? '<div class="mean">💬 In the name of Allah, the Most Kind, the Most Merciful</div>' : ''}
-    <div class="row"><button class="btn ghost small" data-act="bismplay">🔊 Hear it</button><button class="btn go" data-act="closemodal">Bismillah! ✨</button></div>
+    <div class="row"><button class="btn small" data-act="bismplay">🔊 Hear it</button><button class="btn go" data-act="closemodal">Bismillah! ✨</button></div>
   </div>`;
     m.classList.add('show');
+  }
+  /* Versions: the newest version lives in the folder above this one (../). The choice is remembered in
+     localStorage "lhq_channel"; the newest version's start-up script reads it and opens v1/ when it says "v1". */
+  function showVersions() {
+    const m = document.getElementById('modal');
+    m.innerHTML = `<div class="card"><div class="h2" style="margin:6px 0 4px;text-align:center">Choose a version</div>
+    <p class="saveinfo" style="text-align:center">The newest version is the default. You can switch back any time.</p>
+    <div class="row"><button class="btn go wide" data-act="pickver" data-v="latest">✨ Newest version</button><button class="btn wide" data-act="pickver" data-v="v1">Stay on classic v${VERSION}</button></div></div>`;
+    m.classList.add('show');
+  }
+  function pickVersion(v) {
+    try {
+      if (v === 'latest') localStorage.removeItem('lhq_channel');
+      else localStorage.setItem('lhq_channel', 'v1');
+    } catch (e) {}
+    document.getElementById('modal').classList.remove('show');
+    if (v === 'latest') location.href = '../?latest';
   }
   function nextSuggestion(s, p) {
     if (p === 'all') return {};
@@ -1244,6 +1265,13 @@
       }
       case 'saveaudio':
         saveAllAudio();
+        break;
+      case 'versions':
+        sfx.tap();
+        showVersions();
+        break;
+      case 'pickver':
+        pickVersion(b.dataset.v);
         break;
       case 'reset':
         askConfirm('Reset all stars for every sūrah?', 'Reset everything', function () {
@@ -1760,7 +1788,7 @@
         drag.moved = true;
         sfx.tap();
         const g = drag.el.cloneNode(true);
-        g.classList.add('ghost');
+        g.classList.add('drag-ghost');
         g.classList.remove('sel');
         g.style.width = drag.el.offsetWidth + 'px';
         g.style.margin = '0';

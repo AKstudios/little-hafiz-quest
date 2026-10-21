@@ -1,0 +1,18 @@
+# The site is built from the main branch (see .github/workflows/pages.yml there), which also copies
+# this v1 branch into the v1/ folder. When v1 changes, ask main's workflow to rebuild the site.
+name: Rebuild site for v1
+
+on:
+  push:
+    branches: [v1]
+
+permissions:
+  actions: write
+
+jobs:
+  dispatch:
+    runs-on: ubuntu-latest
+    steps:
+      - run: gh workflow run pages.yml --repo "$GITHUB_REPOSITORY" --ref main
+        env:
+          GH_TOKEN: ${{ github.token }}
