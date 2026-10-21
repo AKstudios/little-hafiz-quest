@@ -8,6 +8,24 @@ A grown-up who reads Arabic recites each āyah; the child listens, repeats and d
 
 Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and computers, and keeps working without internet once it's been opened.
 
+<table>
+  <tr>
+    <td align="center"><img src="screenshots/map.png" width="200" alt="Island map of the sūrahs, starting at An-Nās"></td>
+    <td align="center"><img src="screenshots/surah.png" width="200" alt="Sūrah An-Nās with its memory trick, āyah pictures and activities"></td>
+    <td align="center"><img src="screenshots/look-and-repeat.png" width="200" alt="Look &amp; Repeat: picture, hand action and the āyah for the grown-up to read"></td>
+    <td align="center"><img src="screenshots/stepping-stones.png" width="200" alt="Stepping Stones: the child says each āyah and taps the frog to hop"></td>
+  </tr>
+  <tr>
+    <td align="center">Island map</td>
+    <td align="center">Sūrah island</td>
+    <td align="center">👀 Look &amp; Repeat</td>
+    <td align="center">🐸 Stepping Stones</td>
+  </tr>
+</table>
+
+> [!IMPORTANT]
+> This is a free helper for parents, not an authority on the Qur'an. The text and recitation come from public sources and are **not guaranteed to be free of mistakes**. Please check each āyah against a trusted muṣḥaf or teacher before teaching it. See the [Disclaimer](#disclaimer).
+
 ---
 
 ## How to play (for the grown-up)
@@ -66,6 +84,7 @@ audio/NNN.mp3          recitation, one file per sūrah (plus 001.mp3 for the Bas
 fonts/                 Amiri Quran and Baloo 2, with their licences
 icons/                 app icons
 tools/serve.py         local preview server
+screenshots/           README pictures (not used by the game)
 ```
 
 **Preview locally**
@@ -81,6 +100,17 @@ Then open http://localhost:8000/. Use this rather than `python3 -m http.server`,
 **After any change:** bump `VERSION` in `sw.js` (and in `js/game.js`, which is shown in settings). Installed copies then pick up the new version on their next visit.
 
 **Deploy:** GitHub Pages serves the `main` branch root. Pushing to `main` publishes the change within a minute or two.
+
+## Disclaimer
+
+Little Hafiz Quest is a free tool, made only to help parents and other grown-ups teach young children. It is provided **"as is", without any warranty**.
+
+- **No guarantee of correctness.** The Arabic text, recitation audio, āyah timings, simple meanings and transliterations come from public sources and were put together with care, but their accuracy and completeness are not guaranteed.
+- **You are responsible for checking.** The grown-up using the game is responsible for making sure every āyah and recitation is correct before teaching it, by checking against a trusted muṣḥaf or a qualified teacher.
+- **Not a replacement for a teacher.** The simple meanings are written for young children and are not a translation or tafsīr. The game supports, but does not replace, learning with a qualified Qur'an teacher.
+- **No liability.** The author accepts no responsibility or liability for errors in the content, for anything a child learns incorrectly, or for any problem, loss or harm arising from using this game. Use it at your own risk.
+
+See also the warranty and liability terms in [LICENSE](LICENSE).
 
 ## Credits and licences
 
