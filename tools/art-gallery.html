@@ -1,0 +1,153 @@
+<!doctype html>
+<!--
+  Little Hafiz Quest: art gallery (developer page, not part of the game)
+  Shows everything js/art.js can draw. Open it at http://localhost:8000/tools/art-gallery.html
+  (start the preview server from the project folder with: python3 tools/serve.py).
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LHQ art gallery</title>
+  <link rel="stylesheet" href="../css/art.css">
+  <style>
+    @font-face { font-family: 'Baloo 2'; font-weight: 400 800; src: url(../fonts/baloo-2-latin.woff2) format('woff2'); }
+    body { font-family: 'Baloo 2', system-ui, sans-serif; background: #fff6e6; color: #2b2340; margin: 0; padding: 16px; }
+    h1 { margin: 0 0 4px; }
+    h2 { margin: 30px 0 8px; padding-top: 6px; border-top: 2px dashed rgba(43,35,64,.15); }
+    h3 { margin: 14px 0 6px; font-size: 15px; }
+    nav a { margin-right: 10px; color: #6b4fd0; }
+    .grid { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+    .cell { background: #fff; border-radius: 14px; box-shadow: 0 2px 6px rgba(43,35,64,.12); padding: 6px; text-align: center; font-size: 11px; line-height: 1.15; width: 112px; }
+    .cell svg { width: 100px; height: 100px; margin: 0 auto; }
+    .cell.small { width: 66px; } .cell.small svg { width: 56px; height: 56px; }
+    .cell.ex svg { width: 120px; height: 180px; } .cell.ex { width: 132px; }
+    .cell.ex.tiny { width: 70px; } .cell.ex.tiny svg { width: 60px; height: 90px; }
+    .cell.prop svg { width: 100px; height: 100px; } .cell.prop.tall svg { height: 150px; }
+    .cell.stone svg { width: 100px; height: 60px; }
+    .cell.dark { background: #2b2340; color: #fff; }
+    #stickers + .grid .cell { background: #ffe3b8; }
+    .cell.hearts svg { display: inline-block; width: 32px; height: 32px; }
+    .strip { display: flex; flex-direction: column-reverse; width: 360px; border-radius: 12px; overflow: hidden; }
+    .strip > div { display: flex; height: 70px; font-size: 12px; }
+    .strip > div > span { flex: 1; padding: 4px; }
+    .amb { position: relative; width: 300px; height: 300px; border-radius: 12px; overflow: hidden; display: inline-block; margin: 0 8px 8px 0; vertical-align: top; }
+    .amb b { position: absolute; left: 8px; top: 6px; font-size: 12px; z-index: 2; }
+    .splash { position: relative; overflow: hidden; border-radius: 12px; display: inline-block; margin: 0 10px 10px 0; vertical-align: top; box-shadow: 0 2px 8px rgba(0,0,0,.2); }
+    .splash > svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+    .splash .safe { position: absolute; left: 0; right: 0; bottom: 0; height: 30%; border-top: 2px dashed rgba(255,255,255,.7); }
+    .splash .safe2 { position: absolute; left: 0; right: 0; top: 0; height: 12%; border-bottom: 2px dashed rgba(255,255,255,.7); }
+    .mapdemo { position: relative; width: 360px; height: 220px; border-radius: 12px; overflow: hidden; }
+    .mapdemo svg.ex { position: absolute; width: 60px; height: 90px; }
+  </style>
+  <script>window.__errs = []; window.onerror = function (m, s, l, c) { window.__errs.push(m + ' @' + l + ':' + c); };</script>
+  <script src="../js/art.js"></script>
+</head>
+<body>
+  <h1>Little Hafiz Quest: art gallery</h1>
+  <nav>
+    <a href="#items">items</a><a href="#stickers">stickers</a><a href="#gifts">gifts &amp; pieces</a><a href="#props">props</a><a href="#ambient">ambient</a>
+    <a href="#ex-hair">explorer looks</a><a href="#ex-items">explorer items</a><a href="#ex-worlds">decked</a><a href="#ex-walk">walk</a><a href="#splash">splash</a><a href="#worlds">worlds</a>
+  </nav>
+  <main id="out"></main>
+  <script>
+    (function () {
+      const A = window.LHQ_ART, out = document.getElementById('out');
+      document.body.insertAdjacentHTML('afterbegin', A.defs());
+      const esc = (s) => String(s).replace(/[&<>]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;' })[c]);
+      const cell = (svg, label, c) => '<div class="cell ' + (c || '') + '">' + svg + '<div>' + esc(label) + '</div></div>';
+      const sec = (id, title, html) => { out.insertAdjacentHTML('beforeend', '<h2 id="' + id + '">' + title + '</h2>' + html); };
+      const grid = (h) => '<div class="grid">' + h + '</div>';
+      const tryf = (f, d) => { try { return f(); } catch (e) { window.__errs.push(String(e && e.stack || e)); return d || ''; } };
+
+      // items
+      sec('items', 'Items (icon, silhouette, 56px)', grid(A.ITEMS.map((it) => cell(tryf(() => A.item(it.id)), it.name + ' · ' + it.slot + ' · t' + it.tier + (it.from ? ' · ' + it.from : ''))
+        + cell(tryf(() => A.silhouette(it.id)), '?', 'small') + cell(tryf(() => A.item(it.id)), '56px', 'small')).join('')));
+
+      if (A.sticker) sec('stickers', 'Stickers', grid(A.STICKERS.map((s) => cell(tryf(() => A.sticker(s.id)), s.name) + cell(tryf(() => A.sticker(s.id)), '', 'small')).join('')));
+
+      if (A.gift) {
+        let h = '';
+        [1, 2, 3, 4].forEach((t) => { h += cell(tryf(() => A.gift({ tier: t })), 'tier ' + t) + cell(tryf(() => A.gift({ tier: t, open: true })), 'open ' + t); });
+        h += cell(tryf(() => A.gift({ tier: 1, kind: 'sticker' })), 'sticker gift') + cell(tryf(() => A.gift({ tier: 1, kind: 'sticker', open: true })), 'sticker open');
+        h += cell(tryf(() => A.heart(true)) + tryf(() => A.heart(true)) + tryf(() => A.heart(false)), 'hearts', 'hearts');
+        h += cell(tryf(() => A.lostMarker()), 'lost marker') + ['#ff5d6c', '#2fbf71', '#5fb2ff', '#ffc83d'].map((c) => cell(tryf(() => A.flag(c)), 'flag ' + c)).join('');
+        h += cell(tryf(() => A.frog()), 'frog');
+        for (let i = 0; i < 7; i++) h += cell(tryf(() => A.stone(i)), 'stone ' + i, 'stone');
+        sec('gifts', 'Gifts and game pieces', grid(h));
+      }
+
+      if (A.props) {
+        let h = '';
+        A.PROPS_BY_WORLD.forEach((names, w) => {
+          const W = A.WORLDS[w];
+          h += '<h3>' + w + ' ' + W.key + ' · ' + W.name + '</h3><div class="grid" style="background:linear-gradient(' + W.sky[0] + ',' + W.sky[1] + ' 70%,' + W.ground[0] + ' 70%);padding:8px;border-radius:12px">' +
+            names.map((nm) => cell(A.props[nm] || '<b>missing</b>', nm, 'prop' + (/viewBox="0 0 100 1[2-9]\d"/.test(A.props[nm] || '') ? ' tall' : ''))).join('') + '</div>';
+        });
+        sec('props', 'Map props per world', h);
+      }
+
+      if (A.ambient) {
+        let h = '';
+        A.WORLDS.forEach((W, i) => { h += '<div class="amb" style="background:linear-gradient(' + W.sky[0] + ',' + W.sky[1] + ' 65%,' + W.ground[0] + ' 65%,' + W.ground[1] + ')"><b>' + W.key + '</b>' + tryf(() => A.ambient(i)) + '</div>'; });
+        sec('ambient', 'Ambient layers', h);
+      }
+
+      // explorer looks
+      const looks = [];
+      A.LOOKS.hair.forEach((hair, hi) => [0, 2, 4].forEach((skin, si) => looks.push({ skin, hair, hairColor: (hi + si) % 4, hijabColor: (hi * 2 + si) % 6 })));
+      sec('ex-hair', 'Explorer: hair × skin (front, back)', grid(looks.map((l) => cell(A.explorer(l, {}), l.hair + ' s' + l.skin, 'ex') + cell(A.explorer(l, {}, { view: 'back' }), 'back', 'ex')).join('')) +
+        '<h3>All skin tones / hair colours / hijab colours</h3>' + grid([0, 1, 2, 3, 4].map((s) => cell(A.explorer({ skin: s, hair: 'curly', hairColor: s % 4 }, {}), 'skin ' + s + ' hair ' + (s % 4), 'ex tiny')).join('') +
+        [0, 1, 2, 3, 4, 5].map((c) => cell(A.explorer({ skin: c % 5, hair: 'hijab', hijabColor: c }, {}), 'hijab ' + c, 'ex tiny')).join('')));
+
+      // each item on the explorer
+      let h2 = '';
+      const hairs = A.LOOKS.hair;
+      A.ITEMS.filter((it) => it.tier > 0).forEach((it, i) => {
+        const look = { skin: i % 5, hair: hairs[i % 4], hairColor: i % 4, hijabColor: i % 6 };
+        h2 += cell(A.explorer(look, { [it.slot]: it.id }), it.name, 'ex') + cell(A.explorer(look, { [it.slot]: it.id }, { view: 'back' }), 'back', 'ex');
+      });
+      sec('ex-items', 'Explorer: one item each (front, back)', grid(h2));
+
+      // every hat on every hair style
+      let h3 = '';
+      A.ITEMS.filter((it) => it.slot === 'hat' || it.slot === 'glasses').forEach((it) => hairs.forEach((hair, j) => { h3 += cell(A.explorer({ skin: j, hair, hairColor: j, hijabColor: j + 1 }, { [it.slot]: it.id }), it.id + ' / ' + hair, 'ex tiny'); }));
+      sec('ex-hats', 'Hats and glasses × hair styles', grid(h3));
+
+      // fully decked per world tier
+      const deck = [[], [], [], [], [], [], []];
+      A.ITEMS.forEach((it) => { if (it.from) { const w = it.from >= 109 ? 0 : it.from >= 103 ? 1 : it.from >= 97 ? 2 : it.from >= 91 ? 3 : it.from >= 86 ? 4 : it.from >= 82 ? 5 : 6; deck[w].push(it); } });
+      let h4 = '';
+      const acc = {};
+      deck.forEach((list, w) => {
+        list.forEach((it) => { acc[it.slot] = it.id; });
+        const look = { skin: (w * 2) % 5, hair: hairs[w % 4], hairColor: w % 4, hijabColor: (w + 2) % 6 };
+        h4 += cell(A.explorer(look, Object.assign({}, acc)), 'after world ' + (w + 1), 'ex') + cell(A.explorer(look, Object.assign({}, acc), { view: 'back' }), 'back', 'ex');
+      });
+      sec('ex-worlds', 'Explorer: fully decked after each world', grid(h4));
+
+      // walking + map size
+      const full = Object.assign({}, acc);
+      sec('ex-walk', 'Walking (front, back) and map size (~90px)', grid(cell(A.explorer({ hair: 'ponytail', skin: 1 }, {}, { walk: true }), 'walk front', 'ex') + cell(A.explorer({ hair: 'hijab', skin: 3, hijabColor: 2 }, { cape: 'night-cape', bag: 'little-backpack' }, { view: 'back', walk: true }), 'walk back', 'ex') +
+        cell(A.explorer({ hair: 'curly', skin: 4 }, full, { walk: true }), 'decked walk', 'ex')) +
+        '<div class="mapdemo" style="background:linear-gradient(#bfe6ff,#e8f8d6 60%,#9be06b 60%)">' + [0, 1, 2, 3].map((i) => '<div style="position:absolute;left:' + (20 + i * 85) + 'px;top:110px;width:60px;height:90px">' + A.explorer({ hair: hairs[i], skin: i, hijabColor: i }, i % 2 ? full : { hat: 'explorer-cap', pet: 'ladybug-buddy' }, { walk: i > 1, view: i === 3 ? 'back' : 'front' }).replace('<svg ', '<svg style="width:60px;height:90px" ') + '</div>').join('') + '</div>');
+
+      // big views for detail checks
+      const big = (svg) => '<div class="cell" style="width:310px">' + svg.replace('<svg ', '<svg style="width:300px;height:450px" ') + '</div>';
+      sec('ex-big', 'Explorer: big', grid(big(A.explorer({ hair: 'short', skin: 1 }, { watch: 'explorer-watch', pet: 'elephant-buddy', glasses: 'sunrise-shades' })) + big(A.explorer({ hair: 'hijab', skin: 3, hijabColor: 1 }, full)) + big(A.explorer({ hair: 'curly', skin: 4, hairColor: 0 }, full, { view: 'back' }))));
+
+      if (A.splash) {
+        const L1 = { hair: 'hijab', skin: 2, hijabColor: 1 };
+        const sp = (w, hh, opts, label) => '<div class="splash" style="width:' + w + 'px;height:' + hh + 'px">' + tryf(() => A.splash(L1, { cape: 'dawn-cape', bag: 'little-backpack', hat: null }, opts)) + '<div class="safe2"></div><div class="safe"></div></div>';
+        sec('splash', 'Splash (phone 390×844 at 80%, desktop 1280×800 at 50%, night)', sp(312, 675, {}) + sp(640, 400, {}) + sp(312, 675, { night: true }) + sp(640, 400, { night: true }));
+      }
+
+      if (A.WORLDS) {
+        sec('worlds', 'Worlds (meadow at the bottom → peak at the top): sky / ground / path, light then dim',
+          '<div style="display:flex;gap:16px">' + ['', 'dim'].map((mode) => '<div class="strip">' + A.WORLDS.map((W) => { const c = mode ? W.dim : W; return '<div><span style="background:linear-gradient(' + c.sky[0] + ',' + c.sky[1] + ')">' + W.key + ' ' + W.name + '</span><span style="background:linear-gradient(' + c.ground[0] + ',' + c.ground[1] + ')">ground</span><span style="background:' + c.path[0] + ';border:4px solid ' + c.path[1] + '">path</span><span style="background:' + (W.accent) + '">accent</span></div>'; }).join('') + '</div>').join('') + '</div>');
+      }
+      window.__done = true;
+    })();
+  </script>
+</body>
+</html>

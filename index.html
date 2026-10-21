@@ -1,7 +1,7 @@
 <!doctype html>
 <!--
   Little Hafiz Quest
-  A picture-and-gesture game for memorizing Juz ‘Amma (sūrahs 78–114) with a child.
+  A picture-and-gesture adventure for memorizing Juz ‘Amma (sūrahs 78–114) with a child.
   Everything it needs is in this folder: no accounts, no tracking, no requests to other websites.
   See README.md for how to use, edit and publish it.
 -->
@@ -10,7 +10,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>Little Hafiz Quest</title>
-  <meta name="description" content="A fun picture-and-gesture game that helps young children memorize Juz ‘Amma, with a grown-up who reads the Arabic.">
+  <meta name="description" content="A picture-and-gesture adventure that helps young children memorize Juz ‘Amma, with a grown-up who reads the Arabic.">
 
   <!--
     Content Security Policy: only this site's own files may load. No third-party scripts, fonts or trackers.
@@ -32,14 +32,13 @@
 
   <link rel="preload" href="fonts/amiri-quran.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="css/game.css">
+  <link rel="stylesheet" href="css/art.css">
+  <script src="js/boot.js"></script>
 </head>
 <body>
-  <!-- Decorative sky: sun (or moon in dim mode), stars and drifting clouds -->
-  <div id="sky" aria-hidden="true">
-    <div class="twinkle"></div>
-    <div class="sun"></div>
-    <div class="clouds"><div class="cloud c1">☁️</div><div class="cloud c2">☁️</div><div class="cloud c3">☁️</div></div>
-  </div>
+  <!-- Shared SVG gradients for the art (filled in by js/game.js) and the living world background -->
+  <div id="defs" aria-hidden="true"></div>
+  <div id="bg" aria-hidden="true"></div>
 
   <!-- The game draws every screen inside #app (see js/game.js) -->
   <main id="app">
@@ -57,6 +56,8 @@
   <div id="fx" aria-hidden="true"></div>
 
   <script src="js/data.js"></script>
+  <script src="js/art.js"></script>
+  <script src="js/map.js"></script>
   <script src="js/game.js"></script>
 </body>
 </html>

@@ -1,31 +1,46 @@
 /*
- * Little Hafiz Quest: game logic
- * ==============================
- * A picture-and-gesture game that helps a young child memorize Juz ‘Amma (sūrahs 78–114)
+ * Little Hafiz Quest: game logic (v2)
+ * ===================================
+ * A picture-and-gesture adventure that helps a young child memorize Juz ‘Amma (sūrahs 78–114)
  * with a grown-up who reads the Arabic. Plain browser JavaScript: no frameworks, no build step,
  * no network requests except the game's own files.
  *
  * How it is organised
- *   - Content comes from js/data.js (window.LHQ_DATA).
+ *   - Content comes from js/data.js (window.LHQ_DATA), art from js/art.js (window.LHQ_ART),
+ *     the quest map from js/map.js (window.LHQ_MAP).
  *   - State `st` holds the current screen; V[st.view]() returns that screen's HTML; render() draws it.
  *   - All taps go through one delegated click handler that reads data-act="..." attributes.
- *   - Progress and settings are saved on the device only (cookies + localStorage). Nothing is uploaded.
- *   - Recitation: one MP3 per sūrah in /audio; the player seeks to an āyah and stops at its end.
+ *   - Explorers (one per child) each keep their own stars, collection, outfit and lost items.
+ *     Everything is saved on the device only (browser storage, with a cookie copy when it fits).
+ *   - Recitation: one MP3 per sūrah per reciter in audio/<reciter>/, with āyah and word timings in
+ *     audio/<reciter>/timings.json. The player seeks to an āyah (or a single word) and stops at its end.
  *   - Offline: sw.js caches the app; recitations are cached when played or saved from settings.
  *
+ * The quest
+ *   - Splash → Begin → the map (An-Nās at the bottom, An-Naba’ on the mountain top).
+ *   - Inside a sūrah: 1 Look & Repeat → 2 Word Steps → 3 Stepping Stones (3 levels) → review games.
+ *   - A sūrah is "memorized" when its Stepping Stones Level 3 is done (whole sūrah for long ones).
+ *     That gives the sūrah's gift (clothes, gear or a pet for the explorer). The first finished
+ *     activity of each day gives a sticker.
+ *   - Review games (Stepping Stones, Picture Puzzle, What Comes Next) use 3 hearts once a part has been
+ *     learned. Losing all 3 drops the newest item at that sūrah; finishing a game there brings it back.
+ *     Grown-ups can switch hearts off.
+ *
  * Safety notes
- *   - All HTML is built from the bundled data file and from numbers/whitelisted values only.
- *     Stored settings and progress are validated before use (applyStoredPrefs, decProg).
+ *   - HTML is built from the bundled data and art and from numbers/whitelisted values. The only free
+ *     text is an explorer's name, which always goes through esc().
+ *     Stored data is validated before use (cleanStore, cleanProfile).
  *   - No eval, no inline event handlers, no third-party scripts (see the CSP in index.html).
  */
 (function () {
   'use strict';
 
-  const VERSION = '1.2.0';
+  const VERSION = '2.0.0';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
-  const AUDIO_DIR = 'audio/';
-  const AUDIO_SEGMENTS = DATA.audio; // sūrah -> [[start, end], ...] seconds inside audio/<nnn>.mp3
+  const ART = window.LHQ_ART;
+  const MAP = window.LHQ_MAP;
+  if (!ART || !MAP) throw new Error('Little Hafiz Quest: js/art.js or js/map.js did not load.');
   const S = DATA.surahs; // learning order: An-Nās (114) → An-Naba’ (78)
   const BYN = Object.create(null); // sūrah number -> sūrah (no inherited keys)
   S.forEach((s, i) => {
@@ -43,7 +58,36 @@
     { name: 'Sky Kingdom', from: 85, to: 82 },
     { name: 'The Great Climb', from: 81, to: 78 },
   ];
+  const worldOf = (s) => WORLDS.findIndex((w) => s.n <= w.from && s.n >= w.to);
+  const WORLD_ICON = ['meadow-flower-pink', 'forest-pine', 'sands-palm', 'canyon-cactus', 'starry-moon', 'sky-balloon', 'peak-summit']; // props shown on the world rail
   const WCOL = ['#e74c3c', '#f39c12', '#d4a20b', '#27ae60', '#16a085', '#2e86de', '#8e44ad', '#e84393'];
+
+  /* items and stickers come from the art library */
+  const ITEMS = ART.ITEMS;
+  const ITEM = Object.create(null);
+  ITEMS.forEach((it) => (ITEM[it.id] = it));
+  const SURAH_ITEM = Object.create(null); // sūrah number -> the item it gives
+  ITEMS.forEach((it) => {
+    if (it.from) SURAH_ITEM[it.from] = it;
+  });
+  const STICKER = Object.create(null);
+  ART.STICKERS.forEach((x) => (STICKER[x.id] = x));
+  const SLOTS = ['hat', 'glasses', 'top', 'pants', 'shoes', 'cape', 'bag', 'stick', 'shield', 'watch', 'pet'];
+  const SLOT_INFO = {
+    hat: ['🧢', 'Hats'],
+    glasses: ['👓', 'Glasses'],
+    top: ['👕', 'Tops'],
+    pants: ['👖', 'Trousers'],
+    shoes: ['👟', 'Shoes'],
+    cape: ['🦸', 'Capes'],
+    bag: ['🎒', 'Bags'],
+    stick: ['🪄', 'Staffs'],
+    shield: ['🛡️', 'Shields'],
+    watch: ['⌚', 'Watches'],
+    pet: ['🐾', 'Buddies'],
+  };
+  const TIER_LABEL = ['', 'A new treasure!', '✨ Shiny!', '🌟 Sparkly!', '👑 Legendary!'];
+
   function hexRgb(h) {
     h = h.replace('#', '');
     return [parseInt(h.substr(0, 2), 16), parseInt(h.substr(2, 2), 16), parseInt(h.substr(4, 2), 16)];
@@ -58,82 +102,192 @@
   }
   function cv(h) {
     return (
-      '--c:' +
-      h +
-      ';--c14:' +
-      rgba(h, 0.14) +
-      ';--c18:' +
-      rgba(h, 0.18) +
-      ';--c30:' +
-      rgba(h, 0.3) +
-      ';--c35:' +
-      rgba(h, 0.35) +
-      ';--cd:' +
-      shade(h, 0.76)
+      '--c:' + h + ';--c14:' + rgba(h, 0.14) + ';--c18:' + rgba(h, 0.18) + ';--c30:' + rgba(h, 0.3) + ';--c35:' + rgba(h, 0.35) + ';--cd:' + shade(h, 0.76)
     );
   }
   function wv(h) {
     return (
-      '--wc:' +
-      h +
-      ';--wc10:' +
-      rgba(h, 0.1) +
-      ';--wc12:' +
-      rgba(h, 0.12) +
-      ';--wc22:' +
-      rgba(h, 0.22) +
-      ';--wc45:' +
-      rgba(h, 0.45) +
-      ';--wcd:' +
-      shade(h, 0.9) +
-      ';--wcdd:' +
-      shade(h, 0.62)
+      '--wc:' + h + ';--wc10:' + rgba(h, 0.1) + ';--wc12:' + rgba(h, 0.12) + ';--wc22:' + rgba(h, 0.22) + ';--wc45:' + rgba(h, 0.45) + ';--wcd:' + shade(h, 0.9) + ';--wcdd:' + shade(h, 0.62)
     );
+  }
+  const esc = (t) =>
+    String(t).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+
+  /* a real cog for the Grown-up Corner (8 teeth) */
+  function gearPath() {
+    let d = '';
+    const R = 10.2,
+      r = 7.6,
+      n = 8;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2,
+        w = 0.21;
+      const pts = [
+        [r, a - 0.39 + w * 0.2],
+        [R, a - w],
+        [R, a + w],
+        [r, a + 0.39 - w * 0.2],
+      ];
+      pts.forEach(([rad, ang], j) => {
+        d += (i === 0 && j === 0 ? 'M' : 'L') + (12 + rad * Math.cos(ang)).toFixed(2) + ' ' + (12 + rad * Math.sin(ang)).toFixed(2);
+      });
+    }
+    return d + 'Z';
   }
   const ICON = {
     back: '<svg class="i" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg>',
     moon: '<svg class="i" viewBox="0 0 24 24"><path d="M20 14.5A8 8 0 1 1 9.5 4a6.5 6.5 0 0 0 10.5 10.5z" fill="#ffc83d" stroke="#e0a100"/></svg>',
-    gear: '<svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/></svg>',
+    gear: `<svg class="i gear" viewBox="0 0 24 24"><path d="${gearPath()}" fill="#9aa5c4" stroke="#5d6788" stroke-width="1.6"/><circle cx="12" cy="12" r="3.1" fill="#fff" stroke="#5d6788" stroke-width="1.6"/></svg>`,
+    home: '<svg class="i" viewBox="0 0 24 24"><path d="M4 11.5L12 5l8 6.5"/><path d="M6.5 10v8.5h11V10"/><path d="M10.2 18.5v-4.6h3.6v4.6"/></svg>',
+    bag: '<svg class="i" viewBox="0 0 24 24"><path d="M6 9.5c0-3 2.5-5 6-5s6 2 6 5v9a1.5 1.5 0 0 1-1.5 1.5h-9A1.5 1.5 0 0 1 6 18.5z" fill="#ffb347" stroke="#c46a00"/><path d="M9 20v-5h6v5" stroke="#c46a00"/><path d="M9.5 4.9C9.5 3.6 10.6 2.8 12 2.8s2.5.8 2.5 2.1" stroke="#c46a00"/></svg>',
+    play: '<svg class="i" viewBox="0 0 24 24"><path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/></svg>',
   };
 
-  /* ================= saving: cookies (+ browser storage backup) ================= */
-  const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  /* ================= saving: explorers + settings ================= */
+  const STORE_KEY = 'lhq2';
   const blank = () => ({ learn: 0, path: 0, order: 0, next: 0, words: 0 });
-  let prefs = { theme: 'auto', meaning: true, translit: false, sfx: true, audio: true, repeat: 1, slow: false };
-  /* Copy only known settings with valid values from stored data (never trust storage blindly). */
-  function applyStoredPrefs(o) {
-    if (!o || typeof o !== 'object') return;
-    ['meaning', 'translit', 'sfx', 'audio', 'slow'].forEach((k) => {
-      if (typeof o[k] === 'boolean') prefs[k] = o[k];
+  const DEFAULT_PREFS = {
+    theme: 'auto',
+    meaning: true,
+    translit: false,
+    sfx: true,
+    audio: true,
+    repeat: 1,
+    slow: false,
+    reciter: 'alafasy',
+    hearts: true,
+  };
+  let store = null;
+  let prefs = Object.assign({}, DEFAULT_PREFS);
+
+  function newProfile(name) {
+    return {
+      id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
+      name: name || '',
+      look: { skin: 1, hair: 'short', hairColor: 0, hijabColor: 0 },
+      outfit: {},
+      prog: {},
+      items: [],
+      stickers: [],
+      pending: [],
+      lost: [],
+      daily: '',
+      at: 0,
+      made: false,
+    };
+  }
+  const int = (v, lo, hi, d) => (Number.isInteger(v) && v >= lo && v <= hi ? v : d);
+  /* Copy only known fields with valid values (never trust storage blindly). */
+  function cleanProg(o) {
+    const out = {};
+    if (!o || typeof o !== 'object') return out;
+    for (const n in o) {
+      const s = BYN[n],
+        v = o[n];
+      if (!s || !v || typeof v !== 'object' || !Array.isArray(v.parts)) continue;
+      out[s.n] = {
+        parts: s.P.map((_, p) => {
+          const x = v.parts[p] || {};
+          return {
+            learn: x.learn ? 1 : 0,
+            words: x.words ? 1 : 0,
+            order: x.order ? 1 : 0,
+            next: x.next ? 1 : 0,
+            path: int(x.path, 0, 3, 0),
+          };
+        }),
+        all: int(v.all, 0, 3, 0),
+      };
+    }
+    return out;
+  }
+  function cleanProfile(o) {
+    if (!o || typeof o !== 'object') return null;
+    const p = newProfile();
+    if (typeof o.id === 'string' && /^[a-z0-9]{2,24}$/.test(o.id)) p.id = o.id;
+    if (typeof o.name === 'string') p.name = o.name.slice(0, 16);
+    const L = o.look || {};
+    p.look = {
+      skin: int(L.skin, 0, ART.LOOKS.skin.length - 1, 1),
+      hair: ART.LOOKS.hair.includes(L.hair) ? L.hair : 'short',
+      hairColor: int(L.hairColor, 0, ART.LOOKS.hairColor.length - 1, 0),
+      hijabColor: int(L.hijabColor, 0, ART.LOOKS.hijabColor.length - 1, 0),
+    };
+    p.prog = cleanProg(o.prog);
+    const uniq = (a) => [...new Set(a)];
+    p.items = uniq((Array.isArray(o.items) ? o.items : []).filter((id) => ITEM[id] && ITEM[id].from));
+    p.stickers = uniq((Array.isArray(o.stickers) ? o.stickers : []).filter((id) => STICKER[id]));
+    p.pending = (Array.isArray(o.pending) ? o.pending : [])
+      .filter((g) => g && ((g.k === 'i' && ITEM[g.id] && !p.items.includes(g.id)) || (g.k === 's' && STICKER[g.id])))
+      .map((g) => ({ k: g.k, id: g.id }))
+      .slice(0, 60);
+    p.lost = (Array.isArray(o.lost) ? o.lost : [])
+      .filter((x) => x && ITEM[x.id] && BYN[x.n] && p.items.includes(x.id))
+      .map((x) => ({ id: x.id, n: x.n }));
+    const lostIds = p.lost.map((x) => x.id);
+    const out = {};
+    if (o.outfit && typeof o.outfit === 'object')
+      SLOTS.forEach((sl) => {
+        const id = o.outfit[sl];
+        if (ITEM[id] && ITEM[id].slot === sl && (p.items.includes(id) || !ITEM[id].from) && !lostIds.includes(id)) out[sl] = id;
+      });
+    p.outfit = out;
+    if (typeof o.daily === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(o.daily)) p.daily = o.daily;
+    p.at = int(o.at, 0, S.length - 1, 0);
+    p.made = !!o.made;
+    return p;
+  }
+  function cleanPrefs(o) {
+    const out = Object.assign({}, DEFAULT_PREFS);
+    if (!o || typeof o !== 'object') return out;
+    ['meaning', 'translit', 'sfx', 'audio', 'slow', 'hearts'].forEach((k) => {
+      if (typeof o[k] === 'boolean') out[k] = o[k];
     });
-    if (['auto', 'light', 'dim'].includes(o.theme)) prefs.theme = o.theme;
-    if ([1, 2, 3].includes(o.repeat)) prefs.repeat = o.repeat;
+    if (['auto', 'light', 'dim'].includes(o.theme)) out.theme = o.theme;
+    if ([1, 2, 3].includes(o.repeat)) out.repeat = o.repeat;
+    if (typeof o.reciter === 'string' && /^[a-z0-9-]{2,32}$/.test(o.reciter)) out.reciter = o.reciter;
+    return out;
   }
-  let prog = {};
-  function encProg() {
-    return (
-      '1~' +
-      S.map((s) => {
-        const r = prog[s.n];
-        if (!r) return '';
-        let o = s.P.map((_, p) => {
-          const x = r.parts[p] || blank();
-          return B64[
-            (x.learn ? 1 : 0) | (x.order ? 2 : 0) | (x.next ? 4 : 0) | (x.words ? 8 : 0) | ((x.path || 0) << 4)
-          ];
-        }).join('');
-        if (s.P.length > 1) o += B64[r.all || 0];
-        return o.replace(/A+$/, '');
-      })
-        .join('.')
-        .replace(/\.+$/, '')
-    );
+  function cleanStore(o) {
+    const profiles = (o && Array.isArray(o.profiles) ? o.profiles : []).map(cleanProfile).filter(Boolean).slice(0, 8);
+    if (!profiles.length) profiles.push(newProfile());
+    const cur = profiles.some((p) => p.id === o.cur) ? o.cur : profiles[0].id;
+    return { v: 2, cur, profiles, prefs: cleanPrefs(o && o.prefs) };
   }
-  function decProg(str) {
+
+  // Cookies are scoped to this app's folder (GitHub Pages serves many projects from one domain).
+  const COOKIE_PATH = location.pathname.replace(/[^/]*$/, '').replace(/[^A-Za-z0-9/_.~%-]/g, '') || '/';
+  const COOKIE_SECURE = location.protocol === 'https:' ? '; Secure' : '';
+  function setCookie(k, v, maxAge) {
+    try {
+      document.cookie = `${k}=${v}; max-age=${maxAge == null ? 60 * 60 * 24 * 400 : maxAge}; path=${COOKIE_PATH}; SameSite=Lax${COOKIE_SECURE}`;
+    } catch (e) {}
+  }
+  function getCookie(k) {
+    try {
+      const m = document.cookie.match(new RegExp('(?:^|; )' + k + '=([^;]*)'));
+      return m ? m[1] : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  function save() {
+    store.prefs = prefs;
+    const json = JSON.stringify(store);
+    try {
+      localStorage.setItem(STORE_KEY, json);
+    } catch (e) {}
+    const c = encodeURIComponent(json);
+    if (c.length < 3900) setCookie(STORE_KEY, c);
+    else setCookie(STORE_KEY, '', 0);
+  }
+
+  /* v1 progress (single string) — read once to move it into the first explorer */
+  const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  function decProgV1(str) {
     const out = {};
     if (!str) return out;
     if (str[0] === '{') {
-      // migrate v1.0 progress (single-part sūrahs 109–114)
       try {
         const o = JSON.parse(str);
         for (const n in o) {
@@ -162,70 +316,59 @@
         const r = { parts: s.P.map(blank), all: 0 };
         s.P.forEach((_, p) => {
           const c = Math.max(0, B64.indexOf(seg[p] || 'A'));
-          r.parts[p] = {
-            learn: c & 1,
-            order: (c >> 1) & 1,
-            next: (c >> 2) & 1,
-            words: (c >> 3) & 1,
-            path: (c >> 4) & 3,
-          };
+          r.parts[p] = { learn: c & 1, order: (c >> 1) & 1, next: (c >> 2) & 1, words: (c >> 3) & 1, path: (c >> 4) & 3 };
         });
         if (s.P.length > 1) r.all = Math.min(3, Math.max(0, B64.indexOf(seg[s.P.length] || 'A')));
         out[s.n] = r;
       });
     return out;
   }
-  // Scope cookies to this app's folder (GitHub Pages serves many projects from one domain).
-  const COOKIE_PATH = location.pathname.replace(/[^/]*$/, '').replace(/[^A-Za-z0-9/_.~%-]/g, '') || '/';
-  const COOKIE_SECURE = location.protocol === 'https:' ? '; Secure' : '';
-  function setCookie(k, v) {
-    try {
-      document.cookie = `${k}=${v}; max-age=${60 * 60 * 24 * 400}; path=${COOKIE_PATH}; SameSite=Lax${COOKIE_SECURE}`;
-    } catch (e) {}
-  }
-  function getCookie(k) {
-    try {
-      const m = document.cookie.match(new RegExp('(?:^|; )' + k + '=([^;]*)'));
-      return m ? m[1] : null;
-    } catch (e) {
-      return null;
-    }
-  }
-  function cookiesWork() {
-    setCookie('lhq_t', '1');
-    const ok = getCookie('lhq_t') === '1';
-    try {
-      document.cookie = `lhq_t=; max-age=0; path=${COOKIE_PATH}`;
-    } catch (e) {}
-    return ok;
-  }
-  function save() {
-    const p = encProg(),
-      f = encodeURIComponent(JSON.stringify(prefs));
-    setCookie('lhq_prog', p);
-    setCookie('lhq_prefs', f);
-    try {
-      localStorage.setItem('lhq_prog', p);
-      localStorage.setItem('lhq_prefs', f);
-    } catch (e) {}
-  }
   function loadAll() {
-    let p = getCookie('lhq_prog'),
-      f = getCookie('lhq_prefs');
+    let raw = null;
     try {
-      if (p == null) p = localStorage.getItem('lhq_prog');
-      if (f == null) f = localStorage.getItem('lhq_prefs');
+      raw = localStorage.getItem(STORE_KEY);
     } catch (e) {}
-    prog = decProg(p);
+    if (raw == null) {
+      const c = getCookie(STORE_KEY);
+      if (c) {
+        try {
+          raw = decodeURIComponent(c);
+        } catch (e) {}
+      }
+    }
+    let o = null;
     try {
-      if (f) applyStoredPrefs(JSON.parse(f[0] === '{' ? f : decodeURIComponent(f)));
+      o = raw ? JSON.parse(raw) : null;
     } catch (e) {}
+    if (o) {
+      store = cleanStore(o);
+    } else {
+      // first visit to v2: bring v1 stars and settings along
+      let p1 = getCookie('lhq_prog'),
+        f1 = getCookie('lhq_prefs');
+      try {
+        if (p1 == null) p1 = localStorage.getItem('lhq_prog');
+        if (f1 == null) f1 = localStorage.getItem('lhq_prefs');
+      } catch (e) {}
+      const first = newProfile();
+      first.prog = cleanProg(decProgV1(p1));
+      let oldPrefs = null;
+      try {
+        if (f1) oldPrefs = JSON.parse(f1[0] === '{' ? f1 : decodeURIComponent(f1));
+      } catch (e) {}
+      store = { v: 2, cur: first.id, profiles: [first], prefs: cleanPrefs(oldPrefs) };
+      S.forEach((s) => {
+        if (surahDone(s, first)) giveSurahGift(s, first);
+      });
+    }
+    prefs = store.prefs;
   }
-  loadAll();
+  const P = () => store.profiles.find((p) => p.id === store.cur) || store.profiles[0];
 
-  function rec(n) {
-    const s = BYN[n];
-    return prog[n] || (prog[n] = { parts: s.P.map(blank), all: 0 });
+  function rec(n, prof) {
+    const s = BYN[n],
+      pr = (prof || P()).prog;
+    return pr[n] || (pr[n] = { parts: s.P.map(blank), all: 0 });
   }
   function partRec(n, p) {
     const r = rec(n);
@@ -233,26 +376,72 @@
   }
   const partStars = (x) =>
     x ? (x.learn ? 1 : 0) + (x.path || 0) + (x.order ? 1 : 0) + (x.next ? 1 : 0) + (x.words ? 1 : 0) : 0;
-  function surahStars(s) {
-    const r = prog[s.n];
+  function surahStars(s, prof) {
+    const r = (prof || P()).prog[s.n];
     return r ? r.parts.reduce((t, x) => t + partStars(x), 0) + (r.all || 0) : 0;
   }
   const surahMax = (s) => s.P.length * 7 + (s.P.length > 1 ? 3 : 0);
+  function surahDone(s, prof) {
+    const r = (prof || P()).prog[s.n];
+    if (!r) return false;
+    return s.P.length > 1 ? (r.all || 0) >= 3 : !!(r.parts[0] && r.parts[0].path >= 3);
+  }
   function starRow(k, max) {
     let o = '';
     for (let i = 0; i < max; i++) o += i < k ? '⭐' : '☆';
     return o;
   }
+  const totalStars = (prof) => S.reduce((t, s) => t + surahStars(s, prof), 0);
+  const MAX_STARS = S.reduce((t, s) => t + surahMax(s), 0);
+
+  /* ================= gifts, collection, lost items ================= */
+  const today = () => {
+    const d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+  };
+  function giveSurahGift(s, prof) {
+    prof = prof || P();
+    const it = SURAH_ITEM[s.n];
+    if (!it || prof.items.includes(it.id) || prof.pending.some((g) => g.id === it.id)) return false;
+    prof.pending.push({ k: 'i', id: it.id });
+    return true;
+  }
+  function giveDailyGift() {
+    const prof = P();
+    if (prof.daily === today()) return false;
+    prof.daily = today();
+    const have = new Set([...prof.stickers, ...prof.pending.filter((g) => g.k === 's').map((g) => g.id)]);
+    const left = ART.STICKERS.filter((x) => !have.has(x.id));
+    if (!left.length) return false;
+    prof.pending.push({ k: 's', id: left[(Math.random() * left.length) | 0].id });
+    return true;
+  }
+  const isLost = (id, prof) => (prof || P()).lost.some((x) => x.id === id);
+  const lostAt = (n) => P().lost.filter((x) => x.n === n);
+  function wornOutfit(prof) {
+    prof = prof || P();
+    const o = {};
+    SLOTS.forEach((sl) => {
+      const id = prof.outfit[sl];
+      if (id && !isLost(id, prof)) o[sl] = id;
+    });
+    return o;
+  }
+  function explorer(opts, prof) {
+    prof = prof || P();
+    return ART.explorer(prof.look, wornOutfit(prof), opts || { view: 'front' });
+  }
 
   /* ================= theme ================= */
+  const darkMQ = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
+  const isNight = () => prefs.theme === 'dim' || (prefs.theme === 'auto' && !!(darkMQ && darkMQ.matches));
   function applyTheme() {
     document.documentElement.setAttribute('data-mode', prefs.theme);
   }
-  applyTheme();
 
   /* ================= sound effects (synth) ================= */
   let ac;
-  function tone(freqs, dur = 0.12, type = 'sine', vol = 0.15) {
+  function tone(freqs, dur = 0.12, type = 'sine', vol = 0.15, gap) {
     if (!prefs.sfx) return;
     try {
       ac = ac || new (window.AudioContext || window.webkitAudioContext)();
@@ -261,7 +450,7 @@
       freqs.forEach((f, i) => {
         const o = ac.createOscillator(),
           g = ac.createGain(),
-          t = t0 + i * dur;
+          t = t0 + i * (gap || dur);
         o.type = type;
         o.frequency.setValueAtTime(f, t);
         g.gain.setValueAtTime(0.0001, t);
@@ -273,6 +462,26 @@
       });
     } catch (e) {}
   }
+  function noise(dur, vol, hp) {
+    if (!prefs.sfx) return;
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      if (ac.state === 'suspended') ac.resume();
+      const len = Math.floor(ac.sampleRate * dur),
+        buf = ac.createBuffer(1, len, ac.sampleRate),
+        d = buf.getChannelData(0);
+      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
+      const src = ac.createBufferSource(),
+        f = ac.createBiquadFilter(),
+        g = ac.createGain();
+      src.buffer = buf;
+      f.type = 'highpass';
+      f.frequency.value = hp || 800;
+      g.gain.value = vol;
+      src.connect(f).connect(g).connect(ac.destination);
+      src.start();
+    } catch (e) {}
+  }
   const sfx = {
     pop: () => tone([620, 1240], 0.05, 'sine', 0.22),
     tap: () => tone([880], 0.05, 'triangle', 0.1),
@@ -282,32 +491,86 @@
     open: () => tone([392, 523, 659, 784, 988, 1175], 0.07, 'square', 0.06),
     hop: () => tone([330, 440, 660], 0.06, 'sine', 0.18),
     splash: () => tone([900, 700, 500], 0.05, 'triangle', 0.1),
+    heart: () => tone([440, 330, 220], 0.12, 'triangle', 0.14),
+    // toys for the grown-up tips
+    bell: () => tone([1568, 2093], 0.5, 'sine', 0.12, 0.02),
+    clap: () => {
+      noise(0.09, 0.5, 1200);
+      setTimeout(() => noise(0.07, 0.35, 1400), 30);
+    },
+    drum: () => tone([110, 80], 0.14, 'sine', 0.35, 0.03),
+    whoosh: () => noise(0.35, 0.25, 400),
+    hum: () => tone([392, 494], 0.3, 'sine', 0.12, 0.25),
   };
 
-  /* ================= recitation player ================= */
+  /* ================= reciters & recitation player ================= */
+  const FALLBACK_RECITERS = [{ id: 'alafasy', name: 'Mishary Rashid Alafasy', note: 'Clear and melodic', mb: 0 }];
+  let RECITERS = FALLBACK_RECITERS;
+  const TIM = Object.create(null); // reciter -> { "<sūrah>": [[start, end, [[ws, we], ...]], ...] }
+  const timLoad = Object.create(null);
+  function reciter() {
+    return RECITERS.find((r) => r.id === prefs.reciter) || RECITERS[0];
+  }
+  function loadReciters() {
+    return fetch('audio/reciters.json')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((list) => {
+        if (Array.isArray(list) && list.length)
+          RECITERS = list
+            .filter((r) => r && typeof r.id === 'string' && /^[a-z0-9-]{2,32}$/.test(r.id))
+            .map((r) => ({ id: r.id, name: String(r.name || r.id), note: String(r.note || ''), mb: +r.mb || 0 }));
+        if (!RECITERS.some((r) => r.id === prefs.reciter)) prefs.reciter = RECITERS[0].id;
+        if (st.view === 'settings') render();
+      })
+      .catch(() => {});
+  }
+  function loadTimings(id) {
+    if (TIM[id]) return Promise.resolve(TIM[id]);
+    if (!timLoad[id])
+      timLoad[id] = fetch(`audio/${id}/timings.json`)
+        .then((r) => (r.ok ? r.json() : Promise.reject(new Error('no timings'))))
+        .then((j) => (TIM[id] = j && j.surahs ? j.surahs : {}))
+        .catch((e) => {
+          delete timLoad[id];
+          throw e;
+        });
+    return timLoad[id];
+  }
   const player = new Audio();
   player.preload = 'auto';
   let queue = [],
     playing = false,
-    fabKey = '';
+    fabKey = '',
+    playRec = 'alafasy'; // the reciter of what is playing now
   const pad = (n) => String(n).padStart(3, '0');
-  function playList(items) {
+  /* items: [sūrah, āyah (1-based)] or [sūrah, āyah, word index] for a single word */
+  function playList(items, opts) {
     if (!prefs.audio) {
-      toast('The reciter is switched off in settings');
+      toast('The reciter is switched off in the Grown-up Corner');
       return;
     }
+    const id = (opts && opts.reciter) || reciter().id;
+    playRec = id;
     queue = [];
     items.forEach((it) => {
-      for (let r = 0; r < prefs.repeat; r++) queue.push(it);
+      const reps = it.length > 2 || (opts && opts.once) ? 1 : prefs.repeat;
+      for (let r = 0; r < reps; r++) queue.push(it);
     });
     playing = true;
-    playNext();
     updateFab();
+    loadTimings(id)
+      .then(() => {
+        if (playing) playNext();
+      })
+      .catch(() => {
+        stopAudio();
+        toast(navigator.onLine === false ? 'This reciter is not saved for offline use yet.' : 'The recitation could not load. Try again in a moment.');
+      });
   }
   let segTimer = null,
     curSeg = null,
     advTok = 0;
-  /* Play the next queued āyah: seek inside its sūrah file and stop at the āyah's end. */
+  /* Play the next queued āyah or word: seek inside its sūrah file and stop at its end. */
   function playNext() {
     const it = queue.shift();
     if (!it) {
@@ -315,16 +578,28 @@
       return;
     }
     try {
-      const seg = AUDIO_SEGMENTS[it[0]] && AUDIO_SEGMENTS[it[0]][it[1] - 1];
-      if (!seg) {
+      const id = playRec,
+        T = TIM[id] && TIM[id][it[0]];
+      const ay = T && T[it[1] - 1];
+      if (!ay) {
         stopAudio();
         return;
       }
-      const url = `${AUDIO_DIR}${pad(it[0])}.mp3`;
-      curSeg = { start: Math.max(0, seg[0] - 0.05), end: seg[1] + 0.15 };
-      if (player.getAttribute('src') !== url) {
-        player.src = url;
-      }
+      let seg;
+      if (it.length > 2) {
+        const w = ay[2] && ay[2][it[2]];
+        if (!w) {
+          stopAudio();
+          return;
+        }
+        // Quran.com word boundaries sit ~50 ms before the quietest cut point; the last word fades out
+        // after its stated end, so play it to the end of the āyah.
+        const lastW = it[2] === ay[2].length - 1;
+        seg = { start: Math.max(0, w[0] + (it[2] === 0 ? -0.03 : 0.03)), end: (lastW ? ay[1] : w[1] + 0.05) + 0.06 };
+      } else seg = { start: Math.max(0, ay[0] - 0.05), end: ay[1] + 0.15 };
+      curSeg = seg;
+      const url = `audio/${id}/${pad(it[0])}.mp3`;
+      if (player.getAttribute('src') !== url) player.src = url;
       player.defaultPlaybackRate = player.playbackRate = prefs.slow ? 0.8 : 1;
       const seek = () => {
         try {
@@ -350,7 +625,7 @@
           player.pause();
           finishSeg();
         }
-      }, 40);
+      }, 30);
     } catch (e) {
       stopAudio();
     }
@@ -398,21 +673,11 @@
   function fabTarget() {
     const v = st.view,
       s = S[st.i];
-    if (!s || !['hub', 'part', 'learn', 'path', 'order', 'next', 'mystery', 'words'].includes(v)) return null;
+    if (!s || !['surah', 'learn', 'path', 'order', 'next', 'words'].includes(v)) return null;
     const one = (k) => ({ key: `${s.n}:${k}`, label: `Āyah ${k + 1}`, items: [[s.n, k + 1]] });
     const many = (ks, label) => ({ key: `${s.n}:${ks.join(',')}`, label, items: ks.map((k) => [s.n, k + 1]) });
-    if (v === 'hub')
-      return many(
-        s.ayat.map((_, k) => k),
-        'Whole sūrah',
-      );
-    if (v === 'mystery') {
-      if (!st.open) return null;
-      const ms = S[st.s];
-      return { key: `m${ms.n}:${st.a}`, label: 'This āyah', items: [[ms.n, st.a + 1]] };
-    }
     const c = ctx();
-    if (v === 'part') return many(range(c), `Part ${st.p + 1}`);
+    if (v === 'surah') return multi(s) && st.p !== 'all' ? many(range(c), `Part ${st.p + 1}`) : many(range(c), 'Whole sūrah');
     if (v === 'learn') return st.phase === 'chain' ? many(chainList(), 'The chain') : one(st.a);
     if (v === 'path') return one(c.from + st.k);
     if (v === 'order') return st.say != null ? one(st.say) : many(range(c), 'In order');
@@ -465,10 +730,7 @@
         s.animate(
           [
             { transform: 'translate(-50%,-50%) translate(0px,0px) rotate(0deg) scale(.4)', opacity: 1 },
-            {
-              transform: 'translate(-50%,-50%) translate(' + dx + 'px,' + dy + 'px) rotate(' + r + 'deg) scale(1.1)',
-              opacity: 0,
-            },
+            { transform: 'translate(-50%,-50%) translate(' + dx + 'px,' + dy + 'px) rotate(' + r + 'deg) scale(1.1)', opacity: 0 },
           ],
           { duration: 1100, easing: 'cubic-bezier(.15,.7,.4,1)', fill: 'forwards' },
         );
@@ -487,10 +749,7 @@
   function bigParty(set) {
     sfx.win();
     for (let i = 0; i < 4; i++)
-      setTimeout(
-        () => burst(innerWidth * (0.2 + 0.6 * Math.random()), innerHeight * (0.25 + 0.35 * Math.random()), 22, set),
-        i * 220,
-      );
+      setTimeout(() => burst(innerWidth * (0.2 + 0.6 * Math.random()), innerHeight * (0.25 + 0.35 * Math.random()), 22, set), i * 220);
   }
   function wobble(el) {
     if (!el) return;
@@ -547,10 +806,12 @@
   function multi(s) {
     return s.P.length > 1;
   }
+  const pnum = (p) => (p === 'all' || p == null ? 0 : p);
 
   function sceneHTML(a, cls = '') {
     return `<div class="scene an-${a.anim} ${cls}">${a.scene.map((e) => `<span class="e">${e}</span>`).join('')}</div>`;
   }
+  const pics = (a) => `<span class="pics">${a.scene.map((e) => `<span class="e">${e}</span>`).join('')}</span>`;
   function arHTML(s, a, k, opts = {}) {
     return `<div class="ar-box">
     <div class="ar-label">${opts.label || '📖 Grown-up reads'}</div>
@@ -565,8 +826,8 @@
     <button class="icon-btn" data-act="bism" aria-label="Bismillah">${ICON.moon}</button>
     <button class="listen" data-act="fab" aria-label="Listen to the recitation"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="#fff"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18.3 6.5a7.5 7.5 0 0 1 0 11"/></svg><span class="stop"></span></span><span><b>Listen</b><small></small></span><span class="rep" hidden></span></button></div>`;
   }
-  function coach(html, icon = '🦉') {
-    return `<div class="coach"><span class="owl">${icon}</span><div>${html}</div></div>`;
+  function coach(html, icon = '🦉', extra = '') {
+    return `<div class="coach"><span class="owl">${icon}</span><div>${html}</div>${extra}</div>`;
   }
   function dots(c, cur) {
     return `<div class="dots">${range(c)
@@ -588,124 +849,324 @@
     for (let k = c.from; k <= st.a; k++) L.push(k);
     return L;
   }
+  function toyBtn(s) {
+    return s.toy ? `<button class="toy" data-act="toy" aria-label="Tap the ${s.toy[0]}">${s.toy[0]}<small>tap!</small></button>` : '';
+  }
 
-  /* ================= state & render ================= */
+  /* ================= hearts (review games) ================= */
+  function learned() {
+    const s = S[st.i];
+    const r = P().prog[s.n];
+    if (!r) return false;
+    if (st.p === 'all') return r.parts.every((x) => x && x.learn);
+    return !!(r.parts[pnum(st.p)] && r.parts[pnum(st.p)].learn);
+  }
+  const heartsOn = () => prefs.hearts && ['path', 'order', 'next'].includes(st.view) && st.hearts != null && learned();
+  function heartsBar() {
+    if (!heartsOn()) return '';
+    return `<div class="hearts" aria-label="${st.hearts} hearts left">${[0, 1, 2].map((j) => `<span class="hrt ${j < st.hearts ? '' : 'gone'}">${ART.heart(j < st.hearts)}</span>`).join('')}</div>`;
+  }
+  /* a mistake in a review game: lose a heart; at zero, drop the newest item here */
+  function loseHeart() {
+    if (!heartsOn()) return false;
+    st.hearts = Math.max(0, st.hearts - 1);
+    sfx.heart();
+    const hs = $app.querySelectorAll('.hearts .hrt');
+    const el = hs[st.hearts];
+    if (el) {
+      el.classList.add('gone', 'pop');
+      el.innerHTML = ART.heart(false);
+      burstAt(el, 6, ['💔', '✨']);
+    }
+    if (st.hearts === 0) setTimeout(dropItem, 650);
+    return true;
+  }
+  function dropItem() {
+    const prof = P(),
+      s = S[st.i];
+    const restart = { view: st.view, i: st.i, p: st.p, L: st.L };
+    const cand = prof.items.filter((id) => !isLost(id)).slice(-1)[0];
+    let body;
+    if (cand) {
+      prof.lost.push({ id: cand, n: s.n });
+      save();
+      const it = ITEM[cand];
+      body = `<div class="dropit">${ART.item(cand)}</div>
+      <h3>Oh no! Your ${it.name} fell off!</h3>
+      <p class="saveinfo">It's waiting for you at <b>${s.name}</b> on the map. Finish this game with a heart left to get it back!</p>`;
+    } else {
+      body = `<div class="dropit">💪</div><h3>Out of hearts!</h3><p class="saveinfo">That's okay, we learn by trying. Let's try again!</p>`;
+    }
+    stopAudio();
+    pendingRestart = restart;
+    const m = document.getElementById('modal');
+    m.innerHTML = `<div class="card dropcard">${body}<div class="row"><button class="btn go wide" data-act="retry">🔁 Try again</button></div></div>`;
+    m.classList.add('show');
+  }
+  let pendingRestart = null;
+  function restartActivity(r) {
+    st.i = r.i;
+    st.p = r.p;
+    if (r.view === 'path') startPath(r.L);
+    else if (r.view === 'order') startOrder();
+    else if (r.view === 'next') startNext();
+  }
+
+  /* ================= state, scenes & render ================= */
   const $app = document.getElementById('app');
-  let st = { view: 'home' };
+  const $bg = document.getElementById('bg');
+  let st = { view: 'splash' };
+  let mapCtl = null;
   function go(view, params = {}) {
     st = Object.assign({ view }, params);
     render(true);
   }
+  let sceneKeyNow = '';
+  /* the living background behind lessons: the world's sky, a strip of ground with props, gentle motion */
+  function setScene(wi) {
+    const night = isNight();
+    const key = wi == null ? 'none' : wi + (night ? 'n' : 'd');
+    if (key === sceneKeyNow) return;
+    sceneKeyNow = key;
+    if (wi == null) {
+      $bg.innerHTML = '';
+      return;
+    }
+    const w = ART.WORLDS[wi],
+      pl = night && w.dim ? Object.assign({}, w, w.dim) : w;
+    const names = (ART.PROPS_BY_WORLD[wi] || []).filter((nm) => nm !== 'peak-summit');
+    const props = [0, 1, 2, 3, 4]
+      .map((j) => {
+        const name = names[(j * 3 + wi) % names.length];
+        const svg = (name && ART.props[name]) || '';
+        const left = [3, 22, 70, 88, 48][j],
+          size = [80, 54, 64, 86, 40][j],
+          hgt = /viewBox="0 0 100 150"/.test(svg) ? size * 1.5 : size;
+        return svg ? `<div class="scn-prop" style="left:${left}%;width:${size}px;height:${hgt}px">${svg}</div>` : '';
+      })
+      .join('');
+    $bg.innerHTML = `<div class="scn" style="--sky0:${pl.sky[0]};--sky1:${pl.sky[1]};--g0:${pl.ground[0]};--g1:${pl.ground[1]}">
+      <div class="scn-sky"></div><div class="scn-amb">${ART.ambient(wi)}</div>
+      <div class="scn-ground"><svg viewBox="0 0 400 60" preserveAspectRatio="none"><path d="M0 26 C60 8 120 8 180 22 S300 40 400 14 V60 H0Z" fill="${pl.ground[0]}"/><path d="M0 40 C80 26 150 30 230 40 S340 50 400 34 V60 H0Z" fill="${pl.ground[1]}"/></svg>${props}</div></div>`;
+  }
   function render(scroll) {
-    $app.innerHTML = V[st.view]();
-    if (scroll) window.scrollTo({ top: 0, behavior: reduceMotion ? 'auto' : 'smooth' });
-    updateFab();
-  }
-  function toHub() {
-    go('hub', { i: st.i });
-  }
-  function toPart() {
+    if (mapCtl && st.view !== 'map') {
+      mapCtl.destroy();
+      mapCtl = null;
+    }
+    document.body.className = 'v-' + st.view;
     const s = S[st.i];
-    if (multi(s) && st.p !== 'all') go('part', { i: st.i, p: st.p });
-    else toHub();
+    if (st.view === 'splash' || st.view === 'map') setScene(null);
+    else if (s && st.i != null && st.view !== 'settings' && st.view !== 'bag' && st.view !== 'create') setScene(worldOf(s));
+    else setScene(worldOf(S[P().at] || S[0]));
+    $app.innerHTML = V[st.view]();
+    if (st.view === 'map') mountMap();
+    else if (scroll) window.scrollTo({ top: 0, behavior: 'auto' });
+    updateFab();
   }
   const V = {};
 
-  /* ---------- HOME ---------- */
-  V.home = () => {
-    const total = S.reduce((t, s) => t + surahStars(s), 0),
-      max = S.reduce((t, s) => t + surahMax(s), 0);
-    let idx = 0;
-    const worlds = WORLDS.map((w, wi) => {
-      const list = S.filter((s) => s.n <= w.from && s.n >= w.to);
-      const got = list.reduce((t, s) => t + surahStars(s), 0),
-        wmax = list.reduce((t, s) => t + surahMax(s), 0);
-      return `<div class="world-h" id="w${wi}"><span class="wn">World ${wi + 1}</span><div style="flex:1"><b>${w.name}</b><small>Sūrahs ${w.from}–${w.to} · ⭐ ${got}/${wmax}</small><div class="pbar"><i style="width:${wmax ? Math.round((got / wmax) * 100) : 0}%"></i></div></div></div>
-    <div class="map">${list
-      .map((s) => {
-        const i = s.idx,
-          side = idx++ % 2 ? 'r' : 'l';
-        return `<button class="island ${side}" style="${cv(s.color)}" data-act="surah" data-i="${i}">
-        ${i === 0 ? '<span class="flag">🚩 Start here</span>' : ''}
-        <span class="isle-icon">${s.icon}</span>
-        <span class="isle-text"><span class="isle-ar">${s.ar}</span><span class="isle-en">${s.n}. ${s.name}</span>
-          <span class="isle-sub">${s.theme} · ${s.ayat.length} āyāt${multi(s) ? ` · 🚩 ${s.P.length} parts` : ''}</span></span>
-        <span class="isle-stars">⭐ ${surahStars(s)}/${surahMax(s)}</span>
-      </button>`;
-      })
-      .join('')}</div>`;
-    }).join('');
-    return `<div class="screen">
-    <header class="top">
-      <div class="logo"><span class="moon">🌙</span><div><h1>Little Hafiz Quest<span class="ver">v${VERSION}</span></h1><p>Juz ‘Amma by heart · 37 sūrahs</p></div></div>
+  /* ---------- SPLASH ---------- */
+  V.splash = () => {
+    const prof = P(),
+      started = totalStars(prof) > 0;
+    return `<div class="splash">
+    <div class="sp-art">${ART.splash(prof.look, wornOutfit(prof), { night: isNight() })}</div>
+    <div class="sp-top">
+      <button class="verchip" data-act="versions" aria-label="Choose version">v${VERSION}</button>
       <button class="icon-btn" data-act="settings" aria-label="Grown-up corner">${ICON.gear}</button>
-    </header>
-    <div class="starbar"><span>⭐ <b>${total}</b> / ${max}</span><button class="btn small gold gift" data-act="mystery">🎁 Mystery Box</button></div>
-    <div class="chips">${WORLDS.map((w, wi) => `<button class="chip" data-act="world" data-w="${wi}">${wi + 1} · ${w.name}</button>`).join('')}</div>
-    ${worlds}
-    <p class="foot">Start at 🚩 An-Nās and hop island to island ⛵</p>
+    </div>
+    <div class="sp-bottom">
+      <h1 class="sp-title">Little Hafiz Quest</h1>
+      <p class="sp-sub">Juz ‘Amma by heart · 37 sūrahs to the summit</p>
+      <button class="btn gold sp-begin" data-act="begin">${started ? 'Continue the quest ▶' : 'Begin ▶'}</button>
+      <button class="pchip" data-act="profiles"><span class="phead">${explorer({ view: 'front', cls: 'mini' })}</span>${prof.name ? esc(prof.name) : 'Explorer'}<small>${store.profiles.length > 1 ? 'switch' : 'add a child'}</small></button>
+    </div>
   </div>`;
   };
 
-  /* ---------- SŪRAH HUB ---------- */
-  function activities(s, p) {
-    const r = (prog[s.n] && prog[s.n].parts[p]) || blank();
-    const act = (a, ico, t, d, have, max, cls = '') =>
-      `<button class="act ${cls}" data-act="${a}"><span class="ico">${ico}</span><span><b>${t}</b><span class="d">${d}</span><span class="st">${starRow(have, max)}</span></span></button>`;
+  /* ---------- MAKE YOUR EXPLORER ---------- */
+  function lookControls(prof) {
+    const L = prof.look;
+    const sw = (k, list, cls) =>
+      `<div class="swatches">${list.map((c, j) => `<button class="swatch ${cls || ''} ${L[k] === j ? 'on' : ''}" data-act="look" data-k="${k}" data-v="${j}" style="background:${c}" aria-label="${k} ${j + 1}"></button>`).join('')}</div>`;
+    const hairs = ART.LOOKS.hair
+      .map(
+        (h) =>
+          `<button class="hairpick ${L.hair === h ? 'on' : ''}" data-act="look" data-k="hair" data-v="${h}" aria-label="${h}">${ART.explorer(Object.assign({}, L, { hair: h }), {}, { view: 'front', cls: 'mini' })}</button>`,
+      )
+      .join('');
+    return `<div class="lookbox">
+      <label class="lk"><span>Name</span><input id="exname" class="namein" maxlength="16" autocomplete="off" placeholder="Your name" value="${esc(prof.name)}"></label>
+      <div class="lk"><span>Skin</span>${sw('skin', ART.LOOKS.skin)}</div>
+      <div class="lk"><span>Hair</span><div class="hairs">${hairs}</div></div>
+      ${L.hair === 'hijab' ? `<div class="lk"><span>Hijab</span>${sw('hijabColor', ART.LOOKS.hijabColor)}</div>` : `<div class="lk"><span>Colour</span>${sw('hairColor', ART.LOOKS.hairColor)}</div>`}
+    </div>`;
+  }
+  V.create = () => {
+    const prof = P();
+    return `<div class="screen">
+    <div class="h1c">${st.first ? 'Make your explorer!' : 'Change your explorer'}</div>
+    <div class="wd-stage">${explorer({ view: 'front' })}</div>
+    ${lookControls(prof)}
+    <div class="row"><button class="btn gold wide" data-act="made">${st.first ? "Let's go! ▶" : 'Done ✓'}</button></div>
+  </div>`;
+  };
+
+  /* ---------- THE QUEST MAP ---------- */
+  function surahStatus(i) {
+    const s = S[i],
+      prof = P();
+    return {
+      stars: surahStars(s),
+      max: surahMax(s),
+      done: surahDone(s),
+      started: surahStars(s) > 0,
+      gift: false,
+      lost: prof.lost.filter((x) => x.n === s.n).map((x) => x.id),
+    };
+  }
+  function suggestIdx() {
+    const i = S.findIndex((s) => !surahDone(s));
+    return i < 0 ? S.length - 1 : i;
+  }
+  V.map = () => {
+    const prof = P(),
+      gifts = prof.pending.length;
+    return `<div class="mapscr">
+    <div class="hud">
+      <button class="icon-btn" data-act="home" aria-label="Back to the start">${ICON.home}</button>
+      <div class="hud-stars">⭐ <b>${totalStars()}</b><small>/ ${MAX_STARS}</small></div>
+      <button class="icon-btn hud-bag" data-act="bag" aria-label="My explorer and collection">${ICON.bag}${gifts ? `<span class="badge">${gifts}</span>` : ''}</button>
+      <button class="icon-btn" data-act="settings" aria-label="Grown-up corner">${ICON.gear}</button>
+    </div>
+    ${gifts ? `<button class="giftfloat" data-act="opengift">${ART.gift({ tier: giftTier(prof.pending[0]), open: false, kind: prof.pending[0].k === 'i' ? 'item' : 'sticker' })}<span>Open your gift!</span></button>` : ''}
+    <div id="map" class="mroot"></div>
+  </div>`;
+  };
+  function mountMap() {
+    const prof = P();
+    const reached = Math.max(prof.at, ...S.map((s, i) => (surahStars(s) > 0 ? i : 0)));
+    mapCtl = MAP.mount(document.getElementById('map'), {
+      surahs: S,
+      worlds: WORLDS,
+      art: ART,
+      night: isNight(),
+      current: prof.at,
+      reached,
+      suggest: suggestIdx(),
+      status: surahStatus,
+      explorerSVG: () => explorer({ view: 'front' }),
+      worldIcon: (wi) => WORLD_ICON[wi],
+      worldProgress: (wi) => {
+        const list = S.filter((s) => worldOf(s) === wi);
+        const done = list.filter((s) => surahDone(s)).length;
+        return { frac: done / list.length, done: done === list.length };
+      },
+    });
+  }
+  function enterSurah(i) {
+    const prof = P();
+    if (!mapCtl) {
+      prof.at = i;
+      save();
+      openSurah(i);
+      return;
+    }
+    const ctl = mapCtl;
+    sfx.tap();
+    document.body.classList.add('busy');
+    ctl.walkTo(i, () => {
+      prof.at = i;
+      save();
+      ctl.zoomInto(i, () => {
+        document.body.classList.remove('busy');
+        openSurah(i);
+      });
+    });
+  }
+  function openSurah(i) {
+    const s = S[i],
+      r = P().prog[s.n];
+    let p = 0;
+    if (multi(s)) {
+      const sug = s.P.findIndex((_, q) => !(r && r.parts[q] && r.parts[q].path >= 3));
+      p = sug < 0 ? 'all' : sug;
+    }
+    go('surah', { i, p, enter: true });
+  }
+
+  /* ---------- SŪRAH: checkpoint trail + quest steps ---------- */
+  function stepsFor(s, p) {
+    const r = P().prog[s.n];
+    if (p === 'all') {
+      const got = (r && r.all) || 0;
+      return [{ key: 'pathpick', ico: '🐸', t: 'Stepping Stones · whole sūrah', d: 'Every part in one go, with fewer and fewer clues', done: got >= 3, stars: [got, 3] }];
+    }
+    const x = (r && r.parts[p]) || blank();
     const beads = `<span class="beads-ico" style="color:${WCOL[5]}">${WCOL.slice(0, 6)
       .map((c) => `<i style="background:${c}"></i>`)
       .join('')}</span>`;
-    return `<div class="acts">
-    ${act('learn', '👀', 'Look & Repeat', 'Say each āyah 3×, then chain them together', r.learn ? 1 : 0, 1, 'span')}
-    ${act('words', beads, 'Word Steps', 'Learn the words one by one, in order', r.words ? 1 : 0, 1)}
-    ${act('pathpick', '🐸', 'Stepping Stones', 'Fewer and fewer clues', r.path || 0, 3)}
-    ${act('order', '🧩', 'Picture Puzzle', 'Drag each picture to its number', r.order ? 1 : 0, 1)}
-    ${act('next', '🔮', 'What Comes Next?', 'Pick the next picture, then say it', r.next ? 1 : 0, 1)}
-  </div>`;
+    return [
+      { key: 'learn', ico: '👀', t: 'Look & Repeat', d: 'See the picture, hear the āyah, say it 3 times', done: !!x.learn, stars: [x.learn, 1] },
+      { key: 'words', ico: beads, t: 'Word Steps', d: 'Build each āyah word by word', done: !!x.words, stars: [x.words, 1] },
+      { key: 'pathpick', ico: '🐸', t: 'Stepping Stones', d: 'Say it with fewer and fewer clues: 3 levels', done: x.path >= 3, stars: [x.path, 3] },
+      { key: 'order', ico: '🧩', t: 'Picture Puzzle', d: 'Put the pictures in order', done: !!x.order, stars: [x.order, 1], review: true },
+      { key: 'next', ico: '🔮', t: 'What Comes Next?', d: 'Pick the next picture, then say it', done: !!x.next, stars: [x.next, 1], review: true },
+    ];
+  }
+  function checkpointTrail(s) {
+    const r = P().prog[s.n];
+    const cps = s.P.map((P, p) => {
+      const x = r && r.parts[p];
+      const done = !!(x && x.path >= 3),
+        got = partStars(x);
+      return `<button class="cpf ${st.p === p ? 'sel' : ''} ${done ? 'done' : ''}" data-act="part" data-p="${p}">
+        <span class="cpflag">${ART.flag(done ? '#2fbf71' : st.p === p ? '#ff9f1c' : '#b9b1dc')}</span>
+        <b>${p + 1}</b><small>āyāt ${P.from + 1}–${P.to + 1}</small><span class="cpst">⭐ ${got}/7</span></button>`;
+    });
+    const allGot = (r && r.all) || 0;
+    cps.push(`<button class="cpf summit ${st.p === 'all' ? 'sel' : ''} ${allGot >= 3 ? 'done' : ''}" data-act="part" data-p="all">
+      <span class="cpflag">🏁</span><b>All</b><small>whole sūrah</small><span class="cpst">${starRow(allGot, 3)}</span></button>`);
+    return `<div class="h2">🚩 Checkpoints <small>One part at a time, then the whole sūrah</small></div><div class="cptrail">${cps.join('<i class="cpline"></i>')}</div>`;
   }
   function story(s, c) {
     return `<div class="story" aria-label="Picture story">${range(c)
-      .map(
-        (k) =>
-          `<button class="story-cell" data-act="learn" data-a="${k}"><span class="num">${k + 1}</span><span>${s.ayat[k].scene.join('')}</span></button>`,
-      )
+      .map((k) => `<button class="story-cell" data-act="learn" data-a="${k}"><span class="num">${k + 1}</span>${pics(s.ayat[k])}</button>`)
       .join('')}</div>`;
   }
-  V.hub = () => {
-    const s = S[st.i];
-    let body;
-    if (multi(s)) {
-      const r = prog[s.n];
-      const sug = s.P.findIndex((_, p) => !(r && r.parts[p] && r.parts[p].learn));
-      body = `<div class="h2">🚩 Checkpoints</div><div class="cps">${s.P.map((P, p) => {
-        const got = partStars(r && r.parts[p]);
-        const pics = range(P)
-          .map((k) => s.ayat[k].scene[0])
-          .join(' ');
-        return `<button class="cp ${p === sug ? 'suggest' : ''}" data-act="part" data-p="${p}"><span class="cpn"><span>${p + 1}</span></span>
-          <span class="cpt"><b>Āyāt ${P.from + 1}–${P.to + 1}</b><span class="pics">${pics}</span></span><span class="cps-st">⭐ ${got}/7</span></button>`;
-      }).join('')}
-      <button class="cp ${sug < 0 ? 'suggest' : ''}" data-act="pathpick" data-p="all"><span class="cpn">🏁</span>
-        <span class="cpt"><b>Whole sūrah</b><span class="d" style="color:var(--soft);font-weight:600;font-size:14px">Stepping Stones across every part</span></span><span class="cps-st">${starRow((r && r.all) || 0, 3)}</span></button>
-    </div>`;
-    } else {
-      body = `${story(s, s.P[0])}${activities(s, 0)}`;
-    }
-    return `<div class="screen" style="${cv(s.color)}">
-    ${bar(`${s.n}. ${s.name}`, s.theme, 'home')}
-    <div class="hero"><div class="hero-icon bob">${s.icon}</div><div class="hero-ar">سُورَةُ ${s.ar}</div><div class="hero-en">${s.meaning} · ${s.ayat.length} āyāt${multi(s) ? ` · ${s.P.length} checkpoints` : ''}</div></div>
-    <div class="pattern">💡 <b>Memory trick:</b> ${s.pattern}</div>
-    ${body}
-  </div>`;
-  };
-  V.part = () => {
+  V.surah = () => {
     const s = S[st.i],
-      c = ctx();
-    return `<div class="screen" style="${cv(s.color)}">
-    ${bar(`🚩 Part ${st.p + 1} of ${s.P.length}`, `${s.name} · āyāt ${c.from + 1}–${c.to + 1}`, 'hub')}
-    ${story(s, c)}
-    ${st.p > 0 ? `<div class="pattern" style="border-style:solid">🔗 This part links on from āyah ${c.from} ${s.ayat[c.from - 1].scene.join('')} — the chain starts there.</div>` : ''}
-    ${activities(s, st.p)}
+      wi = worldOf(s);
+    const done = surahDone(s);
+    const p = st.p;
+    const steps = stepsFor(s, p);
+    const nextIdx = steps.findIndex((x) => !x.done);
+    let stepsHTML = '',
+      reviewShown = false;
+    steps.forEach((x, j) => {
+      if (x.review && !reviewShown) {
+        reviewShown = true;
+        stepsHTML += `<div class="qsep"><span>Review games</span>${prefs.hearts ? `<small>${ART.heart(true)}${ART.heart(true)}${ART.heart(true)} careful, 3 hearts!</small>` : ''}</div>`;
+      }
+      const isNext = j === nextIdx;
+      stepsHTML += `<button class="qstep ${x.done ? 'done' : ''} ${isNext ? 'next' : ''}" data-act="${x.key}" ${p === 'all' ? 'data-p="all"' : ''}>
+        <span class="qn">${x.done ? '✓' : j + 1}</span><span class="qico">${x.ico}</span>
+        <span class="qtx"><b>${x.t}</b><small>${x.d}</small><span class="st">${starRow(x.stars[0], x.stars[1])}</span></span>
+        ${isNext ? '<span class="qgo">Start ▶</span>' : ''}</button>`;
+    });
+    const c = ctx();
+    return `<div class="screen ${st.enter ? 'zoomin' : ''}" style="${cv(s.color)}">
+    ${bar(`${s.n}. ${s.name}`, `World ${wi + 1} · ${WORLDS[wi].name}`, 'map')}
+    <div class="hero"><div class="hero-icon bob">${s.icon}</div><div class="hero-ar">سُورَةُ ${s.ar}</div>
+      <div class="hero-en">${s.meaning} · ${s.ayat.length} āyāt${multi(s) ? ` · ${s.P.length} checkpoints` : ''}</div>
+      <div class="hero-st ${done ? 'done' : ''}">${done ? '✓ Memorized! MāshāAllāh' : `⭐ ${surahStars(s)} / ${surahMax(s)} stars`}</div></div>
+    ${lostAt(s.n).length ? `<div class="lostnote">${lostAt(s.n).map((x) => `<span class="lostit">${ART.item(x.id)}</span>`).join('')}<span>Your <b>${lostAt(s.n).map((x) => ITEM[x.id].name).join(', ')}</b> fell off here! Finish a review game to get it back.</span></div>` : ''}
+    ${multi(s) ? checkpointTrail(s) : ''}
+    <div class="h2">${p === 'all' ? '🏁 The whole sūrah' : multi(s) ? `🧭 Part ${p + 1}: your quest` : '🧭 Your quest'}<small>${nextIdx < 0 ? 'All done here! Play any game again to revise.' : 'Tap the glowing step to start'}</small></div>
+    <div class="qsteps">${stepsHTML}</div>
+    ${p === 'all' ? '' : `<div class="h2">🖼️ Picture story <small>Tap a picture to learn that āyah</small></div>${story(s, c)}`}
+    <div class="tip"><div class="tip-h">💡 Tip for grown-ups</div><div class="tip-b">${s.pattern}</div>${s.toy ? `<div class="tip-toy">${toyBtn(s)}<span>Tap the ${s.toy[0]} together with your child each time you hear it.</span></div>` : ''}</div>
   </div>`;
   };
 
@@ -720,8 +1181,8 @@
       const L = chainList(),
         cur = s.ayat[L[Math.min(st.chain, L.length - 1)]];
       body = `
-      ${coach(`🔗 <b>Chain time!</b> Say from āyah ${L[0] + 1} all the way to āyah ${k + 1}. Do the actions too!`)}
-      <div class="chain">${L.map((x, j) => `<button class="link ${j < st.chain ? 'lit' : j === st.chain ? 'cur' : ''} ${!c.all && st.p > 0 && j === 0 ? 'bridge' : ''}" data-act="chainstep"><span class="num">${x + 1}</span><span class="pic">${s.ayat[x].scene.join('')}</span></button>`).join('')}</div>
+      ${coach(`🔗 <b>Chain time!</b> Say from āyah ${L[0] + 1} all the way to āyah ${k + 1}. Do the actions too!`, '🦉', toyBtn(s))}
+      <div class="chain">${L.map((x, j) => `<button class="link ${j < st.chain ? 'lit' : j === st.chain ? 'cur' : ''} ${!c.all && st.p > 0 && j === 0 ? 'bridge' : ''}" data-act="chainstep"><span class="num">${x + 1}</span>${pics(s.ayat[x])}</button>`).join('')}</div>
       <div style="text-align:center"><div class="gest"><small>Do it</small>${cur.gesture}</div></div>
       <details class="adult"><summary>👁️ Grown-up check</summary><div class="ar sm" lang="ar">${cur.ar}</div></details>
       <div class="row"><button class="btn go wide" data-act="chainstep">✅ Said it! Next</button></div>`;
@@ -737,11 +1198,11 @@
       if (st.phase === 'repeat') {
         const n = st.popped.filter(Boolean).length;
         body += `
-        ${coach(`📖 Grown-up reads · 🧒 you repeat!<br><span class="sub">Pop any bubble each time you say it — ${3 - n} to go!</span>`)}
+        ${coach(`📖 Grown-up reads · 🧒 you repeat!<br><span class="sub">Pop a bubble each time you say it: ${3 - n} to go!</span>`, '🦉', toyBtn(s))}
         <div class="bubbles">${st.popped.map((p, b) => (p ? '<span class="bubble popped">⭐</span>' : `<button class="bubble" data-act="pop" data-b="${b}" aria-label="Pop bubble">Say!</button>`)).join('')}</div>`;
       } else {
         body += `
-        ${coach(`🙈 Now say it with <b>just the picture</b>! Do the action to help you remember.`)}
+        ${coach(`🙈 Now say it with <b>just the picture</b>! Do the action to help you remember.`, '🦉', toyBtn(s))}
         <div class="row">
           <button class="btn wide" data-act="peek">${st.peek ? '🙈 Hide' : '👀 Peek'}</button>
           <button class="btn go wide" data-act="saidit">⭐ Said it!</button>
@@ -749,13 +1210,13 @@
       }
     }
     return `<div class="screen" style="${cv(s.color)}">
-    ${bar('Look & Repeat', `${s.name} · ${k + 1}/${s.ayat.length}`, 'part')}
+    ${bar('Look & Repeat', `${s.name} · āyah ${k + 1} of ${s.ayat.length}`, 'surah')}
     ${dots(c, k)}
     ${body}
   </div>`;
   };
 
-  /* ---------- WORD STEPS (no emoji in this mode) ---------- */
+  /* ---------- WORD STEPS (no emoji in this mode; tap a word to hear just that word) ---------- */
   V.words = () => {
     const s = S[st.i],
       c = ctx(),
@@ -764,10 +1225,7 @@
       n = W.length;
     const col = (j) => WCOL[j % WCOL.length];
     const track = `<div class="wlabel">Āyah tracker</div><div class="wtrack">${range(c)
-      .map(
-        (x) =>
-          `<button class="${x === k ? 'cur' : st.doneA.includes(x) ? 'done' : ''}" data-act="wjump" data-k="${x}">${x + 1}<small>${toArNum(x + 1)}</small></button>`,
-      )
+      .map((x) => `<button class="${x === k ? 'cur' : st.doneA.includes(x) ? 'done' : ''}" data-act="wjump" data-k="${x}">${x + 1}<small>${toArNum(x + 1)}</small></button>`)
       .join('')}</div>`;
     const beads = `<div class="beads" aria-label="Word ${Math.min(st.w, n)} of ${n}">${W.map((_, j) => {
       const on = st.phase === 'build' ? j < st.w : st.shown.includes(j);
@@ -778,32 +1236,30 @@
     if (st.phase === 'build') {
       stage = `<div class="wflow">${W.map((w, j) =>
         j < st.w
-          ? `<span class="word ${j === st.w - 1 ? 'new' : ''}" style="${wv(col(j))}" data-act="say" data-n="${s.n}" data-k="${k}">${w}</span>`
+          ? `<button class="word ${j === st.w - 1 ? 'new' : ''}" style="${wv(col(j))}" data-act="sayw" data-n="${s.n}" data-k="${k}" data-w="${j}" lang="ar">${w}</button>`
           : `<span class="word ph" style="${wv(col(j))}"></span>`,
       ).join('')}</div>`;
       note =
         st.w === 1
-          ? 'Grown-up reads the first word. Child repeats it.'
-          : `Grown-up reads from the first word up to the new word. Child repeats all ${st.w} words.`;
+          ? 'Grown-up reads the first word. Child repeats it. <b>Tap a word to hear it.</b>'
+          : `Grown-up reads from the first word up to the new word. Child repeats all ${st.w} words. <b>Tap any word to hear it.</b>`;
       controls = `<button class="btn wide" data-act="wprev" ${st.w <= 1 ? 'disabled' : ''}>‹ Back</button>
       ${st.w < n ? `<button class="btn go wide" data-act="wnext">Next word ›</button>` : `<button class="btn go wide" data-act="wrecall">Say it all ›</button>`}`;
     } else {
       const all = st.shown.length === n;
       stage = `<div class="wflow">${W.map((w, j) =>
         st.shown.includes(j)
-          ? `<span class="wtile shown" style="${wv(col(j))}">${w}</span>`
+          ? `<button class="wtile shown" style="${wv(col(j))}" data-act="sayw" data-n="${s.n}" data-k="${k}" data-w="${j}" lang="ar">${w}</button>`
           : `<button class="wtile" style="${wv(col(j))}" data-act="wshow" data-j="${j}">${j + 1}</button>`,
       ).join('')}</div>`;
-      note = all
-        ? 'Every word in its place. Well done!'
-        : 'Child says the whole āyah from memory. Grown-up taps each tile as the word is said.';
+      note = all ? 'Every word in its place. Well done!' : 'Child says the whole āyah from memory. Grown-up taps each tile as the word is said.';
       const last = k === c.to;
       controls = all
         ? `<button class="btn wide" data-act="whide">Again</button><button class="btn go wide" data-act="wdone">${last ? 'Finish part ›' : 'Next āyah ›'}</button>`
         : `<button class="btn wide" data-act="wbuild">‹ Practise</button><button class="btn go wide" data-act="wreveal">Show next word</button>`;
     }
     return `<div class="screen" style="${cv(s.color)}">
-    ${bar('Word Steps', `${s.name} · ${k + 1}/${s.ayat.length}`, 'part')}
+    ${bar('Word Steps', `${s.name} · āyah ${k + 1} of ${s.ayat.length}`, 'surah')}
     ${track}
     <div class="wlabel" style="margin-top:6px">Word order</div>
     ${beads}
@@ -818,17 +1274,18 @@
   V.pathpick = () => {
     const s = S[st.i],
       c = ctx();
-    const got = c.all ? (prog[s.n] || {}).all || 0 : ((prog[s.n] && prog[s.n].parts[st.p]) || blank()).path;
+    const got = c.all ? (P().prog[s.n] || {}).all || 0 : ((P().prog[s.n] && P().prog[s.n].parts[st.p]) || blank()).path;
     const lv = (L, ico, t, d) =>
-      `<button class="level" data-act="path" data-l="${L}"><span class="lv">${ico}</span><span><b>${t}</b><span>${d}</span></span><span class="ok">${got >= L ? '⭐' : '☆'}</span></button>`;
+      `<button class="level ${got >= L ? 'done' : got + 1 === L ? 'next' : ''}" data-act="path" data-l="${L}"><span class="lv">${ico}</span><span><b>${t}</b><span>${d}</span></span><span class="ok">${got >= L ? '⭐' : '☆'}</span></button>`;
     return `<div class="screen" style="${cv(s.color)}">
-    ${bar('Stepping Stones', c.all ? `${s.name} · whole sūrah` : `${s.name}${multi(s) ? ' · ' + partLabel(s, st.p) : ''}`, c.all ? 'hub' : 'part')}
-    ${coach('Say each āyah, then <b>tap the frog</b> to hop to the next stone! Each level has <b>fewer clues</b>.', '🐸')}
+    ${bar('Stepping Stones', c.all ? `${s.name} · whole sūrah` : `${s.name}${multi(s) ? ' · ' + partLabel(s, st.p) : ''}`, 'surah')}
+    ${coach('Say each āyah, then <b>tap the frog</b> to hop to the next stone! Each level has <b>fewer clues</b>.', `<span class="frogico">${ART.frog()}</span>`)}
     <div class="levels">
       ${lv(1, '🖼️', 'Level 1 · Picture + first word', 'The grown-up says the first word to start you off')}
       ${lv(2, '🎨', 'Level 2 · Picture only', 'Just the picture and the action')}
       ${lv(3, '🧠', 'Level 3 · Super Brain', 'No pictures! Only the āyah number')}
     </div>
+    ${prefs.hearts && learned() ? `<p class="saveinfo center">${ART.heart(true)} You have 3 hearts. A grown-up taps “Not quite” for a mistake.</p>` : ''}
   </div>`;
   };
   V.path = () => {
@@ -838,7 +1295,8 @@
       k = idx[st.k],
       a = s.ayat[k],
       L = st.L,
-      h = st.hint;
+      h = st.hint,
+      wi = worldOf(s);
     const maxHint = L; // L1: full · L2: first word → full · L3: picture → first word → full
     const showPic = L <= 2 || h >= 1;
     const showFirst = L === 1 || (L === 2 && h >= 1) || (L === 3 && h >= 2);
@@ -846,13 +1304,14 @@
     const prev = st.k > 0 ? s.ayat[idx[st.k - 1]] : null;
     return `<div class="screen" style="${cv(s.color)}">
     ${bar('Stepping Stones', `${s.name} · Level ${L}${c.all ? ' · whole sūrah' : ''}`, 'pathpick')}
-    <div class="stones ${idx.length > 12 ? 'many' : ''}">${idx
+    ${heartsBar()}
+    <div class="stream w${wi}"><div class="stones ${idx.length > 12 ? 'many' : ''}">${idx
       .map((x, j) =>
         j === st.k
-          ? `<button class="stone cur" data-act="hop" aria-label="Hop to the next stone">🐸</button>`
-          : `<span class="stone ${j < st.k ? 'done' : ''}">${j < st.k ? '✓' : x + 1}</span>`,
+          ? `<button class="stone cur" data-act="hop" aria-label="Hop to the next stone"><span class="stbg">${ART.stone(wi)}</span><span class="frog">${ART.frog()}</span></button>`
+          : `<span class="stone ${j < st.k ? 'done' : ''}"><span class="stbg">${ART.stone(wi)}</span><b>${j < st.k ? '✓' : x + 1}</b></span>`,
       )
-      .join('')}</div>
+      .join('')}</div></div>
     <div class="card">
       ${showPic ? tag(s, k) : `<span class="ayah-tag"><span class="num">${k + 1}</span>Āyah ${k + 1}</span>`}
       ${showPic ? sceneHTML(a) : `<div class="mystery-q">?</div>`}
@@ -860,12 +1319,16 @@
       ${showFirst && !showFull ? `<div><div class="first-word" lang="ar">${firstWord(a.ar)} …</div></div>` : ''}
       ${showFull ? arHTML(s, a, k, { label: '💡 Full help', sm: true }) : ''}
     </div>
-    ${coach(prev ? `What comes after <b>${prev.scene.join('')}</b>? Say <b>āyah ${k + 1}</b>, then tap the 🐸!` : `Say <b>āyah ${k + 1}</b>, then tap the 🐸 to hop!`, '🐸')}
+    ${coach(prev ? `What comes after ${pics(prev)}? Say <b>āyah ${k + 1}</b>, then tap the frog!` : `Say <b>āyah ${k + 1}</b>, then tap the frog to hop!`, `<span class="frogico">${ART.frog()}</span>`)}
     <div class="row">
       <button class="btn wide" data-act="hint" ${h >= maxHint ? 'disabled' : ''}>💡 Little help</button>
       <button class="btn go wide" data-act="hop">✅ Said it!</button>
     </div>
-    ${showFull ? '' : `<details class="adult"><summary>👁️ Grown-up check</summary><div class="ar sm" lang="ar">${a.ar}</div></details>`}
+    <div class="parent">
+      <button class="btn small ${st.help ? 'on' : ''}" data-act="phelp">🧑‍🏫 ${st.help ? 'Hide' : 'Grown-up help'}</button>
+      ${heartsOn() ? '<button class="btn small" data-act="oops">🙈 Not quite</button>' : ''}
+    </div>
+    ${st.help && !showFull ? `<div class="phelp"><div class="ar-label">Āyah ${k + 1} for the grown-up</div><div class="ar sm" lang="ar" data-act="say" data-n="${s.n}" data-k="${k}">${a.ar} ﴿${toArNum(k + 1)}﴾</div><button class="btn small ghostbtn" data-act="say" data-n="${s.n}" data-k="${k}">🔊 Hear it</button></div>` : ''}
   </div>`;
   };
 
@@ -878,17 +1341,18 @@
     const left = st.deck.filter((k) => !placedK.includes(k));
     const full = left.length === 0;
     return `<div class="screen" style="${cv(s.color)}">
-    ${bar('Picture Puzzle', `${s.name}${multi(s) ? ' · ' + partLabel(s, st.p) : ''}`, 'part')}
-    ${coach(full ? 'All in order! 🎉' : st.sel != null ? 'Now tap the number where it goes!' : '<b>Drag</b> each picture to its number — and say that āyah!', '🧩')}
+    ${bar('Picture Puzzle', `${s.name}${multi(s) ? ' · ' + partLabel(s, st.p) : ''}`, 'surah')}
+    ${heartsBar()}
+    ${coach(full ? 'All in order! 🎉' : st.sel != null ? 'Now tap the number where it goes!' : '<b>Drag</b> each picture to its number, and say that āyah!', '🧩')}
     <div class="slots">${idx
       .map((k, j) =>
         st.placed[j] != null
-          ? `<div class="slot filled"><span class="num">${k + 1}</span><span class="pic">${s.ayat[st.placed[j]].scene.join('')}</span></div>`
+          ? `<div class="slot filled"><span class="num">${k + 1}</span>${pics(s.ayat[st.placed[j]])}</div>`
           : `<button class="slot ${st.sel != null ? 'ready' : ''}" data-act="slot" data-j="${j}"><span class="num" style="opacity:.55">${k + 1}</span></button>`,
       )
       .join('')}</div>
     ${st.say != null ? `<div class="say">🗣️ Say āyah ${st.say + 1}! &nbsp;<span style="font-weight:600">${s.ayat[st.say].gesture}</span></div>` : ''}
-    <div class="deck">${left.map((k) => `<div class="pcard ${st.sel === k ? 'sel' : ''}" data-k="${k}" role="button" aria-label="Picture card">${s.ayat[k].scene.join('')}</div>`).join('')}</div>
+    <div class="deck">${left.map((k) => `<div class="pcard ${st.sel === k ? 'sel' : ''}" data-k="${k}" role="button" aria-label="Picture card">${pics(s.ayat[k])}</div>`).join('')}</div>
     ${st.say != null ? `<details class="adult"><summary>👁️ Grown-up check · āyah ${st.say + 1}</summary><div class="ar sm" lang="ar">${s.ayat[st.say].ar}</div></details>` : ''}
   </div>`;
   };
@@ -916,7 +1380,8 @@
       a = s.ayat[cur],
       nx = s.ayat[cur + 1];
     return `<div class="screen" style="${cv(s.color)}">
-    ${bar('What Comes Next?', `${s.name} · ${st.r + 1}/${st.rounds.length}`, 'part')}
+    ${bar('What Comes Next?', `${s.name} · round ${st.r + 1} of ${st.rounds.length}`, 'surah')}
+    ${heartsBar()}
     <div class="card">
       ${tag(s, cur)}
       ${sceneHTML(a, 'sm')}
@@ -929,74 +1394,88 @@
         <span class="ayah-tag"><span class="num">${cur + 2}</span>Yes! Now say it 🗣️</span>
         ${sceneHTML(nx, 'sm')}
         <div class="gest"><small>Do it</small>${nx.gesture}</div>
+        <div class="row"><button class="btn small hear" data-act="say" data-n="${s.n}" data-k="${cur + 1}">🔊 Hear āyah ${cur + 2}</button></div>
         <details class="adult"><summary>👁️ Grown-up check</summary><div class="ar sm" lang="ar">${nx.ar}</div></details>
       </div>
       <div class="row"><button class="btn go wide" data-act="nextround">${st.r + 1 < st.rounds.length ? 'Next round ➡️' : 'Finish 🎉'}</button></div>`
         : `<div class="qhead">🔮 Which picture comes <b>next</b>?</div>
-       <div class="opts">${st.opts.map((j) => `<button class="opt" data-act="guess" data-k="${j}">${s.ayat[j].scene.join('')}</button>`).join('')}</div>`
-    }
-  </div>`;
-  };
-
-  /* ---------- MYSTERY BOX ---------- */
-  function mysteryPool() {
-    const pool = [];
-    S.forEach((s, i) => {
-      const r = prog[s.n];
-      if (!r) return;
-      s.P.forEach((P, p) => {
-        if (r.parts[p] && r.parts[p].learn) range(P).forEach((k) => pool.push([i, k]));
-      });
-    });
-    if (pool.length < 4) S.slice(0, 6).forEach((s, i) => s.ayat.forEach((_, k) => pool.push([i, k])));
-    return pool;
-  }
-  V.mystery = () => {
-    const s = S[st.s],
-      a = s.ayat[st.a];
-    if (!st.open)
-      return `<div class="screen">
-    ${bar('Mystery Box', 'Pictures from sūrahs you have learned', 'home')}
-    ${coach('Open the box! Which sūrah does the picture come from? Then say the āyah!', '🎁')}
-    <button class="giftbox" data-act="openbox" aria-label="Open the mystery box">🎁</button>
-    <p class="foot" style="margin-top:0">Tap the box!</p></div>`;
-    return `<div class="screen" style="${cv(st.stage ? s.color : '#7c5cf0')}">
-    ${bar('Mystery Box', 'Pictures from sūrahs you have learned', 'home')}
-    <div class="card">${sceneHTML(a)}<div class="gest"><small>Do it</small>${a.gesture}</div></div>
-    ${
-      st.stage === 0
-        ? `
-      <div class="qhead">🏝️ Which sūrah is it from?</div>
-      <div class="isles">${st.choices
-        .map((i) => {
-          const x = S[i];
-          return `<button class="isle-pick" style="${cv(x.color)}" data-act="pickisle" data-i="${i}"><span class="i">${x.icon}</span>${x.name}</button>`;
-        })
-        .join('')}</div>`
-        : `
-      ${coach(`Yes! It's <b>${s.name}</b>, āyah ${st.a + 1}. Now say it! 🗣️`, s.icon)}
-      <details class="adult"><summary>👁️ Grown-up check</summary><div class="ar sm" lang="ar">${a.ar}</div></details>
-      <div class="row"><button class="btn gold wide" data-act="mystery">🎁 Another box</button></div>`
+       <div class="opts">${st.opts.map((j) => `<button class="opt" data-act="guess" data-k="${j}">${pics(s.ayat[j])}</button>`).join('')}</div>`
     }
   </div>`;
   };
 
   /* ---------- DONE ---------- */
+  function giftTier(g) {
+    if (!g) return 1;
+    return g.k === 'i' ? Math.max(1, ITEM[g.id].tier || 1) : 1;
+  }
   V.done = () => {
     const s = S[st.i];
     const plain = st.plain; // Word Steps keeps its celebration emoji-free
-    const stars = plain
-      ? `<span class="tstar">★</span>`.repeat(st.stars || 1)
-      : '<span>⭐</span>'.repeat(st.stars || 1);
+    const stars = plain ? `<span class="tstar">★</span>`.repeat(st.stars || 1) : '<span>⭐</span>'.repeat(st.stars || 1);
+    const prof = P();
+    const found = (st.found || [])
+      .map((id) => `<div class="found"><span class="fit">${ART.item(id)}</span><span>You found your <b>${ITEM[id].name}</b>!</span></div>`)
+      .join('');
+    const g = prof.pending[0];
     return `<div class="screen donescr" style="${cv(s.color)}">
     ${plain ? `<div class="medal"><span>★</span></div>` : `<div class="big">${st.big || '🎉'}</div>`}
     <h2>MāshāAllāh!</h2>
     <p>${st.msg}</p>
     <div class="trophy-stars">${stars}</div>
-    <div class="row" style="margin-top:24px">
+    ${st.memorized ? `<div class="memo">🏆 You memorized <b>${s.name}</b>!</div>` : ''}
+    ${found}
+    ${g ? `<button class="giftbtn" data-act="opengift">${ART.gift({ tier: giftTier(g), open: false, kind: g.k === 'i' ? 'item' : 'sticker' })}<b>${prof.pending.length > 1 ? prof.pending.length + ' gifts' : 'A gift'} for you!</b><small>Tap to open</small></button>` : ''}
+    <div class="row" style="margin-top:22px">
       ${st.nextAct ? `<button class="btn go wide" data-act="${st.nextAct}" ${st.nextL ? `data-l="${st.nextL}"` : ''} ${st.nextP != null ? `data-p="${st.nextP}"` : ''}>${st.nextLabel}</button>` : ''}
-      <button class="btn wide" data-act="back" data-to="${st.back || 'part'}">${plain ? 'Back' : '🏝️ Back'}</button>
+      <button class="btn wide" data-act="back" data-to="surah">🧭 Back to ${s.name}</button>
     </div>
+    <div class="row"><button class="btn small" data-act="back" data-to="map">🗺️ Map</button></div>
+  </div>`;
+  };
+
+  /* ---------- MY EXPLORER (wardrobe + collection) ---------- */
+  V.bag = () => {
+    const prof = P(),
+      tab = st.tab || 'look';
+    const tabs = ['look', ...SLOTS, 'stickers']
+      .map((t) => {
+        const ic = t === 'look' ? '🙂' : t === 'stickers' ? '⭐' : SLOT_INFO[t][0];
+        const nm = t === 'look' ? 'Me' : t === 'stickers' ? 'Stickers' : SLOT_INFO[t][1];
+        return `<button class="wtab ${tab === t ? 'on' : ''}" data-act="tab" data-t="${t}"><span>${ic}</span><small>${nm}</small></button>`;
+      })
+      .join('');
+    let body = '';
+    if (tab === 'look') body = lookControls(prof);
+    else if (tab === 'stickers') {
+      body = `<div class="sgrid">${ART.STICKERS.map((x) =>
+        prof.stickers.includes(x.id)
+          ? `<div class="scell">${ART.sticker(x.id)}<small>${x.name}</small></div>`
+          : `<div class="scell locked"><span class="q">?</span><small>A daily gift</small></div>`,
+      ).join('')}</div><p class="saveinfo center">Finish a game each day to get a new sticker. ${prof.stickers.length} of ${ART.STICKERS.length} collected.</p>`;
+    } else {
+      const list = ITEMS.filter((it) => it.slot === tab);
+      const worn = wornOutfit(prof)[tab];
+      body = `<div class="igrid">${list
+        .map((it) => {
+          const owned = !it.from || prof.items.includes(it.id);
+          const lost = prof.lost.find((x) => x.id === it.id);
+          const on = worn === it.id || (!worn && !it.from);
+          if (lost)
+            return `<button class="icell lost" data-act="goto" data-i="${BYN[lost.n].idx}"><span class="iart">${ART.item(it.id)}</span><span class="lostbadge">${ART.lostMarker()}</span><small>Lost at ${BYN[lost.n].name}!</small></button>`;
+          if (owned)
+            return `<button class="icell t${it.tier || 0} ${on ? 'on' : ''}" data-act="equip" data-id="${it.id}"><span class="iart">${ART.item(it.id)}</span><small>${it.name}</small></button>`;
+          return `<div class="icell locked"><span class="iart">${ART.silhouette(it.id)}</span><small>Memorize ${BYN[it.from].name}</small></div>`;
+        })
+        .join('')}</div>`;
+    }
+    const gifts = prof.pending.length;
+    return `<div class="screen">
+    ${bar('My Explorer', prof.name ? esc(prof.name) : 'Dress up and collect', 'map')}
+    <div class="wd-stage">${explorer({ view: st.backView ? 'back' : 'front' })}<button class="wd-turn" data-act="turn" aria-label="Turn around">↻</button></div>
+    ${gifts ? `<button class="giftbtn small" data-act="opengift">${ART.gift({ tier: giftTier(prof.pending[0]), open: false, kind: prof.pending[0].k === 'i' ? 'item' : 'sticker' })}<b>${gifts} gift${gifts > 1 ? 's' : ''} to open!</b></button>` : ''}
+    <div class="wtabs">${tabs}</div>
+    <div class="wbody">${body}</div>
   </div>`;
   };
 
@@ -1006,9 +1485,31 @@
       `<button class="toggle" data-act="tog" data-k="${k}"><span>${t}<small>${d}</small></span><span class="sw ${prefs[k] ? 'on' : ''}"></span></button>`;
     const seg = (k, opts) =>
       `<span class="seg">${opts.map(([v, l]) => `<button class="${prefs[k] === v ? 'on' : ''}" data-act="set" data-k="${k}" data-v="${v}">${l}</button>`).join('')}</span>`;
-    const ck = cookiesWork();
+    const prof = P();
+    const progress = S.map((s) => {
+      const got = surahStars(s),
+        max = surahMax(s),
+        done = surahDone(s);
+      return `<div class="prow ${done ? 'done' : got ? 'part' : ''}"><span class="pn">${s.n}</span><span class="pname">${s.name}${done ? ' ✓' : ''}</span>
+        <span class="pbar"><i style="width:${Math.round((got / max) * 100)}%"></i></span><span class="pst">${got}/${max} ⭐</span></div>`;
+    }).join('');
+    const doneCount = S.filter((s) => surahDone(s)).length;
+    const recs = RECITERS.map(
+      (r) =>
+        `<div class="recrow ${r.id === prefs.reciter ? 'on' : ''}"><button class="recpick" data-act="reciter" data-id="${r.id}"><span class="rdot"></span><span>${esc(r.name)}<small>${esc(r.note)}${r.mb ? ` · ${r.mb} MB` : ''}</small></span></button><button class="icon-btn sm" data-act="sample" data-id="${r.id}" aria-label="Hear a sample">${ICON.play}</button></div>`,
+    ).join('');
     return `<div class="screen">
-    ${bar('Grown-up Corner', `Settings · v${VERSION}`, 'home')}
+    ${bar('Grown-up Corner', `Settings · v${VERSION}`, st.back || 'splash')}
+    <div class="sheet">
+      <h3>🧒 Explorers</h3>
+      ${store.profiles
+        .map(
+          (p) =>
+            `<div class="setrow"><button class="profrow ${p.id === store.cur ? 'on' : ''}" data-act="pickprof" data-id="${p.id}"><span class="phead">${explorer({ view: 'front', cls: 'mini' }, p)}</span><span>${p.name ? esc(p.name) : 'Explorer'}<small>⭐ ${totalStars(p)} · ${S.filter((s) => surahDone(s, p)).length} memorized</small></span></button>${store.profiles.length > 1 ? `<button class="btn small danger" data-act="delprof" data-id="${p.id}">Remove</button>` : ''}</div>`,
+        )
+        .join('')}
+      <div class="setrow" style="justify-content:center"><button class="btn small" data-act="newprof">➕ Add another child</button></div>
+    </div>
     <div class="sheet">
       <h3>🎨 Look</h3>
       <div class="setrow"><span>Theme<small>Dim is gentle for bedtime</small></span>${seg('theme', [
@@ -1020,9 +1521,9 @@
       ${tg('translit', 'Show transliteration', "Latin letters, for helpers who can't read Arabic")}
     </div>
     <div class="sheet">
-      <h3>🔊 Sound</h3>
+      <h3>🔊 Recitation</h3>
       ${tg('audio', 'Listen button', 'The orange button at the top plays the reciter')}
-      <div class="setrow"><span>Reciter</span><span style="font-weight:800;text-align:right">Mishary Rashid Alafasy</span></div>
+      <div class="setrow col"><span>Reciter<small>Tap ▶ to hear a sample</small></span><div class="recs">${recs}</div></div>
       <div class="setrow"><span>Repeat each āyah<small>Hear it again and again</small></span>${seg('repeat', [
         [1, '1×'],
         [2, '2×'],
@@ -1032,58 +1533,73 @@
       ${tg('sfx', 'Game sounds', 'Pops, chimes and cheers')}
     </div>
     <div class="sheet">
-      <h3>💾 Progress</h3>
-      <p class="saveinfo">${ck ? 'Stars are saved automatically on this device, in this browser (cookies, with browser storage as a backup). Nothing is sent anywhere.' : 'Stars are saved automatically in this browser’s storage on this device. Nothing is sent anywhere.'}</p>
+      <h3>❤️ Game</h3>
+      ${tg('hearts', 'Hearts in review games', 'Three hearts; losing them all drops an item, which comes back after trying again')}
+    </div>
+    <div class="sheet">
+      <h3>💾 Progress${prof.name ? ` · ${esc(prof.name)}` : ''}</h3>
+      <p class="saveinfo">${doneCount} of ${S.length} sūrahs memorized · ⭐ ${totalStars()} of ${MAX_STARS} stars. Saved on this device only; nothing is sent anywhere.</p>
+      <div class="plist">${progress}</div>
       <div class="setrow"><select class="selbox" id="resetSel" style="max-width:none;flex:1">${S.map((s, i) => `<option value="${i}">${s.n}. ${s.name} (⭐ ${surahStars(s)})</option>`).join('')}</select>
         <button class="btn small" data-act="resetone">Reset</button></div>
-      <div class="setrow" style="justify-content:center"><button class="btn small danger" data-act="reset">🔄 Reset everything</button></div>
+      <div class="setrow" style="justify-content:center"><button class="btn small danger" data-act="reset">🔄 Reset this explorer</button></div>
     </div>
     ${offlineSheet()}
     <div class="sheet">
+      <h3>🧭 Version</h3>
+      <div class="setrow"><span>Little Hafiz Quest v${VERSION}<small>You can switch to the classic version any time</small></span><button class="btn small" data-act="versions">Change</button></div>
+    </div>
+    <div class="sheet">
       <h3>📖 How to use it</h3>
       <ol class="tips">
-        <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Finish a part before starting the next.</li>
-        <li><b>Look &amp; Repeat first.</b> You read, your child repeats 3 times while doing the action, then says it with only the picture. After each new āyah, chain from the start.</li>
-        <li><b>Word Steps for long āyāt.</b> Build the āyah one word at a time, always going back to the first word, then let them say it all while you reveal each word.</li>
-        <li><b>Fade the clues.</b> Stepping Stones Level 1 → 2 → 3 over a few days. Level 3 means it's memorized. Then do the 🏁 Whole sūrah stones.</li>
-        <li><b>Review</b> with the Puzzle, What Comes Next and the Mystery Box (it picks from parts you have learned).</li>
-        <li><b>5–10 minutes is plenty.</b> Stop while it's still fun; recite again at bedtime or in ṣalāh.</li>
+        <li><b>Follow the glowing step.</b> In each sūrah: 1 Look &amp; Repeat, 2 Word Steps, 3 Stepping Stones (levels 1 → 3), then the review games.</li>
+        <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Then do the 🏁 whole sūrah.</li>
+        <li><b>Memorized = Stepping Stones Level 3.</b> That opens the sūrah's gift for the explorer.</li>
+        <li><b>Revise any sūrah any time:</b> tap it on the map. In review games, tap “Not quite” when a mistake is made.</li>
+        <li><b>5–10 minutes a day is plenty.</b> Stop while it's still fun; recite again at bedtime or in ṣalāh.</li>
       </ol>
       <p class="saveinfo">The pictures are memory hooks only, not literal images of the meaning. The simple meanings are written for young children; check a full tafsīr for detail.</p>
+      <p class="saveinfo"><b>Please check the Qur'an text and recitation</b> against a trusted muṣḥaf or teacher. They come from public sources and are not guaranteed to be free of mistakes.</p>
     </div>
   </div>`;
   };
 
   /* ================= offline (service worker + saved recitations) ================= */
   const OFFLINE_OK = 'serviceWorker' in navigator && 'caches' in window && /^https?:$/.test(location.protocol);
-  const AUDIO_CACHE = 'lhq-audio-v1'; // must match sw.js
-  const AUDIO_FILES = Object.keys(AUDIO_SEGMENTS).map((n) => `${AUDIO_DIR}${pad(+n)}.mp3`);
-  let offline = { saved: null, busy: false, done: 0 };
+  const AUDIO_CACHE = 'lhq2-audio'; // must match sw.js
+  const audioFiles = (id) => {
+    const T = TIM[id];
+    const nums = T ? Object.keys(T) : ['1', ...S.map((s) => String(s.n))];
+    return [`audio/${id}/timings.json`, ...nums.map((n) => `audio/${id}/${pad(+n)}.mp3`)];
+  };
+  let offline = { saved: null, busy: false, done: 0, id: '' };
   function registerOffline() {
     if (!OFFLINE_OK) return;
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('sw.js').catch(() => {});
     });
   }
-  /* Count how many sūrah recitation files are already stored on this device. */
-  function countSavedAudio() {
+  function countSavedAudio(id) {
     if (!OFFLINE_OK) return Promise.resolve(0);
     return caches
       .open(AUDIO_CACHE)
-      .then((c) => Promise.all(AUDIO_FILES.map((u) => c.match(new URL(u, location.href).href))))
+      .then((c) => Promise.all(audioFiles(id).map((u) => c.match(new URL(u, location.href).href))))
       .then((list) => list.filter(Boolean).length)
       .catch(() => 0);
   }
-  /* Download every recitation file into the offline store, one at a time, showing progress. */
   function saveAllAudio() {
     if (!OFFLINE_OK || offline.busy) return;
+    const id = reciter().id;
     offline.busy = true;
     offline.done = 0;
+    offline.id = id;
     render();
-    caches
-      .open(AUDIO_CACHE)
+    loadTimings(id)
+      .catch(() => null)
+      .then(() => caches.open(AUDIO_CACHE))
       .then(async (cache) => {
-        for (const u of AUDIO_FILES) {
+        const files = audioFiles(id);
+        for (const u of files) {
           const href = new URL(u, location.href).href;
           if (!(await cache.match(href))) {
             const res = await fetch(href, { cache: 'no-cache' });
@@ -1092,12 +1608,12 @@
           }
           offline.done++;
           const el = document.getElementById('offlineProgress');
-          if (el) el.textContent = `${offline.done} of ${AUDIO_FILES.length}`;
+          if (el) el.textContent = `${offline.done} of ${files.length}`;
         }
       })
       .then(() => {
         offline.busy = false;
-        offline.saved = AUDIO_FILES.length;
+        offline.saved = audioFiles(id).length;
         toast('All recitations saved for offline use ✨');
         if (st.view === 'settings') render();
       })
@@ -1109,28 +1625,87 @@
       });
   }
   function offlineSheet() {
-    if (!OFFLINE_OK)
-      return `<div class="sheet"><h3>📶 Offline</h3><p class="saveinfo">Open the game from its web link to use it without internet.</p></div>`;
+    if (!OFFLINE_OK) return `<div class="sheet"><h3>📶 Offline</h3><p class="saveinfo">Open the game from its web link to use it without internet.</p></div>`;
+    const r = reciter();
+    if (offline.id !== r.id) {
+      offline.id = r.id;
+      offline.saved = null;
+    }
     if (offline.saved == null && !offline.busy)
-      countSavedAudio().then((n) => {
+      countSavedAudio(r.id).then((n) => {
         offline.saved = n;
         if (st.view === 'settings' && !offline.busy) render();
       });
-    const total = AUDIO_FILES.length,
+    const total = audioFiles(r.id).length,
       n = offline.saved || 0;
     const status = offline.busy
       ? `Saving… <b id="offlineProgress">${offline.done} of ${total}</b>`
       : n >= total
-        ? 'All recitations are saved. The game works without internet.'
-        : `${n} of ${total} sūrahs saved. The game itself already works offline.`;
+        ? `All of ${esc(r.name)}'s recitations are saved. The game works without internet.`
+        : `${n} of ${total} files saved for ${esc(r.name)}. The game itself already works offline.`;
     return `<div class="sheet"><h3>📶 Offline</h3>
     <p class="saveinfo">${status}</p>
-    ${offline.busy || n >= total ? '' : `<div class="setrow" style="justify-content:center"><button class="btn small" data-act="saveaudio">⬇️ Save all recitations (21 MB)</button></div>`}
+    ${offline.busy || n >= total ? '' : `<div class="setrow" style="justify-content:center"><button class="btn small" data-act="saveaudio">⬇️ Save all recitations${r.mb ? ` (${r.mb} MB)` : ''}</button></div>`}
   </div>`;
+  }
+
+  /* ================= versions ================= */
+  const CHANNEL_KEY = 'lhq_channel'; // read by js/boot.js before the page draws
+  function showVersions() {
+    const m = document.getElementById('modal');
+    const draw = (list) => {
+      m.innerHTML = `<div class="card verscard"><h3>Choose a version</h3>
+      <p class="saveinfo">The newest version is the default. Some families prefer the classic one; you can switch back any time.</p>
+      <div class="vlist">${list
+        .map(
+          (v) =>
+            `<button class="vrow ${v.id === 'latest' ? 'on' : ''}" data-act="pickver" data-v="${v.id}"><b>${esc(v.label)}</b><small>${esc(v.note || '')}</small></button>`,
+        )
+        .join('')}</div>
+      <div class="row"><button class="btn wide" data-act="cno">Close</button></div></div>`;
+      m.classList.add('show');
+    };
+    draw([{ id: 'latest', label: `v${VERSION} · latest`, note: 'The quest map, explorer and gifts' }]);
+    fetch('versions.json', { cache: 'no-cache' })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((j) => {
+        if (!j || !Array.isArray(j.versions) || !m.classList.contains('show') || !m.querySelector('.verscard')) return;
+        draw(
+          j.versions
+            .filter((v) => v && /^[a-z0-9-]{1,16}$/.test(v.id))
+            .map((v) => ({ id: v.id === j.latest ? 'latest' : v.id, label: String(v.label || v.id), note: String(v.note || '') })),
+        );
+      })
+      .catch(() => {});
+  }
+  function pickVersion(id) {
+    try {
+      if (id === 'latest') localStorage.removeItem(CHANNEL_KEY);
+      else localStorage.setItem(CHANNEL_KEY, id);
+    } catch (e) {}
+    if (id === 'latest') {
+      document.getElementById('modal').classList.remove('show');
+      toast(`You're on the latest version (v${VERSION})`);
+      return;
+    }
+    location.href = id + '/';
   }
 
   /* ================= actions ================= */
   function finish(extra) {
+    const s = S[st.i];
+    const prof = P();
+    // lost items at this sūrah come back after finishing a review game here
+    if (['path', 'order', 'next'].includes(st.view)) {
+      const back = prof.lost.filter((x) => x.n === s.n).map((x) => x.id);
+      if (back.length) {
+        prof.lost = prof.lost.filter((x) => x.n !== s.n);
+        extra.found = back;
+      }
+    }
+    if (surahDone(s) && giveSurahGift(s)) extra.memorized = true;
+    giveDailyGift();
+    save();
     if (extra.plain) bigParty(['★', '✦', '●']);
     else bigParty();
     stopAudio();
@@ -1147,31 +1722,115 @@
   }
   function showBism() {
     const m = document.getElementById('modal');
-    m.innerHTML = `<div class="card">
+    m.innerHTML = `<div class="card bismcard">
     <div style="font-size:54px" class="bob">🌙</div>
     <div class="ar-label">Begin every sūrah with</div>
     <div class="ar" lang="ar">${BISM}</div>
     ${prefs.translit ? '<div class="tr">Bismillāhir-raḥmānir-raḥīm</div>' : ''}
     ${prefs.meaning ? '<div class="mean">💬 In the name of Allah, the Most Kind, the Most Merciful</div>' : ''}
-    <div class="row"><button class="btn ghost small" data-act="bismplay">🔊 Hear it</button><button class="btn go" data-act="closemodal">Bismillah! ✨</button></div>
+    <div class="row"><button class="btn small" data-act="bismplay">🔊 Hear it</button><button class="btn go" data-act="closemodal">Bismillah! ✨</button></div>
   </div>`;
     m.classList.add('show');
   }
+  function showProfiles() {
+    const m = document.getElementById('modal');
+    m.innerHTML = `<div class="card profcard"><h3>Who's exploring today?</h3>
+    <div class="plistm">${store.profiles
+      .map(
+        (p) =>
+          `<button class="profpick ${p.id === store.cur ? 'on' : ''}" data-act="pickprof" data-id="${p.id}" data-go="1"><span class="phead">${explorer({ view: 'front', cls: 'mini' }, p)}</span><b>${p.name ? esc(p.name) : 'Explorer'}</b><small>⭐ ${totalStars(p)}</small></button>`,
+      )
+      .join('')}
+      ${store.profiles.length < 8 ? '<button class="profpick add" data-act="newprof"><span class="phead">➕</span><b>New explorer</b><small>for another child</small></button>' : ''}</div>
+    <div class="row"><button class="btn wide" data-act="cno">Close</button></div></div>`;
+    m.classList.add('show');
+  }
+  /* open the first waiting gift: a wobbling box, tap, it pops open */
+  function showGift() {
+    const g = P().pending[0];
+    if (!g) return;
+    const m = document.getElementById('modal');
+    m.innerHTML = `<div class="card giftcard"><button class="gbox" data-act="giftpop" aria-label="Open the gift">${ART.gift({ tier: giftTier(g), open: false, kind: g.k === 'i' ? 'item' : 'sticker' })}</button><p class="gtap">Tap the gift!</p></div>`;
+    m.classList.add('show');
+  }
+  function popGift() {
+    const prof = P(),
+      g = prof.pending.shift();
+    if (!g) return;
+    let art, name, sub, wear;
+    if (g.k === 'i') {
+      const it = ITEM[g.id];
+      if (!prof.items.includes(g.id)) prof.items.push(g.id);
+      art = ART.item(g.id);
+      name = it.name;
+      sub = TIER_LABEL[it.tier || 1] + ` From ${BYN[it.from].name}.`;
+      wear = true;
+    } else {
+      if (!prof.stickers.includes(g.id)) prof.stickers.push(g.id);
+      art = ART.sticker(g.id);
+      name = STICKER[g.id].name + ' sticker';
+      sub = 'For your sticker book! Come back tomorrow for another.';
+    }
+    save();
+    sfx.open();
+    const m = document.getElementById('modal');
+    const more = prof.pending.length;
+    m.innerHTML = `<div class="card giftcard open"><div class="grays"></div><div class="gopen">${ART.gift({ tier: giftTier(g), open: true, kind: g.k === 'i' ? 'item' : 'sticker' })}</div>
+      <div class="gitem">${art}</div><h3>${name}</h3><p class="saveinfo">${sub}</p>
+      <div class="row">${wear ? `<button class="btn go wide" data-act="wear" data-id="${g.id}">👕 Wear it!</button>` : ''}<button class="btn wide" data-act="giftok">${more ? `Next (${more}) ›` : 'Yay! ✨'}</button></div></div>`;
+    setTimeout(() => burstAt(m.querySelector('.gitem'), 26, ['🎉', '⭐', '✨', '🎈']), 120);
+  }
   function nextSuggestion(s, p) {
     if (p === 'all') return {};
-    if (multi(s) && p + 1 < s.P.length)
-      return { nextAct: 'part', nextP: p + 1, nextLabel: `Next checkpoint 🚩 ${p + 2}` };
+    if (multi(s) && p + 1 < s.P.length) return { nextAct: 'part', nextP: p + 1, nextLabel: `Next checkpoint 🚩 ${p + 2}` };
     if (multi(s)) return { nextAct: 'pathpick', nextP: 'all', nextLabel: '🏁 Whole sūrah stones' };
     return {};
   }
+  function startPath(L) {
+    sfx.tap();
+    go('path', { i: st.i, p: st.p != null ? st.p : 0, L, k: 0, hint: 0, hints: 0, hearts: 3, help: false });
+  }
+  function startOrder() {
+    sfx.tap();
+    const p = pnum(st.p);
+    st.p = p;
+    const idx = range(ctx());
+    let deck = shuffle(idx);
+    while (idx.length > 1 && deck.every((v, j) => v === idx[j])) deck = shuffle(idx);
+    go('order', { i: st.i, p, deck, placed: {}, say: null, sel: null, hearts: 3 });
+  }
+  function startNext() {
+    sfx.tap();
+    const s = S[st.i];
+    const p = pnum(st.p);
+    st.p = p;
+    const c = ctx();
+    let rounds = range(c).slice(0, -1);
+    if (p > 0) rounds.unshift(c.from - 1); // link from the previous part
+    if (!rounds.length) rounds = [c.from]; // a one-āyah part still gets one round (into the next part)
+    rounds = shuffle(rounds.filter((k) => k + 1 < s.ayat.length));
+    go('next', { i: st.i, p, rounds, r: 0, picked: false, opts: makeOpts(s, rounds[0], c), hearts: 3 });
+  }
+  function toSurah() {
+    go('surah', { i: st.i, p: st.p == null ? 0 : st.p });
+  }
+
+  document.addEventListener('input', (e) => {
+    if (e.target && e.target.id === 'exname') {
+      P().name = e.target.value.replace(/[\u0000-\u001f<>]/g, '').slice(0, 16);
+      save();
+    }
+  });
 
   document.addEventListener('click', (e) => {
     const m = document.getElementById('modal');
     if (e.target === m) {
+      if (m.querySelector('.dropcard')) return; // must press "Try again"
       pendingYes = null;
       m.classList.remove('show');
       return;
     }
+    if (document.body.classList.contains('busy')) return; // the explorer is walking
     if (!window.PointerEvent && st.view === 'order') {
       const pc = e.target.closest('.pcard');
       if (pc) {
@@ -1187,27 +1846,183 @@
     const act = b.dataset.act,
       s = S[st.i];
     switch (act) {
-      case 'surah':
-        sfx.tap();
-        go('hub', { i: +b.dataset.i });
-        break;
-      case 'world': {
-        const el = document.getElementById('w' + b.dataset.w);
-        if (el) el.scrollIntoView({ behavior: reduceMotion ? 'auto' : 'smooth' });
+      /* splash, explorers, map */
+      case 'begin': {
+        sfx.chime();
+        const prof = P();
+        if (!prof.made) {
+          go('create', { first: true });
+          break;
+        }
+        const sp = $app.querySelector('.splash');
+        if (sp && !reduceMotion) {
+          sp.classList.add('leaving');
+          setTimeout(() => go('map'), 520);
+        } else go('map');
         break;
       }
+      case 'home':
+        sfx.tap();
+        go('splash');
+        break;
+      case 'profiles':
+        sfx.tap();
+        showProfiles();
+        break;
+      case 'pickprof': {
+        sfx.tap();
+        store.cur = b.dataset.id;
+        save();
+        m.classList.remove('show');
+        if (st.view === 'settings') render();
+        else go('splash');
+        break;
+      }
+      case 'newprof': {
+        sfx.tap();
+        if (store.profiles.length >= 8) break;
+        const p = newProfile();
+        store.profiles.push(p);
+        store.cur = p.id;
+        save();
+        m.classList.remove('show');
+        go('create', { first: true });
+        break;
+      }
+      case 'delprof': {
+        const p = store.profiles.find((x) => x.id === b.dataset.id);
+        if (!p) break;
+        askConfirm(`Remove ${p.name ? esc(p.name) : 'this explorer'} and all their stars and treasures?`, 'Remove', () => {
+          store.profiles = store.profiles.filter((x) => x.id !== p.id);
+          if (store.cur === p.id) store.cur = store.profiles[0].id;
+          save();
+          render();
+        });
+        break;
+      }
+      case 'look': {
+        sfx.tap();
+        const L = P().look,
+          k = b.dataset.k;
+        L[k] = k === 'hair' ? b.dataset.v : +b.dataset.v;
+        save();
+        const y = scrollY;
+        render();
+        scrollTo(0, y);
+        break;
+      }
+      case 'made': {
+        sfx.chime();
+        P().made = true;
+        save();
+        go(st.first ? 'map' : 'bag', st.first ? {} : { tab: 'look' });
+        break;
+      }
+      case 'surah':
+        if (st.view === 'map') enterSurah(+b.dataset.i);
+        else openSurah(+b.dataset.i);
+        break;
+      case 'goto':
+        sfx.tap();
+        P().at = +b.dataset.i;
+        save();
+        go('map');
+        break;
+      case 'world':
+        if (mapCtl) mapCtl.scrollToWorld(+b.dataset.w);
+        break;
+      case 'bag':
+        sfx.tap();
+        go('bag', { tab: 'look' });
+        break;
+      case 'tab':
+        sfx.tap();
+        st.tab = b.dataset.t;
+        render();
+        break;
+      case 'turn':
+        sfx.tap();
+        st.backView = !st.backView;
+        render();
+        break;
+      case 'equip': {
+        const id = b.dataset.id,
+          it = ITEM[id];
+        if (!it) break;
+        sfx.pop();
+        const o = P().outfit;
+        if (!it.from || o[it.slot] === id) delete o[it.slot];
+        else o[it.slot] = id;
+        save();
+        const y = scrollY;
+        render();
+        scrollTo(0, y);
+        burstAt($app.querySelector('.wd-stage'), 10, ['✨', '⭐']);
+        break;
+      }
+      case 'opengift':
+        sfx.tap();
+        showGift();
+        break;
+      case 'giftpop':
+        popGift();
+        break;
+      case 'wear': {
+        const it = ITEM[b.dataset.id];
+        if (it) {
+          P().outfit[it.slot] = it.id;
+          save();
+        }
+        sfx.chime();
+        if (P().pending.length) showGift();
+        else {
+          m.classList.remove('show');
+          go('bag', { tab: it ? it.slot : 'look' });
+        }
+        break;
+      }
+      case 'giftok':
+        sfx.tap();
+        if (P().pending.length) showGift();
+        else {
+          m.classList.remove('show');
+          render();
+        }
+        break;
+      case 'versions':
+        sfx.tap();
+        showVersions();
+        break;
+      case 'pickver':
+        pickVersion(b.dataset.v);
+        break;
+
+      /* sūrah */
       case 'part':
         sfx.tap();
-        go('part', { i: st.i, p: +b.dataset.p });
+        if (st.view !== 'surah') {
+          go('surah', { i: st.i, p: b.dataset.p === 'all' ? 'all' : +b.dataset.p });
+          break;
+        }
+        st.p = b.dataset.p === 'all' ? 'all' : +b.dataset.p;
+        st.enter = false;
+        render();
         break;
+      case 'toy': {
+        const kind = s && s.toy ? s.toy[1] : 'chime';
+        (sfx[kind] || sfx.chime)();
+        burstAt(b, 8, [s && s.toy ? s.toy[0] : '✨', '✨']);
+        wobble(b);
+        break;
+      }
       case 'back': {
         sfx.tap();
         stopAudio();
         const to = b.dataset.to;
-        if (to === 'home') go('home');
-        else if (to === 'hub') toHub();
+        if (to === 'map') go('map');
+        else if (to === 'splash') go('splash');
         else if (to === 'pathpick') go('pathpick', { i: st.i, p: st.p });
-        else toPart();
+        else toSurah();
         break;
       }
       case 'bism':
@@ -1215,7 +2030,7 @@
         showBism();
         break;
       case 'bismplay':
-        playList([[1, 1]]);
+        playList([[1, 1]], { once: true });
         break;
       case 'closemodal':
         sfx.chime();
@@ -1224,7 +2039,7 @@
         break;
       case 'settings':
         sfx.tap();
-        go('settings');
+        go('settings', { back: st.view === 'map' ? 'map' : 'splash' });
         break;
       case 'tog':
         prefs[b.dataset.k] = !prefs[b.dataset.k];
@@ -1242,12 +2057,24 @@
         render();
         break;
       }
+      case 'reciter':
+        sfx.tap();
+        stopAudio();
+        prefs.reciter = b.dataset.id;
+        save();
+        loadTimings(prefs.reciter).catch(() => {});
+        render();
+        break;
+      case 'sample':
+        if (RECITERS.some((r) => r.id === b.dataset.id)) playList([[1, 1]], { once: true, reciter: b.dataset.id });
+        break;
       case 'saveaudio':
         saveAllAudio();
         break;
       case 'reset':
-        askConfirm('Reset all stars for every sūrah?', 'Reset everything', function () {
-          prog = {};
+        askConfirm(`Reset all stars for ${P().name ? esc(P().name) : 'this explorer'}? Treasures already found stay.`, 'Reset stars', function () {
+          P().prog = {};
+          P().lost = [];
           save();
           toast('All stars reset ✨');
           render();
@@ -1257,7 +2084,7 @@
         const i = +document.getElementById('resetSel').value;
         const x = S[i];
         askConfirm(`Reset the stars for ${x.name}?`, 'Reset', function () {
-          delete prog[x.n];
+          delete P().prog[x.n];
           save();
           toast(`${x.name} reset ✨`);
           render();
@@ -1275,6 +2102,13 @@
         pendingYes = null;
         m.classList.remove('show');
         break;
+      case 'retry': {
+        m.classList.remove('show');
+        const r = pendingRestart;
+        pendingRestart = null;
+        if (r) restartActivity(r);
+        break;
+      }
 
       /* listening */
       case 'fab': {
@@ -1289,6 +2123,10 @@
       case 'say':
         playList([[+b.dataset.n, +b.dataset.k + 1]]);
         break;
+      case 'sayw':
+        playList([[+b.dataset.n, +b.dataset.k + 1, +b.dataset.w]]);
+        wobble(b);
+        break;
 
       /* look & repeat */
       case 'learn': {
@@ -1297,7 +2135,7 @@
           p = st.p;
         if (a != null) p = partOf(s, a);
         else {
-          if (p == null || p === 'all') p = 0;
+          p = pnum(p);
           a = s.P[p].from;
         }
         go('learn', { i: st.i, p, a, phase: 'repeat', popped: [false, false, false], peek: false, chain: 0 });
@@ -1355,8 +2193,7 @@
       /* word steps */
       case 'words': {
         sfx.tap();
-        const c = ctx();
-        const p = st.p == null || st.p === 'all' ? 0 : st.p;
+        const p = pnum(st.p);
         go('words', { i: st.i, p, a: s.P[p].from, w: 1, phase: 'build', shown: [], doneA: [] });
         break;
       }
@@ -1373,11 +2210,8 @@
       case 'wbead': {
         const j = +b.dataset.j;
         sfx.tap();
-        if (st.phase === 'build') {
-          st.w = j + 1;
-        } else if (!st.shown.includes(j)) {
-          st.shown.push(j);
-        }
+        if (st.phase === 'build') st.w = j + 1;
+        else if (!st.shown.includes(j)) st.shown.push(j);
         render();
         break;
       }
@@ -1461,8 +2295,7 @@
         });
         break;
       case 'path':
-        sfx.tap();
-        go('path', { i: st.i, p: st.p != null ? st.p : 0, L: +b.dataset.l, k: 0, hint: 0, hints: 0 });
+        startPath(+b.dataset.l);
         break;
       case 'hint':
         sfx.tap();
@@ -1470,37 +2303,35 @@
         st.hints++;
         render();
         break;
+      case 'phelp':
+        sfx.tap();
+        st.help = !st.help;
+        render();
+        break;
+      case 'oops':
+        if (loseHeart() && st.hearts > 0) {
+          st.help = true;
+          setTimeout(() => {
+            if (st.view === 'path' && st.hearts > 0) render();
+          }, 500);
+        }
+        break;
       case 'hop':
         hopFrog();
         break;
 
       /* puzzle */
-      case 'order': {
-        sfx.tap();
-        const p = st.p == null || st.p === 'all' ? 0 : st.p;
-        st.p = p;
-        const idx = range(ctx());
-        let deck = shuffle(idx);
-        while (idx.length > 1 && deck.every((v, j) => v === idx[j])) deck = shuffle(idx);
-        go('order', { i: st.i, p, deck, placed: {}, say: null, sel: null });
+      case 'order':
+        startOrder();
         break;
-      }
       case 'slot':
         if (st.sel != null) tryPlace(st.sel, +b.dataset.j, b);
         break;
 
       /* what comes next */
-      case 'next': {
-        sfx.tap();
-        const p = st.p == null || st.p === 'all' ? 0 : st.p;
-        st.p = p;
-        const c = ctx();
-        let rounds = range(c).slice(0, -1);
-        if (p > 0) rounds.unshift(c.from - 1); // link from the previous part
-        rounds = shuffle(rounds);
-        go('next', { i: st.i, p, rounds, r: 0, picked: false, opts: makeOpts(s, rounds[0], c) });
+      case 'next':
+        startNext();
         break;
-      }
       case 'guess': {
         const j = +b.dataset.k,
           cur = st.rounds[st.r];
@@ -1515,6 +2346,7 @@
         } else {
           sfx.boop();
           wobble(b);
+          loseHeart();
         }
         break;
       }
@@ -1532,37 +2364,6 @@
         }
         break;
       }
-
-      /* mystery box */
-      case 'mystery': {
-        sfx.tap();
-        const pool = mysteryPool(),
-          [si, a] = pool[(Math.random() * pool.length) | 0];
-        const others = shuffle(
-          [...new Set(pool.map((x) => x[0]).concat([0, 1, 2, 3, 4, 5]))].filter((x) => x !== si),
-        ).slice(0, 3);
-        go('mystery', { i: si, s: si, a, open: false, stage: 0, choices: shuffle([si, ...others]) });
-        break;
-      }
-      case 'openbox':
-        sfx.open();
-        burstAt(b, 26, ['🎉', '⭐', '✨', '🎈']);
-        setTimeout(() => {
-          st.open = true;
-          render();
-        }, 350);
-        break;
-      case 'pickisle':
-        if (+b.dataset.i === st.s || S[+b.dataset.i].ayat.some((x) => sceneKey(x) === sceneKey(S[st.s].ayat[st.a]))) {
-          sfx.chime();
-          burstAt(b, 18);
-          st.stage = 1;
-          render();
-        } else {
-          sfx.boop();
-          wobble(b);
-        }
-        break;
     }
   });
 
@@ -1584,7 +2385,7 @@
         msg: `You said ${multi(s) ? partLabel(s, st.p).toLowerCase() + ' of ' : 'all of '}${s.name} with the pictures!`,
         stars: 1,
         nextAct: 'words',
-        nextLabel: 'Try Word Steps ›',
+        nextLabel: 'Next: Word Steps ›',
       });
     }
   }
@@ -1618,11 +2419,7 @@
           r.path = Math.max(r.path || 0, st.L);
         }
         save();
-        const where = all
-          ? `the whole of ${s.name}`
-          : multi(s)
-            ? `${partLabel(s, st.p).toLowerCase()} of ${s.name}`
-            : s.name;
+        const where = all ? `the whole of ${s.name}` : multi(s) ? `${partLabel(s, st.p).toLowerCase()} of ${s.name}` : s.name;
         const msgs = [
           `You hopped across ${where} with pictures and first words!`,
           `You hopped across ${where} with only pictures!`,
@@ -1633,15 +2430,14 @@
         else if (!all) nx = { nextAct: 'order', nextLabel: 'Picture Puzzle 🧩' };
         finish({
           big: st.L === 3 ? '🧠' : '🐸',
-          msg:
-            msgs[st.L - 1] + (st.hints ? ` (${st.hints} little help${st.hints > 1 ? 's' : ''})` : ' No help needed!'),
+          msg: msgs[st.L - 1] + (st.hints ? ` (${st.hints} little help${st.hints > 1 ? 's' : ''})` : ' No help needed!'),
           stars: st.L,
-          back: all ? 'hub' : 'part',
           ...nx,
         });
       } else {
         st.k++;
         st.hint = 0;
+        st.help = false;
         render();
       }
     };
@@ -1650,12 +2446,10 @@
       return;
     }
     const a = cur.getBoundingClientRect(),
-      target = next
-        ? next.getBoundingClientRect()
-        : { left: a.left + 70, top: a.top + 40, width: a.width, height: a.height };
+      target = next ? next.getBoundingClientRect() : { left: a.left + 70, top: a.top + 40, width: a.width, height: a.height };
     const f = document.createElement('div');
     f.className = 'flyfrog';
-    f.textContent = '🐸';
+    f.innerHTML = ART.frog();
     f.style.left = a.left + a.width / 2 + 'px';
     f.style.top = a.top + a.height / 2 + 'px';
     document.body.appendChild(f);
@@ -1664,19 +2458,9 @@
       dy = target.top + target.height / 2 - (a.top + a.height / 2);
     const anim = f.animate(
       [
-        { transform: 'translate(-50%,-50%) translate(0px,0px) scale(1) rotate(0deg)' },
-        {
-          transform:
-            'translate(-50%,-50%) translate(' +
-            Math.round(dx / 2) +
-            'px,' +
-            Math.round(dy / 2 - 70) +
-            'px) scale(1.35) rotate(-12deg)',
-        },
-        {
-          transform:
-            'translate(-50%,-50%) translate(' + Math.round(dx) + 'px,' + Math.round(dy) + 'px) scale(1) rotate(0deg)',
-        },
+        { transform: 'translate(-50%,-60%) translate(0px,0px) scale(1) rotate(0deg)' },
+        { transform: 'translate(-50%,-60%) translate(' + Math.round(dx / 2) + 'px,' + Math.round(dy / 2 - 70) + 'px) scale(1.35) rotate(-12deg)' },
+        { transform: 'translate(-50%,-60%) translate(' + Math.round(dx) + 'px,' + Math.round(dy) + 'px) scale(1) rotate(0deg)' },
       ],
       { duration: 520, easing: 'ease-in-out' },
     );
@@ -1731,7 +2515,7 @@
     } else {
       sfx.boop();
       wobble(slotEl);
-      toast('Not that one — try another number!');
+      if (!loseHeart()) toast('Not that one. Try another number!');
     }
   }
   document.addEventListener('pointerdown', (e) => {
@@ -1740,16 +2524,7 @@
     if (!c) return;
     e.preventDefault();
     const r = c.getBoundingClientRect();
-    drag = {
-      el: c,
-      k: +c.dataset.k,
-      x0: e.clientX,
-      y0: e.clientY,
-      offX: e.clientX - r.left,
-      offY: e.clientY - r.top,
-      moved: false,
-      ghost: null,
-    };
+    drag = { el: c, k: +c.dataset.k, x0: e.clientX, y0: e.clientY, offX: e.clientX - r.left, offY: e.clientY - r.top, moved: false, ghost: null };
   });
   document.addEventListener(
     'pointermove',
@@ -1760,7 +2535,7 @@
         drag.moved = true;
         sfx.tap();
         const g = drag.el.cloneNode(true);
-        g.classList.add('ghost');
+        g.classList.add('drag-ghost');
         g.classList.remove('sel');
         g.style.width = drag.el.offsetWidth + 'px';
         g.style.margin = '0';
@@ -1798,6 +2573,18 @@
   document.addEventListener('pointerup', (e) => endDrag(e, false));
   document.addEventListener('pointercancel', (e) => endDrag(e, true));
 
+  /* follow the device's light/dark setting while on "Auto" */
+  if (darkMQ && darkMQ.addEventListener)
+    darkMQ.addEventListener('change', () => {
+      if (prefs.theme === 'auto' && st.view !== 'map') render();
+    });
+
+  /* ================= start ================= */
+  loadAll();
+  applyTheme();
+  document.getElementById('defs').innerHTML = ART.defs();
   render();
+  loadReciters().then(() => loadTimings(reciter().id).catch(() => {}));
   registerOffline();
+  window.__lhq = { st: () => st, store: () => store, go, player }; // for testing in the browser console
 })();

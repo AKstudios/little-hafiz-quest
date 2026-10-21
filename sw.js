@@ -2,8 +2,10 @@
  * Little Hafiz Quest: service worker (offline support)
  * ====================================================
  * - On install, stores the app itself (page, styles, scripts, data, fonts, icons) so it opens without internet.
- * - Recitation files (audio/*.mp3, one per sūrah) are stored the first time they play,
- *   or all at once from the Grown-up Corner ("Save all recitations").
+ * - Recitation files (audio/<reciter>/NNN.mp3, one per sūrah, plus that reciter's timings.json) are stored
+ *   the first time they play, or all at once from the Grown-up Corner ("Save all recitations").
+ * - Older versions live in their own folders (v1/ …) with their own service worker. This one leaves
+ *   their requests alone, and uses cache names they never touch ("lhq2-…").
  * - Audio players ask for byte ranges (to jump to an āyah). Safari requires a proper "206 Partial Content"
  *   answer, so ranges are cut from the stored file here.
  * - Only this site's own files are handled; nothing else is requested or stored.
@@ -12,16 +14,23 @@
  */
 'use strict';
 
-const VERSION = '1.2.0';
-const SHELL_CACHE = `lhq-shell-${VERSION}`;
-const AUDIO_CACHE = 'lhq-audio-v1'; // keep across app updates; change only if the audio files change
+const VERSION = '2.0.0';
+const SHELL_CACHE = `lhq2-shell-${VERSION}`;
+const AUDIO_CACHE = 'lhq2-audio'; // keep across app updates; change only if the audio files change
+const DATA_CACHE = 'lhq2-data'; // small lists that can change between versions (reciters, versions)
+// caches left by v1.x when it lived at this address (v1 now has its own folder and cache names)
+const LEGACY = (k) => k === 'lhq-audio-v1' || k.startsWith('lhq-shell-');
 
 const SHELL_FILES = [
   './',
   './index.html',
   './css/game.css',
+  './js/boot.js',
   './js/data.js',
+  './js/art.js',
+  './js/map.js',
   './js/game.js',
+  './css/art.css',
   './manifest.webmanifest',
   './fonts/amiri-quran.woff2',
   './fonts/baloo-2-latin.woff2',
@@ -45,7 +54,7 @@ self.addEventListener('activate', (event) => {
     caches
       .keys()
       .then((keys) =>
-        Promise.all(keys.filter((k) => k.startsWith('lhq-shell-') && k !== SHELL_CACHE).map((k) => caches.delete(k))),
+        Promise.all(keys.filter((k) => (k.startsWith('lhq2-shell-') && k !== SHELL_CACHE) || LEGACY(k)).map((k) => caches.delete(k))),
       )
       .then(() => self.clients.claim()),
   );
@@ -56,9 +65,20 @@ self.addEventListener('fetch', (event) => {
   if (req.method !== 'GET') return;
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return; // never touch other sites
+  const scope = new URL(self.registration.scope).pathname;
+  if (!url.pathname.startsWith(scope) || /^v\d+\//.test(url.pathname.slice(scope.length))) return; // older versions
 
-  if (/\/audio\/\d{3}\.mp3$/.test(url.pathname)) {
+  if (/\/audio\/[a-z0-9-]+\/\d{3}\.mp3$/.test(url.pathname)) {
     event.respondWith(audioResponse(event, url));
+    return;
+  }
+  if (/\/audio\/[a-z0-9-]+\/timings\.json$/.test(url.pathname)) {
+    // timings belong with their recitation: keep them in the audio store
+    event.respondWith(storeFirst(AUDIO_CACHE, req));
+    return;
+  }
+  if (/\/(versions|audio\/reciters)\.json$/.test(url.pathname)) {
+    event.respondWith(networkFirst(req));
     return;
   }
 
@@ -71,6 +91,30 @@ self.addEventListener('fetch', (event) => {
 
   event.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req)));
 });
+
+/* answer from the store, or fetch and store (used for files that never change for a given version) */
+async function storeFirst(name, req) {
+  const cache = await caches.open(name);
+  const key = new URL(req.url).origin + new URL(req.url).pathname;
+  const hit = await cache.match(key);
+  if (hit) return hit;
+  const res = await fetch(req);
+  if (res.ok && res.status === 200) cache.put(key, res.clone());
+  return res;
+}
+/* try the network first (fresh lists), fall back to the last stored copy when offline */
+async function networkFirst(req) {
+  const cache = await caches.open(DATA_CACHE);
+  try {
+    const res = await fetch(req, { cache: 'no-cache' });
+    if (res.ok) cache.put(req.url.split('?')[0], res.clone());
+    return res;
+  } catch (e) {
+    const hit = await cache.match(req.url.split('?')[0]);
+    if (hit) return hit;
+    throw e;
+  }
+}
 
 function cachedIndex() {
   return caches.open(SHELL_CACHE).then((cache) => cache.match('./index.html'));

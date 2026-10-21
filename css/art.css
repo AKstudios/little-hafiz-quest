@@ -1,0 +1,394 @@
+/*
+ * Little Hafiz Quest: art animations (goes with js/art.js)
+ * ========================================================
+ * Only transform and opacity are animated. Every picture from LHQ_ART carries the class "lhq-art",
+ * and prefers-reduced-motion stops all of it (see the end of this file).
+ *
+ * Explorer (<svg class="ex ex-front|ex-back [walk]">)
+ *   idle: breathing (.ex-body), head tilt (.ex-head), blink (.ex-eyes), cape flutter (.ex-cape), pet hop (.ex-pet)
+ *   .walk: stepping legs (.ex-leg-l/.ex-leg-r), swinging arms (.ex-arm-l/.ex-arm-r), body bob
+ * Tier effects: .lhq-glint (tier 2 shine), .lhq-sweep (icon shine sweep), .lhq-tw (tier 3-4 twinkles), .lhq-aura (tier 4 glow)
+ * Props: .pr-sway (grass, trees), .pr-flap (wings), .pr-bob (floating things), .pr-glow (lights)
+ */
+.lhq-art {
+  overflow: visible;
+}
+svg.lhq-art {
+  display: block;
+}
+
+/* ---------- explorer: idle ---------- */
+.ex .ex-body {
+  animation: lhq-breathe 3.4s ease-in-out infinite;
+}
+.ex .ex-head {
+  transform-origin: 92px 152px;
+  animation: lhq-tilt 6.8s ease-in-out infinite;
+}
+.ex .ex-eyes,
+.lhq-blink {
+  transform-box: fill-box;
+  transform-origin: 50% 55%;
+  animation: lhq-blink 4.6s infinite;
+}
+.ex .ex-cape {
+  transform-origin: 92px 156px;
+  animation: lhq-cape 3.2s ease-in-out infinite;
+}
+.ex .ex-pet {
+  transform-origin: 164px 291px;
+  animation: lhq-pethop 2.8s ease-in-out infinite;
+}
+.ex-front .ex-arm-r,
+.ex-back .ex-arm-l {
+  transform-origin: 66px 163px;
+}
+.ex-front .ex-arm-l,
+.ex-back .ex-arm-r {
+  transform-origin: 118px 163px;
+}
+.lhq-hover {
+  animation: lhq-hover 2.4s ease-in-out infinite;
+}
+.lhq-flap {
+  transform-box: fill-box;
+  transform-origin: 100% 60%;
+  animation: lhq-flap 0.42s ease-in-out infinite alternate;
+}
+.lhq-wing-l {
+  transform-box: fill-box;
+  transform-origin: 100% 60%;
+  animation: lhq-wing 2.8s ease-in-out infinite;
+}
+
+@keyframes lhq-breathe {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-1.6px); }
+}
+@keyframes lhq-tilt {
+  0%, 100% { transform: rotate(0deg); }
+  30% { transform: rotate(-1.6deg); }
+  70% { transform: rotate(1.4deg); }
+}
+@keyframes lhq-blink {
+  0%, 92%, 100% { transform: scaleY(1); }
+  95% { transform: scaleY(0.1); }
+}
+@keyframes lhq-cape {
+  0%, 100% { transform: skewX(0deg) scaleX(1); }
+  50% { transform: skewX(-2.4deg) scaleX(1.03); }
+}
+@keyframes lhq-pethop {
+  0%, 62%, 100% { transform: translateY(0) scale(1, 1); }
+  70% { transform: translateY(0) scale(1.06, 0.93); }
+  80% { transform: translateY(-9px) scale(0.97, 1.04); }
+  90% { transform: translateY(0) scale(1.03, 0.97); }
+}
+@keyframes lhq-hover {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes lhq-flap {
+  to { transform: scaleX(0.45); }
+}
+@keyframes lhq-wing {
+  0%, 100% { transform: rotate(0deg); }
+  50% { transform: rotate(-8deg); }
+}
+
+/* ---------- explorer: walking (add class "walk") ---------- */
+.ex.walk .ex-body {
+  animation: lhq-bob 0.34s ease-in-out infinite alternate;
+}
+.ex.walk .ex-leg-r {
+  animation: lhq-step 0.68s ease-in-out infinite;
+}
+.ex.walk .ex-leg-l {
+  animation: lhq-step 0.68s ease-in-out -0.34s infinite;
+}
+.ex.walk .ex-arm-r {
+  animation: lhq-swing 0.68s ease-in-out infinite;
+}
+.ex.walk .ex-arm-l {
+  animation: lhq-swing 0.68s ease-in-out -0.34s infinite;
+}
+.ex.walk .ex-cape {
+  animation: lhq-cape 0.68s ease-in-out infinite;
+}
+.ex.walk .ex-pet {
+  animation: lhq-pethop2 0.68s ease-in-out infinite;
+}
+@keyframes lhq-bob {
+  from { transform: translateY(0); }
+  to { transform: translateY(-3.5px); }
+}
+@keyframes lhq-step {
+  0%, 50%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-9px); }
+}
+@keyframes lhq-swing {
+  0%, 100% { transform: rotate(7deg); }
+  50% { transform: rotate(-7deg); }
+}
+@keyframes lhq-pethop2 {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-7px); }
+}
+
+/* ---------- tier effects ---------- */
+.lhq-tw {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: lhq-tw 2.6s ease-in-out infinite;
+}
+.lhq-glint {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: lhq-glint 3.6s ease-in-out infinite;
+}
+.lhq-aura {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: lhq-aura 3s ease-in-out infinite;
+}
+.lhq-sweep {
+  animation: lhq-sweep 4.4s ease-in-out infinite;
+}
+@keyframes lhq-tw {
+  0%, 100% { transform: scale(0.15) rotate(0deg); opacity: 0; }
+  35% { transform: scale(1) rotate(45deg); opacity: 1; }
+  65% { transform: scale(0.35) rotate(90deg); opacity: 0.25; }
+}
+@keyframes lhq-glint {
+  0%, 70%, 100% { transform: scale(0.1) rotate(0deg); opacity: 0; }
+  82% { transform: scale(1) rotate(45deg); opacity: 1; }
+  92% { transform: scale(0.3) rotate(90deg); opacity: 0; }
+}
+@keyframes lhq-aura {
+  0%, 100% { transform: scale(0.92); opacity: 0.7; }
+  50% { transform: scale(1.04); opacity: 1; }
+}
+@keyframes lhq-sweep {
+  0% { transform: translateX(0); }
+  38%, 100% { transform: translateX(160px); }
+}
+
+/* ---------- gifts and game pieces ---------- */
+.lhq-wobble {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: lhq-wobble 2.4s ease-in-out infinite;
+}
+.lhq-rays {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: lhq-spin 14s linear infinite;
+}
+.lhq-gift.open .lhq-lid {
+  animation: lhq-pop 0.55s cubic-bezier(0.3, 1.6, 0.5, 1) both;
+}
+.lhq-bounce {
+  animation: lhq-bounce 1.6s ease-in-out infinite;
+}
+.lhq-pulse {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: lhq-aura 1.6s ease-in-out infinite;
+}
+.lhq-wave {
+  transform-box: fill-box;
+  transform-origin: 0% 50%;
+  animation: lhq-wave 1.9s ease-in-out infinite;
+}
+.lhq-frog-b {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: lhq-croak 3.2s ease-in-out infinite;
+}
+/* The game can add class "hop" to the frog's <svg> for one jump. */
+.lhq-frog.hop .lhq-frog-b {
+  animation: lhq-hop 0.55s ease-out;
+}
+@keyframes lhq-wobble {
+  0%, 55%, 100% { transform: rotate(0deg) scale(1, 1); }
+  62% { transform: rotate(-7deg) scale(1.03, 0.97); }
+  70% { transform: rotate(6deg) scale(0.98, 1.03); }
+  78% { transform: rotate(-4deg); }
+  86% { transform: rotate(2deg); }
+}
+@keyframes lhq-spin {
+  to { transform: rotate(360deg); }
+}
+@keyframes lhq-pop {
+  from { transform: rotate(0deg) translate(0, 0); }
+}
+@keyframes lhq-bounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+@keyframes lhq-wave {
+  0%, 100% { transform: skewY(0deg) scaleX(1); }
+  50% { transform: skewY(-5deg) scaleX(0.93); }
+}
+@keyframes lhq-croak {
+  0%, 80%, 100% { transform: scale(1, 1); }
+  86% { transform: scale(1.05, 0.95); }
+  92% { transform: scale(0.98, 1.03); }
+}
+@keyframes lhq-hop {
+  0% { transform: translateY(0) scale(1.1, 0.9); }
+  45% { transform: translateY(-40%) scale(0.95, 1.08); }
+  85% { transform: translateY(0) scale(1.08, 0.92); }
+  100% { transform: translateY(0) scale(1, 1); }
+}
+
+/* ---------- map props ---------- */
+.pr-sway {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: lhq-sway 4.2s ease-in-out infinite;
+}
+.pr-bob {
+  animation: lhq-hover 3.6s ease-in-out infinite;
+}
+.pr-glow {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: lhq-aura 3.4s ease-in-out infinite;
+}
+.pr-flap {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: lhq-wingflap 0.5s ease-in-out infinite alternate;
+}
+@keyframes lhq-sway {
+  0%, 100% { transform: rotate(-1.8deg); }
+  50% { transform: rotate(1.8deg); }
+}
+@keyframes lhq-wingflap {
+  to { transform: scaleY(-0.6); }
+}
+
+/* ---------- ambient layer (LHQ_ART.ambient): put it in a full-screen box with pointer-events:none ---------- */
+.lhq-amb {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  pointer-events: none;
+  opacity: 0.72;
+  container-type: size;
+}
+.lhq-amb .amb {
+  position: absolute;
+  display: block;
+  left: 0;
+  top: 0;
+}
+.lhq-amb .amb .amb {
+  position: relative;
+  width: 100%;
+  height: 100%;
+}
+.lhq-amb svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.lhq-amb .amb-across {
+  animation: lhq-across 40s linear infinite;
+}
+.lhq-amb .amb-bob {
+  animation: lhq-hover 2.6s ease-in-out infinite;
+}
+.lhq-amb .amb-fall {
+  animation: lhq-fall 20s linear infinite;
+}
+.lhq-amb .amb-swayx {
+  animation: lhq-swayx 3.2s ease-in-out infinite alternate;
+}
+.lhq-amb .amb-wavex {
+  animation: lhq-wavex 8s ease-in-out infinite alternate;
+  opacity: 0.6;
+}
+.lhq-amb .amb-drift,
+.lhq-splash .amb-drift {
+  animation: lhq-drift 10s ease-in-out infinite alternate;
+}
+.lhq-amb .amb-glow {
+  opacity: 0.9;
+}
+.lhq-amb .amb-twk {
+  animation: lhq-twk 3.2s ease-in-out infinite;
+}
+@keyframes lhq-across {
+  from { transform: translateX(-25vw); transform: translateX(-25cqw); }
+  to { transform: translateX(110vw); transform: translateX(110cqw); }
+}
+@keyframes lhq-fall {
+  from { transform: translateY(-8vh); transform: translateY(-8cqh); }
+  to { transform: translateY(108vh); transform: translateY(108cqh); }
+}
+@keyframes lhq-swayx {
+  from { transform: translateX(-22px) rotate(-30deg); }
+  to { transform: translateX(22px) rotate(40deg); }
+}
+@keyframes lhq-wavex {
+  from { transform: translateX(-30px); }
+  to { transform: translateX(30px); }
+}
+@keyframes lhq-drift {
+  0% { transform: translate(0, 0); opacity: 0.35; }
+  50% { transform: translate(26px, -34px); opacity: 1; }
+  100% { transform: translate(-18px, -60px); opacity: 0.5; }
+}
+@keyframes lhq-twk {
+  0%, 100% { transform: scale(0.5); opacity: 0.2; }
+  50% { transform: scale(1); opacity: 1; }
+}
+
+/* ---------- splash scene ---------- */
+.lhq-splash .sp-cloud {
+  animation: lhq-cloud 90s linear infinite;
+}
+.lhq-splash .sp-bird {
+  animation: lhq-spbird 30s linear infinite;
+}
+.lhq-splash .sp-grass {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  animation: lhq-sway 3.6s ease-in-out infinite;
+}
+.lhq-splash .sp-beacon {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: lhq-beacon 2.8s ease-in-out infinite;
+}
+@keyframes lhq-cloud {
+  0% { transform: translateX(0); }
+  50% { transform: translateX(90px); }
+  100% { transform: translateX(0); }
+}
+@keyframes lhq-spbird {
+  0% { transform: translate(0, 0); opacity: 0; }
+  3% { opacity: 1; }
+  45% { transform: translate(1750px, -60px); opacity: 1; }
+  46%, 100% { transform: translate(1750px, -60px); opacity: 0; }
+}
+@keyframes lhq-beacon {
+  0%, 100% { transform: scale(0.85); opacity: 0.65; }
+  50% { transform: scale(1.12); opacity: 1; }
+}
+
+/* ---------- reduced motion: no decorative animation at all ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .lhq-art,
+  .lhq-art * {
+    animation: none !important;
+  }
+  .lhq-amb .amb-across,
+  .lhq-amb .amb-fall,
+  .lhq-splash .sp-bird {
+    display: none;
+  }
+}

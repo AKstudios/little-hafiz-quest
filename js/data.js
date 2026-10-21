@@ -14,6 +14,8 @@
  *       icon:    one emoji for the map island. theme:  a kid-friendly place name for the island.
  *       color:   island colour (#rrggbb).
  *       pattern: a short memory trick for the grown-up (may contain <b> tags).
+ *       toy:     (optional) [emoji, sound] a button the child taps along with the trick, e.g. ["🔔", "bell"].
+ *                Sounds: bell, clap, drum, chime, pop, boop, whoosh, hum (see sfx in js/game.js).
  *       parts:   checkpoints as [firstĀyah, lastĀyah] pairs (1-based, covering every āyah once, in order).
  *       ayat: [  one object per āyah, in order:
  *         ar:      Uthmani Arabic text (do not edit by hand).
@@ -26,9 +28,8 @@
  *       ]
  *     }
  *   ],
- *   audio: { "<sūrah number>": [[start, end], ...] }
- *     Seconds where each āyah sits inside audio/<sūrah number, 3 digits>.mp3 (one file per sūrah).
  * }
+ * Recitation timings are not here: each reciter has audio/<reciter>/timings.json (see tools/build_audio.py).
  *
  * Editing tips
  *   - Change a picture, action or meaning by editing that āyah's line below.
@@ -56,6 +57,7 @@ window.LHQ_DATA = {
       theme: "People Town",
       color: "#14a899",
       pattern: "Almost every āyah ends with <b>“-nās”</b> 🔔. Ring the bell at the end of each one!",
+      toy: ["🔔", "bell"],
       parts: [[1, 6]],
       ayat: [
         {"ar": "قُلۡ أَعُوذُ بِرَبِّ ٱلنَّاسِ", "tr": "Qul a‘ūdhu bi-rabbin-nās", "kid": "Say: I ask Allah, Lord of all people, to keep me safe", "scene": ["🛡️", "👨‍👩‍👧"], "hook": "Safe Shield", "gesture": "🤗 Hug yourself tight", "anim": "pulse"},
@@ -75,6 +77,7 @@ window.LHQ_DATA = {
       theme: "Sunrise Hill",
       color: "#f08a24",
       pattern: "Four āyāt begin with <b>“wa min sharri”</b> 🛡️. Shield up for each one!",
+      toy: ["🛡️", "whoosh"],
       parts: [[1, 5]],
       ayat: [
         {"ar": "قُلۡ أَعُوذُ بِرَبِّ ٱلۡفَلَقِ", "tr": "Qul a‘ūdhu bi-rabbil-falaq", "kid": "Say: I ask Allah, Lord of the morning light, to keep me safe", "scene": ["🌅"], "hook": "Sunrise", "gesture": "🌄 Open your hands slowly like the sun coming up", "anim": "rise"},
@@ -93,6 +96,7 @@ window.LHQ_DATA = {
       theme: "Diamond Cave",
       color: "#7c5cf0",
       pattern: "It starts and ends with <b>“aḥad”</b> ☝️. One finger up at the start and at the end!",
+      toy: ["☝️", "chime"],
       parts: [[1, 4]],
       ayat: [
         {"ar": "قُلۡ هُوَ ٱللَّهُ أَحَدٌ", "tr": "Qul huwallāhu aḥad", "kid": "Say: He is Allah, the One", "scene": ["☝️"], "hook": "One!", "gesture": "☝️ Hold up one finger", "anim": "pulse"},
@@ -110,6 +114,7 @@ window.LHQ_DATA = {
       theme: "Rope Bridge",
       color: "#e14b4b",
       pattern: "The endings rhyme: <b>tabb · kasab · lahab · ḥaṭab · masad</b> 🥁. Clap on each ending!",
+      toy: ["👏", "clap"],
       parts: [[1, 5]],
       ayat: [
         {"ar": "تَبَّتۡ يَدَآ أَبِي لَهَبࣲ وَتَبَّ", "tr": "Tabbat yadā Abī Lahabin wa tabb", "kid": "The hands of Abu Lahab are ruined, and he is ruined", "scene": ["🙌", "🔥"], "hook": "Hands & flame", "gesture": "🙌 Show both your hands", "anim": "flick"},
@@ -144,6 +149,7 @@ window.LHQ_DATA = {
       theme: "Two Paths Valley",
       color: "#2f7ff0",
       pattern: "Lots of <b>“lā”</b> (no!) 🙅. Āyah 3 and āyah 5 are <b>twins</b> 👯 — exactly the same!",
+      toy: ["🙅", "boop"],
       parts: [[1, 6]],
       ayat: [
         {"ar": "قُلۡ يَـٰٓأَيُّهَا ٱلۡكَٰفِرُونَ", "tr": "Qul yā ayyuhal-kāfirūn", "kid": "Say: O you who disbelieve", "scene": ["📣"], "hook": "Say it out loud!", "gesture": "📣 Cup your hands around your mouth", "anim": "shout"},
@@ -179,6 +185,7 @@ window.LHQ_DATA = {
       theme: "Helping Hands Village",
       color: "#d946ef",
       pattern: "<b>“Alladhī / alladhīna”</b> 👉 pops up in āyāt 1, 2, 5 and 6 — point each time! Most endings sound <b>“-īn / -ūn”</b> 🎵.",
+      toy: ["👉", "pop"],
       parts: [[1, 7]],
       ayat: [
         {"ar": "أَرَءَيۡتَ ٱلَّذِي يُكَذِّبُ بِٱلدِّينِ", "tr": "Ara’aytal-ladhī yukadhdhibu bid-dīn", "kid": "Have you seen the one who says the Day of Judgement is not true?", "scene": ["👀", "⚖️"], "hook": "Denies the Day", "gesture": "👀 Point to your eyes", "anim": "search"},
@@ -234,6 +241,7 @@ window.LHQ_DATA = {
       theme: "Counting Cove",
       color: "#dc4f4f",
       pattern: "Every āyah ends with a soft <b>“-ah”</b> 🎈. Āyāt 4 & 5 both end in <b>“al-ḥuṭamah”</b> 💥 — clap twice!",
+      toy: ["👏", "clap"],
       parts: [[1, 3], [4, 9]],
       ayat: [
         {"ar": "وَيۡلࣱ لِّكُلِّ هُمَزَةࣲ لُّمَزَةٍ", "tr": "Waylul-likulli humazatil-lumazah", "kid": "Big trouble for everyone who mocks and makes fun of others", "scene": ["🗯️", "👉"], "hook": "Mockers", "gesture": "🙅 Shake your head: no making fun!", "anim": "shake"},
@@ -256,6 +264,7 @@ window.LHQ_DATA = {
       theme: "Hourglass Harbor",
       color: "#10b981",
       pattern: "Tiny but mighty: āyah 3 says <b>“wa tawāṣaw”</b> twice 🤝 — first <b>bil-ḥaqq</b>, then <b>biṣ-ṣabr</b>!",
+      toy: ["🤝", "chime"],
       parts: [[1, 3]],
       ayat: [
         {"ar": "وَٱلۡعَصۡرِ", "tr": "Wal-‘aṣr", "kid": "By time!", "scene": ["⏳"], "hook": "Time", "gesture": "⏳ Flip a pretend hourglass over", "anim": "spin"},
@@ -317,6 +326,7 @@ window.LHQ_DATA = {
       theme: "Gallop Plains",
       color: "#f0a020",
       pattern: "Āyāt 1–5 sound like galloping: <b>ḍabḥā · qadḥā · ṣubḥā · naq‘ā · jam‘ā</b> 🐎. Pat your knees to the rhythm!",
+      toy: ["🐎", "drum"],
       parts: [[1, 5], [6, 11]],
       ayat: [
         {"ar": "وَٱلۡعَٰدِيَٰتِ ضَبۡحࣰا", "tr": "Wal-‘ādiyāti ḍabḥā", "kid": "By the running horses, panting hard", "scene": ["🐎", "💨"], "hook": "Panting horses", "gesture": "🐎 Gallop by patting your knees fast", "anim": "march"},
@@ -383,6 +393,7 @@ window.LHQ_DATA = {
       theme: "Moonlight Bay",
       color: "#ef6c3a",
       pattern: "<b>“Laylatul-qadr”</b> 🌙 comes three times in a row (āyāt 1–3). Make a moon with your hands each time!",
+      toy: ["🌙", "chime"],
       parts: [[1, 5]],
       ayat: [
         {"ar": "إِنَّآ أَنزَلۡنَٰهُ فِي لَيۡلَةِ ٱلۡقَدۡرِ", "tr": "Innā anzalnāhu fī laylatil-qadr", "kid": "We sent the Qur'an down on the Night of Decree", "scene": ["📖", "🌙"], "hook": "Sent down at night", "gesture": "👇 Bring both hands down slowly from the sky", "anim": "float"},
@@ -401,6 +412,7 @@ window.LHQ_DATA = {
       theme: "Pen Peak",
       color: "#0ea5a4",
       pattern: "It starts with <b>“Iqra’”</b> (Read!) 📖, and three āyāt start with <b>“Ara’ayta”</b> (have you seen?) 👀. Point to your eyes each time!",
+      toy: ["👀", "pop"],
       parts: [[1, 5], [6, 8], [9, 14], [15, 19]],
       ayat: [
         {"ar": "ٱقۡرَأۡ بِٱسۡمِ رَبِّكَ ٱلَّذِي خَلَقَ", "tr": "Iqra’ bismi rabbikal-ladhī khalaq", "kid": "Read in the name of your Lord who made everything", "scene": ["📖", "☝️"], "hook": "Read!", "gesture": "📖 Open your hands like a book", "anim": "rise"},
@@ -433,6 +445,7 @@ window.LHQ_DATA = {
       theme: "Olive Grove",
       color: "#d946ef",
       pattern: "Three special things first: <b>fig & olive → Mount Sinai → safe city</b> 🌳🏔️🕋. The endings hum <b>“-īn / -ūn”</b> (zaytūn, sīnīn, amīn) — hum along!",
+      toy: ["🎵", "hum"],
       parts: [[1, 3], [4, 8]],
       ayat: [
         {"ar": "وَٱلتِّينِ وَٱلزَّيۡتُونِ", "tr": "Wat-tīni waz-zaytūn", "kid": "By the fig and the olive", "scene": ["🌳", "🌿"], "hook": "Fig & olive", "gesture": "🍐 Pretend to pick a fruit from a tree", "anim": "sway"},
@@ -454,6 +467,7 @@ window.LHQ_DATA = {
       theme: "Balloon Field",
       color: "#3b82f6",
       pattern: "Āyāt 1–4 rhyme in <b>“-rak”</b> (ṣadrak, wizrak, ẓahrak, dhikrak) 🎈. Then <b>“ma‘al-‘usri yusrā”</b> comes two times — hard, then easy!",
+      toy: ["🎈", "pop"],
       parts: [[1, 4], [5, 8]],
       ayat: [
         {"ar": "أَلَمۡ نَشۡرَحۡ لَكَ صَدۡرَكَ", "tr": "Alam nashraḥ laka ṣadrak", "kid": "Did We not open up your heart wide for you?", "scene": ["🎈", "💗"], "hook": "Wide-open heart", "gesture": "🌬️ Take a deep breath and puff out your chest", "anim": "pulse"},
@@ -475,6 +489,7 @@ window.LHQ_DATA = {
       theme: "Morning Meadow",
       color: "#ca8a04",
       pattern: "Āyāt 6–8: Allah <b>found you… and helped</b> 🎁🎁🎁. Āyāt 9–11 all start with <b>“ammā”</b> (as for…) 👉 — point for each one!",
+      toy: ["👉", "pop"],
       parts: [[1, 5], [6, 11]],
       ayat: [
         {"ar": "وَٱلضُّحَىٰ", "tr": "Waḍ-ḍuḥā", "kid": "By the bright morning", "scene": ["🌤️"], "hook": "Bright morning", "gesture": "🌤️ Stretch your arms up — good morning!", "anim": "rise"},
@@ -499,6 +514,7 @@ window.LHQ_DATA = {
       theme: "Starlight Woods",
       color: "#dc4f4f",
       pattern: "Every āyah ends with a long <b>“-ā”</b> 🎶 (yaghshā, tajallā, unthā…). Āyāt 7 and 10 sound alike: <b>yusrā</b> (easy) vs <b>‘usrā</b> (hard)!",
+      toy: ["🎶", "chime"],
       parts: [[1, 4], [5, 10], [11, 16], [17, 21]],
       ayat: [
         {"ar": "وَٱلَّيۡلِ إِذَا يَغۡشَىٰ", "tr": "Wal-layli idhā yaghshā", "kid": "By the night when it covers everything", "scene": ["🌃", "🌑"], "hook": "Night covers", "gesture": "🌙 Spread your arms over your head like a dark tent", "anim": "dim"},
@@ -533,6 +549,7 @@ window.LHQ_DATA = {
       theme: "Sunshine Shore",
       color: "#10b981",
       pattern: "Every āyah ends in <b>“-hā”</b> 🎵 (ḍuḥāhā, talāhā, jallāhā…). Say a happy <b>“hā!”</b> with a little clap at each ending!",
+      toy: ["👏", "clap"],
       parts: [[1, 6], [7, 10], [11, 15]],
       ayat: [
         {"ar": "وَٱلشَّمۡسِ وَضُحَىٰهَا", "tr": "Wash-shamsi wa ḍuḥāhā", "kid": "By the sun and its bright morning light", "scene": ["☀️"], "hook": "Bright sun", "gesture": "☀️ Open your fingers wide like sun rays", "anim": "rise"},
@@ -561,6 +578,7 @@ window.LHQ_DATA = {
       theme: "Hilltop City",
       color: "#e0567a",
       pattern: "The endings change like a song: <b>-ad</b> (balad, walad) → <b>-ayn</b> (‘aynayn, najdayn) → <b>-ah</b> (‘aqabah, raqabah) 🎵. Clap when the sound changes!",
+      toy: ["👏", "clap"],
       parts: [[1, 4], [5, 10], [11, 16], [17, 20]],
       ayat: [
         {"ar": "لَآ أُقۡسِمُ بِهَٰذَا ٱلۡبَلَدِ", "tr": "Lā uqsimu bi-hādhal-balad", "kid": "I swear by this city, Makkah", "scene": ["🕋", "🏘️"], "hook": "This city", "gesture": "🏘️ Draw a big square in the air for the city", "anim": "pulse"},
@@ -708,6 +726,7 @@ window.LHQ_DATA = {
       theme: "Shooting Star Peak",
       color: "#16a34a",
       pattern: "<b>“Was-samā’i”</b> (by the sky) 🌌 starts āyah 1 and āyah 11. The last three end <b>kaydā · kaydā · ruwaydā</b> — clap three times!",
+      toy: ["👏", "clap"],
       parts: [[1, 4], [5, 10], [11, 14], [15, 17]],
       ayat: [
         {"ar": "وَٱلسَّمَآءِ وَٱلطَّارِقِ", "tr": "Was-samā’i waṭ-ṭāriq", "kid": "By the sky, and by the one that comes knocking at night", "scene": ["🌌", "🚪"], "hook": "Night knocker", "gesture": "✊ Knock knock gently in the air", "anim": "beat"},
@@ -738,6 +757,7 @@ window.LHQ_DATA = {
       theme: "Stargazer Tower",
       color: "#ef6c3a",
       pattern: "Endings drum <b>-ūd</b> and <b>-īd</b> 🥁: maw‘ūd, ukhdūd, waqūd, qu‘ūd, shuhūd… then ḥamīd, shahīd, shadīd, majīd. Drum on each ending!",
+      toy: ["🥁", "drum"],
       parts: [[1, 4], [5, 9], [10, 12], [13, 16], [17, 22]],
       ayat: [
         {"ar": "وَٱلسَّمَآءِ ذَاتِ ٱلۡبُرُوجِ", "tr": "Was-samā’i dhātil-burūj", "kid": "By the sky full of big stars", "scene": ["🌌", "⭐"], "hook": "Starry sky", "gesture": "✨ Twinkle your fingers up high", "anim": "pulse"},
@@ -811,6 +831,7 @@ window.LHQ_DATA = {
       theme: "Fair Scales Market",
       color: "#d946ef",
       pattern: "<b>“Kallā!”</b> 🙅 (No way!) starts 4 āyāt: 7, 14, 15, 18. Two riddles: <b>sijjīn</b> 📕⬇️ the low book, <b>‘illiyyīn</b> 📗⬆️ the high book!",
+      toy: ["🙅", "boop"],
       parts: [[1, 6], [7, 11], [12, 17], [18, 22], [23, 28], [29, 32], [33, 36]],
       ayat: [
         {"ar": "وَيۡلࣱ لِّلۡمُطَفِّفِينَ", "tr": "Waylul-lil-muṭaffifīn", "kid": "Big trouble for those who cheat by giving people less", "scene": ["⚖️", "🤏"], "hook": "Cheating scales", "gesture": "⚖️ Hold your hands out like scales, then tip one down", "anim": "sway"},
@@ -860,6 +881,7 @@ window.LHQ_DATA = {
       theme: "Starfall Cove",
       color: "#3b82f6",
       pattern: "Āyāt 1–4 start with <b>“idhā”</b> 🌠 (sky, stars, seas, graves). Near the end <b>“yawm ad-dīn”</b> rings three times 🔔 — ring the bell each time!",
+      toy: ["🔔", "bell"],
       parts: [[1, 5], [6, 9], [10, 12], [13, 16], [17, 19]],
       ayat: [
         {"ar": "إِذَا ٱلسَّمَآءُ ٱنفَطَرَتۡ", "tr": "Idhas-samā’un-faṭarat", "kid": "When the sky cracks open", "scene": ["☁️", "💥"], "hook": "Sky cracks", "gesture": "👐 Pull your hands apart: crack!", "anim": "shake"},
@@ -892,6 +914,7 @@ window.LHQ_DATA = {
       theme: "Swirly Sun Peak",
       color: "#ca8a04",
       pattern: "Twelve āyāt start with <b>“idhā”</b> (when…) ⏰. Clap on every “idhā” and count the big changes: sun, stars, mountains…",
+      toy: ["👏", "clap"],
       parts: [[1, 6], [7, 10], [11, 14], [15, 18], [19, 21], [22, 25], [26, 29]],
       ayat: [
         {"ar": "إِذَا ٱلشَّمۡسُ كُوِّرَتۡ", "tr": "Idhash-shamsu kuwwirat", "kid": "When the sun is rolled up and its light goes out", "scene": ["☀️", "🌀"], "hook": "Sun rolled up", "gesture": "🌀 Roll your hands around and around", "anim": "twist"},
@@ -1093,44 +1116,4 @@ window.LHQ_DATA = {
       ],
     },
   ],
-  audio: {
-    "1": [[0.25, 6.281]],
-    "78": [[0.25, 6.621], [7.071, 12.137], [12.587, 18.52], [18.97, 22.982], [23.432, 29.578], [30.028, 34.134], [34.584, 38.397], [38.847, 42.905], [43.355, 47.897], [48.347, 52.254], [52.704, 57.684], [58.134, 64.424], [64.874, 70.226], [70.676, 79.951], [80.401, 85.637], [86.087, 90.203], [90.653, 96.28], [96.73, 103.613], [104.063, 111.163], [111.613, 117.368], [117.818, 123.752], [124.202, 127.581], [128.031, 133.705], [134.155, 141.414], [141.864, 147.058], [147.508, 152.523], [152.973, 158.941], [159.391, 164.925], [165.375, 171.235], [171.685, 179.479], [179.929, 184.347], [184.797, 189.136], [189.586, 192.733], [193.183, 196.846], [197.296, 204.515], [204.965, 213.395], [213.845, 227.269], [227.719, 247.362], [247.812, 259.078], [259.528, 293.161]],
-    "79": [[0.25, 4.756], [5.206, 9.555], [10.005, 13.22], [13.67, 16.884], [17.334, 20.675], [21.125, 24.434], [24.884, 27.825], [28.275, 33.706], [34.156, 37.192], [37.642, 44.743], [45.193, 51.159], [51.609, 57.208], [57.658, 63.593], [64.043, 68.34], [68.79, 72.655], [73.105, 79.271], [79.721, 85.383], [85.833, 92.231], [92.681, 97.114], [97.564, 101.23], [101.68, 103.991], [104.441, 107.886], [108.336, 110.763], [111.213, 115.057], [115.507, 121.443], [121.893, 128.658], [129.108, 137.753], [138.203, 142.079], [142.529, 147.298], [147.748, 151.897], [152.347, 158.713], [159.163, 162.125], [162.575, 166.767], [167.217, 176.461], [176.911, 182.3], [182.75, 187.624], [188.074, 191.729], [192.179, 195.919], [196.369, 200.939], [201.389, 210.643], [211.093, 216.303], [216.753, 222.772], [223.222, 228.17], [228.62, 232.906], [233.356, 242.19], [242.64, 255.585]],
-    "80": [[0.25, 3.135], [3.585, 8.904], [9.354, 14.347], [14.797, 20.061], [20.511, 24.029], [24.479, 28.287], [28.737, 33.024], [33.474, 39.914], [40.364, 42.363], [42.813, 46.287], [46.737, 52.561], [53.011, 57.543], [57.993, 61.421], [61.871, 65.67], [66.12, 68.282], [68.732, 71.572], [72.022, 77.937], [78.387, 81.634], [82.084, 87.412], [87.862, 91.95], [92.4, 96.841], [97.291, 103.749], [104.199, 110.657], [111.107, 117.321], [117.771, 124.13], [124.58, 129.292], [129.742, 134.328], [134.778, 138.287], [138.737, 142.898], [143.348, 147.291], [147.741, 151.459], [151.909, 156.151], [156.601, 164.09], [164.54, 170.202], [170.652, 176.143], [176.593, 180.916], [181.366, 191.885], [192.335, 197.853], [198.303, 202.228], [202.678, 208.585], [209.035, 211.623], [212.073, 219.054]],
-    "81": [[0.25, 2.584], [3.034, 6.679], [7.129, 9.809], [10.259, 13.014], [13.464, 15.968], [16.418, 19.197], [19.647, 22.692], [23.142, 26.072], [26.522, 30.707], [31.157, 33.328], [33.778, 37.53], [37.98, 40.701], [41.151, 44.871], [45.321, 50.317], [50.767, 56.57], [57.02, 60.598], [61.048, 63.935], [64.385, 67.554], [68.004, 74.008], [74.458, 79.866], [80.316, 85.211], [85.661, 90.757], [91.207, 96.437], [96.887, 101.969], [102.419, 106.189], [106.639, 109.823], [110.273, 115.564], [116.014, 124.253], [124.703, 137.653]],
-    "82": [[0.25, 5.051], [5.501, 10.09], [10.54, 13.166], [13.616, 16.912], [17.362, 22.98], [23.43, 32.888], [33.338, 37.932], [38.382, 45.81], [46.26, 51.836], [52.286, 57.722], [58.172, 62.438], [62.888, 67.126], [67.576, 72.834], [73.284, 78.85], [79.3, 83.838], [84.288, 90.93], [91.38, 97.695], [98.145, 105.33], [105.78, 119.009]],
-    "83": [[0.25, 4.987], [5.437, 13.412], [13.862, 20.907], [21.357, 31.68], [32.13, 36.199], [36.649, 44.584], [45.034, 55.054], [55.504, 63.095], [63.545, 68.848], [69.298, 75.836], [76.286, 82.541], [82.991, 92.283], [92.733, 102.348], [102.798, 112.291], [112.741, 123.389], [123.839, 131.126], [131.576, 142.021], [142.471, 152.167], [152.617, 159.803], [160.253, 165.111], [165.561, 170.217], [170.667, 176.942], [177.392, 184.72], [185.17, 192.255], [192.705, 199.202], [199.652, 208.903], [209.353, 215.325], [215.775, 222.637], [223.087, 233.37], [233.82, 239.609], [240.059, 251.395], [251.845, 266.926], [267.376, 274.987], [275.437, 283.979], [284.429, 292.155], [292.605, 301.591]],
-    "84": [[0.25, 5.763], [6.213, 9.86], [10.31, 13.002], [13.452, 17.41], [17.86, 21.662], [22.112, 35.682], [36.132, 42.182], [42.632, 47.89], [48.34, 55.153], [55.603, 63.703], [64.153, 67.361], [67.811, 70.483], [70.933, 77.845], [78.295, 86.197], [86.647, 93.106], [93.556, 97.839], [98.289, 100.961], [101.411, 103.983], [104.433, 109.819], [110.269, 115.258], [115.708, 123.709], [124.159, 130.18], [130.63, 135.677], [136.127, 142.162], [142.612, 155.145]],
-    "85": [[0.25, 8.595], [9.045, 14.275], [14.725, 21.435], [21.885, 27.829], [28.279, 35.001], [35.451, 40.876], [41.326, 49.879], [50.329, 62.619], [63.069, 76.553], [77.003, 94.978], [95.428, 117.166], [117.616, 124.118], [124.568, 131.784], [132.234, 137.659], [138.109, 142.794], [143.244, 148.084], [148.534, 153.907], [154.357, 159.094], [159.544, 165.501], [165.951, 174.608], [175.058, 181.148], [181.598, 188.973]],
-    "86": [[0.25, 5.45], [5.9, 10.944], [11.394, 15.029], [15.479, 22.425], [22.875, 29.787], [30.237, 36.381], [36.831, 44.209], [44.659, 49.939], [50.389, 54.854], [55.304, 61.791], [62.241, 66.989], [67.439, 70.528], [70.978, 75.705], [76.155, 78.65], [79.1, 83.814], [84.264, 86.982], [87.432, 94.614]],
-    "87": [[0.25, 4.251], [4.701, 8.158], [8.608, 12.065], [12.515, 17.572], [18.022, 23.261], [23.711, 27.923], [28.373, 40.571], [41.021, 44.312], [44.762, 49.578], [50.028, 54.633], [55.083, 59.295], [59.745, 64.802], [65.252, 71.714], [72.164, 76.466], [76.916, 81.007], [81.457, 85.907], [86.357, 91.178], [91.628, 96.834], [97.284, 103.088]],
-    "88": [[0.25, 4.219], [4.669, 9.641], [10.091, 14.096], [14.546, 17.92], [18.37, 22.152], [22.602, 29.901], [30.351, 36.735], [37.185, 42.832], [43.282, 46.283], [46.733, 50.507], [50.957, 54.962], [55.412, 59.594], [60.044, 64.368], [64.818, 68.849], [69.299, 72.318], [72.768, 76.257], [76.707, 82.701], [83.151, 88.336], [88.786, 92.373], [92.823, 96.197], [96.647, 103.28], [103.73, 107.699], [108.149, 112.482], [112.932, 117.976], [118.426, 124.108], [124.558, 131.749]],
-    "89": [[0.25, 1.622], [2.072, 4.437], [4.887, 7.239], [7.689, 10.46], [10.91, 15.194], [15.644, 21.592], [22.042, 26.368], [26.818, 33.48], [33.93, 41.055], [41.505, 46.698], [47.148, 52.425], [52.875, 58.054], [58.504, 64.901], [65.351, 71.622], [72.072, 87.091], [87.541, 100.237], [100.687, 107.741], [108.191, 117.612], [118.062, 123.773], [124.223, 130.815], [131.265, 138.068], [138.518, 145.909], [146.359, 162.96], [163.41, 168.785], [169.235, 176.094], [176.544, 181.765], [182.215, 190.263], [190.713, 198.289], [198.739, 201.898], [202.348, 206.935]],
-    "90": [[0.25, 5.945], [6.395, 12.042], [12.492, 16.265], [16.715, 22.074], [22.524, 27.954], [28.404, 32.754], [33.204, 38.466], [38.916, 44.443], [44.893, 50.733], [51.183, 57.046], [57.496, 60.259], [60.709, 65.588], [66.038, 67.96], [68.41, 74.634], [75.084, 78.688], [79.138, 83.639], [84.089, 94.259], [94.709, 100.407], [100.857, 108.04], [108.49, 114.047]],
-    "91": [[0.25, 3.293], [3.743, 7.183], [7.633, 12.326], [12.776, 16.42], [16.87, 21.8], [22.25, 25.532], [25.982, 30.278], [30.728, 35.851], [36.301, 40.381], [40.831, 45.11], [45.56, 49.544], [49.994, 53.769], [54.219, 61.467], [61.917, 72.809], [73.259, 78.858]],
-    "92": [[0.25, 3.518], [3.968, 8.337], [8.787, 13.744], [14.194, 18.421], [18.871, 23.605], [24.055, 26.958], [27.408, 31.134], [31.584, 36.489], [36.939, 39.752], [40.202, 43.753], [44.203, 51.137], [51.587, 55.333], [55.783, 61.417], [61.867, 67.597], [68.047, 73.575], [74.025, 78.022], [78.472, 83.046], [83.496, 88.37], [88.82, 96.669], [97.119, 103.492], [103.942, 107.942]],
-    "93": [[0.25, 2.051], [2.501, 5.471], [5.921, 10.278], [10.728, 15.839], [16.289, 21.254], [21.704, 26.877], [27.327, 34.373], [34.823, 40.872], [41.322, 46.177], [46.627, 52.823], [53.273, 59.099]],
-    "94": [[0.25, 3.777], [4.227, 8.559], [9.009, 14.498], [14.948, 18.438], [18.888, 23.314], [23.764, 27.875], [28.325, 32.472], [32.922, 37.097]],
-    "95": [[0.25, 4.991], [5.441, 9.518], [9.968, 14.754], [15.204, 23.889], [24.339, 31.296], [31.746, 42.278], [42.728, 48.765], [49.215, 62.247]],
-    "96": [[0.25, 4.563], [5.013, 9.402], [9.852, 13.192], [13.642, 17.0], [17.45, 22.45], [22.9, 29.948], [30.398, 33.288], [33.738, 38.085], [38.535, 41.716], [42.166, 45.134], [45.584, 49.984], [50.434, 53.301], [53.751, 58.283], [58.733, 64.269], [64.719, 73.367], [73.817, 78.417], [78.867, 81.361], [81.811, 84.668], [85.118, 91.095]],
-    "97": [[0.25, 8.16], [8.61, 14.573], [15.023, 20.507], [20.957, 31.973], [32.423, 37.605]],
-    "98": [[0.25, 12.753], [13.203, 20.373], [20.823, 24.838], [25.288, 37.041], [37.491, 58.126], [58.576, 76.719], [77.169, 88.739], [89.189, 116.188]],
-    "99": [[0.25, 4.988], [5.438, 9.882], [10.332, 15.348], [15.798, 21.157], [21.607, 26.402], [26.852, 35.479], [35.929, 42.971], [43.421, 52.897]],
-    "100": [[0.25, 3.48], [3.93, 7.131], [7.581, 10.624], [11.074, 14.103], [14.553, 17.812], [18.262, 25.884], [26.334, 33.052], [33.502, 40.565], [41.015, 48.078], [48.528, 53.363], [53.813, 64.315]],
-    "101": [[0.25, 2.512], [2.962, 5.198], [5.648, 11.187], [11.637, 19.361], [19.811, 27.355], [27.805, 33.486], [33.936, 37.74], [38.19, 43.202], [43.652, 47.065], [47.515, 51.958], [52.408, 57.391]],
-    "102": [[0.25, 3.613], [4.063, 8.021], [8.471, 13.798], [14.248, 20.932], [21.382, 27.907], [28.357, 34.401], [34.851, 42.847], [43.297, 55.784]],
-    "103": [[0.25, 1.98], [2.43, 8.17], [8.62, 21.114]],
-    "104": [[0.25, 4.795], [5.245, 10.562], [11.012, 17.62], [18.07, 24.75], [25.2, 30.171], [30.621, 34.057], [34.507, 38.899], [39.349, 44.962], [45.412, 51.023]],
-    "105": [[0.25, 8.141], [8.591, 14.799], [15.249, 22.1], [22.55, 31.827], [32.277, 41.269]],
-    "106": [[0.25, 4.831], [5.281, 14.087], [14.537, 20.45], [20.9, 34.393]],
-    "107": [[0.25, 6.467], [6.917, 13.383], [13.833, 20.999], [21.449, 27.12], [27.57, 35.08], [35.53, 43.093], [43.543, 50.742]],
-    "108": [[0.25, 6.909], [7.359, 10.863], [11.313, 16.506]],
-    "109": [[0.25, 7.711], [8.161, 15.566], [16.016, 24.19], [24.64, 31.241], [31.691, 40.069], [40.519, 46.719]],
-    "110": [[0.25, 7.127], [7.577, 15.711], [16.161, 26.156]],
-    "111": [[0.25, 7.593], [8.043, 15.156], [15.606, 20.723], [21.173, 26.707], [27.157, 33.546]],
-    "112": [[0.25, 3.167], [3.617, 6.103], [6.553, 9.47], [9.92, 14.724]],
-    "113": [[0.25, 3.668], [4.118, 7.709], [8.159, 13.148], [13.598, 19.563], [20.013, 25.616]],
-    "114": [[0.25, 6.321], [6.771, 11.982], [12.432, 17.724], [18.174, 26.118], [26.568, 34.421], [34.871, 43.062]],
-  },
 };

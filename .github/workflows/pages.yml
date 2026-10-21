@@ -1,0 +1,64 @@
+# Publishes Little Hafiz Quest on GitHub Pages: the newest version at the site root and each older
+# version in its own folder, so families can choose one in the game (see js/boot.js).
+#   main branch → /        v1 branch → /v1/
+# Runs on every push to main, and when the v1 branch asks for it (see notify-deploy.yml there).
+name: Deploy site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+          path: latest
+      - uses: actions/checkout@v4
+        with:
+          ref: v1
+          path: v1
+      - name: Put the versions together
+        run: |
+          mkdir -p _site/v1
+          rsync -a --exclude .git --exclude .github --exclude screenshots latest/ _site/
+          rsync -a --exclude .git --exclude .github --exclude screenshots v1/ _site/v1/
+          # versions.json lists what the version chooser offers, with each version number read from its sw.js
+          python3 - <<'PY'
+          import json, re
+          def ver(path):
+              return re.search(r"const VERSION = '([^']+)'", open(path, encoding='utf8').read()).group(1)
+          data = json.load(open('latest/versions.json', encoding='utf8'))
+          found = {'v2': ver('latest/sw.js'), 'v1': ver('v1/sw.js')}
+          for v in data['versions']:
+              if v['id'] in found:
+                  v['label'] = 'v' + found[v['id']] + (' · latest' if v['id'] == data['latest'] else ' · classic')
+          json.dump(data, open('_site/versions.json', 'w', encoding='utf8'), ensure_ascii=False, indent=1)
+          print(json.dumps(data, ensure_ascii=False))
+          PY
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
