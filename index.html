@@ -1,0 +1,62 @@
+<!doctype html>
+<!--
+  Little Hafiz Quest
+  A picture-and-gesture game for memorizing Juz ‘Amma (sūrahs 78–114) with a child.
+  Everything it needs is in this folder: no accounts, no tracking, no requests to other websites.
+  See README.md for how to use, edit and publish it.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Little Hafiz Quest</title>
+  <meta name="description" content="A fun picture-and-gesture game that helps young children memorize Juz ‘Amma, with a grown-up who reads the Arabic.">
+
+  <!--
+    Content Security Policy: only this site's own files may load. No third-party scripts, fonts or trackers.
+    'unsafe-inline' is allowed for styles only, because each sūrah's colours are passed as inline CSS variables.
+  -->
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; media-src 'self'; connect-src 'self'; worker-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <meta name="referrer" content="no-referrer">
+
+  <!-- Home Screen app -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <meta name="theme-color" content="#bfe6ff" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#0e0f2d" media="(prefers-color-scheme: dark)">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="Hafiz Quest">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+
+  <link rel="preload" href="fonts/amiri-quran.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="css/game.css">
+</head>
+<body>
+  <!-- Decorative sky: sun (or moon in dim mode), stars and drifting clouds -->
+  <div id="sky" aria-hidden="true">
+    <div class="twinkle"></div>
+    <div class="sun"></div>
+    <div class="clouds"><div class="cloud c1">☁️</div><div class="cloud c2">☁️</div><div class="cloud c3">☁️</div></div>
+  </div>
+
+  <!-- The game draws every screen inside #app (see js/game.js) -->
+  <main id="app">
+    <noscript>
+      <div class="sheet noscript">
+        <div class="noscript-moon">🌙</div>
+        <h3>Little Hafiz Quest needs a web browser</h3>
+        <p class="saveinfo">This looks like a preview, and previews can't run games. Open the Little Hafiz Quest <b>link</b> in Safari, Chrome, Edge or Firefox instead.</p>
+      </div>
+    </noscript>
+  </main>
+
+  <div id="modal" role="dialog" aria-modal="true"></div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="fx" aria-hidden="true"></div>
+
+  <script src="js/data.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
