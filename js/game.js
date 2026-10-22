@@ -35,7 +35,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.3.0';
+  const VERSION = '2.3.1';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const ART = window.LHQ_ART;
@@ -79,9 +79,10 @@
   });
   const STICKER = Object.create(null);
   ART.STICKERS.forEach((x) => (STICKER[x.id] = x));
-  const SLOTS = ['hat', 'glasses', 'top', 'pants', 'shoes', 'cape', 'bag', 'stick', 'shield', 'watch', 'pet'];
+  const SLOTS = ['hat', 'hijab', 'glasses', 'top', 'pants', 'shoes', 'cape', 'bag', 'stick', 'shield', 'watch', 'pet'];
   const SLOT_INFO = {
     hat: ['🧢', 'Hats'],
+    hijab: ['🧕', 'Hijabs'],
     glasses: ['👓', 'Glasses'],
     top: ['👕', 'Tops'],
     pants: ['👖', 'Pants'],
@@ -190,6 +191,7 @@
       stash: null, // the outfit put aside by the "comfy clothes" button, to swap back
       cpg: [], // checkpoints whose small gift was given ('<sūrah>:<part>')
       feats: [], // summit milestones reached: 'once', 'three', 'all'
+      fix: [], // sūrahs where all the hearts ran out in a review game (a broken heart on the map until fixed)
       daily: '',
       at: 0,
       made: false,
@@ -283,6 +285,7 @@
     }
     p.cpg = uniq((Array.isArray(o.cpg) ? o.cpg : []).filter((k) => typeof k === 'string' && /^\d{2,3}:\d$/.test(k))).slice(0, 200);
     p.feats = uniq((Array.isArray(o.feats) ? o.feats : []).filter((k) => FEAT_ITEM[k]));
+    p.fix = uniq((Array.isArray(o.fix) ? o.fix : []).filter((n) => BYN[n]));
     p.wdone = Array.isArray(o.wdone)
       ? uniq(o.wdone.filter((w) => Number.isInteger(w) && w >= 0 && w < WORLDS.length))
       : WORLDS.map((_, wi) => wi).filter((wi) => worldDone(wi, p)); // no party for worlds finished before v2.1
@@ -506,12 +509,15 @@
   }
   const isLost = (id, prof) => (prof || P()).lost.some((x) => x.id === id);
   const lostAt = (n) => P().lost.filter((x) => x.n === n);
+  /* Some things are for boys only (kufis) or girls only (hijabs); the hijab hair style is for girls too. */
+  const kidOf = (prof) => (ART.isGirl((prof || P()).look) ? 'girl' : 'boy');
+  const forKid = (it, prof) => !it.for || it.for === kidOf(prof);
   function wornOutfit(prof) {
     prof = prof || P();
     const o = {};
     SLOTS.forEach((sl) => {
       const id = prof.outfit[sl];
-      if (id && !isLost(id, prof)) o[sl] = id;
+      if (id && !isLost(id, prof) && ITEM[id] && forKid(ITEM[id], prof)) o[sl] = id;
     });
     return o;
   }
@@ -1025,16 +1031,15 @@
       s = S[st.i];
     const restart = { view: st.view, i: st.i, p: st.p, L: st.L };
     const cand = prof.items.filter((id) => !isLost(id)).slice(-1)[0];
+    // a broken heart marks this sūrah on the map until a review game here is finished
+    if (!prof.fix.includes(s.n)) prof.fix.push(s.n);
+    save();
     let body;
     if (cand) {
       prof.lost.push({ id: cand, n: s.n });
       save();
-      const it = ITEM[cand];
-      // what the explorer still has with them (anything not owned from the start)
-      const left = Object.values(wornOutfit(prof)).filter((id) => !starter(ITEM[id]));
       body = `<div class="dropscene"><div class="dropex">${explorer({ view: 'front' })}</div><div class="dropit">${itemPic(cand)}</div></div>
       <h3>Oh no! Your ${itemName(cand)} fell off!</h3>
-      <div class="leftrow">${left.length ? `<small>Still with you</small><span>${left.map((id) => `<i title="${itemName(id)}">${itemPic(id)}</i>`).join('')}</span>` : '<small>Just your comfy clothes left!</small>'}</div>
       <p class="saveinfo">It's waiting for you at <b>${s.name}</b> on the map. Finish a review game there to get it back and cheer your explorer up!</p>`;
     } else {
       body = `<div class="dropit">💪</div><h3>Out of hearts!</h3><p class="saveinfo">That's okay, we learn by trying. Let's try again!</p>`;
@@ -1227,6 +1232,7 @@
     const sw = (k, list, kind, label) =>
       `<div class="swatches">${list.map((c, j) => `<button class="swatch2 ${L[k] === j ? 'on' : ''}" data-act="look" data-k="${k}" data-v="${j}" aria-label="${label} ${j + 1}" aria-pressed="${L[k] === j}">${swatchArt(kind, c)}</button>`).join('')}</div>`;
     const hairs = ART.LOOKS.hair
+      .filter((h) => h !== 'hijab' || ART.isGirl(L))
       .map(
         (h) =>
           `<button class="hairpick ${L.hair === h ? 'on' : ''}" data-act="look" data-k="hair" data-v="${h}" aria-label="${h}" aria-pressed="${L.hair === h}">${ART.explorer(Object.assign({}, L, { hair: h }), {}, { view: 'front', cls: 'mini' })}</button>`,
@@ -1268,6 +1274,7 @@
       started: surahStars(s) > 0,
       gift: false,
       lost: prof.lost.filter((x) => x.n === s.n).map((x) => x.id),
+      fix: prof.fix.includes(s.n),
     };
   }
   function suggestIdx() {
@@ -1279,7 +1286,8 @@
     return `<div class="mapscr">
     <div class="hud">
       <button class="icon-btn" data-act="home" aria-label="Back to the start">${ICON.home}</button>
-      <div class="hud-stars">⭐ <b>${totalStars()}</b><small>/ ${MAX_STARS}</small></div>
+      <button class="hud-stars hud-sur" data-act="progress" data-t="surahs" aria-label="Sūrahs done: ${doneSurahs()} of ${S.length}">📖 <b>${doneSurahs()}</b><small>/${S.length}</small></button>
+      <button class="hud-stars" data-act="progress" data-t="stars" aria-label="Stars: ${totalStars()} of ${MAX_STARS}">⭐ <b>${totalStars()}</b><small>/${MAX_STARS}</small></button>
       ${giftIcon(prof)}
       <button class="icon-btn hud-bag" data-act="bag" aria-label="My explorer and collection">${ICON.bag}${prof.fresh.length ? NEWDOT : ''}</button>
       <button class="icon-btn" data-act="settings" aria-label="Grown-up corner">${ICON.gear}</button>
@@ -1309,12 +1317,54 @@
       },
     });
   }
-  function enterSurah(i) {
+  // a sūrah counts as done once it has at least one star
+  const doneSurahs = (prof) => S.filter((s) => surahStars(s, prof) > 0).length;
+  /* The progress view (tap the counters at the top of the map): every sūrah with its stars; tap one to go there. */
+  function showProgress(tab) {
+    const prof = P(),
+      m = document.getElementById('modal');
+    const rows = S.map((s, i) => {
+      const got = surahStars(s),
+        max = surahMax(s),
+        fix = prof.fix.includes(s.n);
+      const right =
+        tab === 'stars'
+          ? `<span class="pgbar"><i style="width:${Math.round((got / max) * 100)}%"></i></span><span class="pgst">${got}/${max} ⭐</span>`
+          : `<span class="pgok ${got ? 'on' : ''}">${got ? '✓' : ''}</span>`;
+      return `<button class="pgrow ${got ? 'done' : ''}" data-act="jump" data-i="${i}"><span class="pn">${s.n}</span><span class="pgname">${s.name}${fix ? ' <span class="pgfix" title="Needs fixing">💔</span>' : ''}<small>${s.icon} ${s.meaning}</small></span>${right}</button>`;
+    }).join('');
+    const fixes = prof.fix.length ? `<p class="saveinfo center">💔 ${prof.fix.length === 1 ? 'One sūrah needs' : prof.fix.length + ' sūrahs need'} a little fixing: tap it to play a review game there.</p>` : '';
+    m.innerHTML = `<div class="card progcard">
+      <div class="pgtabs"><button class="${tab !== 'stars' ? 'on' : ''}" data-act="progress" data-t="surahs">📖 Sūrahs <b>${doneSurahs()}/${S.length}</b></button><button class="${tab === 'stars' ? 'on' : ''}" data-act="progress" data-t="stars">⭐ Stars <b>${totalStars()}/${MAX_STARS}</b></button></div>
+      <p class="saveinfo center">${tab === 'stars' ? 'Every star in every sūrah. Tap a sūrah to go there.' : 'A sūrah is done with at least one star. Tap one to go there.'}</p>${fixes}
+      <div class="pglist">${rows}</div>
+      <div class="row"><button class="btn wide" data-act="cno">Close</button></div></div>`;
+    m.classList.add('show');
+    const list = m.querySelector('.pglist'),
+      cur = list && list.children[prof.at];
+    if (cur) list.scrollTop = Math.max(0, cur.offsetTop - list.clientHeight / 2);
+  }
+  /* go to sūrah i from anywhere: the map, the explorer walks in, then its next lesson starts */
+  function jumpTo(i) {
+    document.getElementById('modal').classList.remove('show');
+    const walk = () =>
+      enterSurah(i, () => {
+        const next = $app.querySelector('.qstep.next');
+        if (next) setTimeout(() => st.view === 'surah' && next.isConnected && next.click(), 650);
+      });
+    if (st.view === 'map' && mapCtl) walk();
+    else {
+      go('map');
+      setTimeout(walk, 450);
+    }
+  }
+  function enterSurah(i, then) {
     const prof = P();
     if (!mapCtl) {
       prof.at = i;
       save();
       openSurah(i);
+      if (then) then();
       return;
     }
     const ctl = mapCtl;
@@ -1326,6 +1376,7 @@
       ctl.zoomInto(i, () => {
         document.body.classList.remove('busy');
         openSurah(i);
+        if (then) then();
       });
     });
   }
@@ -1691,9 +1742,18 @@
     const plain = st.plain; // Word Steps keeps its celebration emoji-free
     const stars = plain ? `<span class="tstar">★</span>`.repeat(st.stars || 1) : '<span>⭐</span>'.repeat(st.stars || 1);
     const prof = P();
-    const found = st.found && st.found.length
-      ? `<div class="found shine"><span class="shineex">${explorer({ view: 'front', mood: prof.lost.length ? 'sad' : 'shine' })}</span><span>${st.found.map((id) => `<span class="fit">${itemPic(id)}</span>`).join('')}<span>You got your <b>${st.found.map((id) => itemName(id)).join(' and ')}</b> back!${prof.lost.length ? '' : ' Your explorer is shining again!'}</span></span></div>`
-      : '';
+    // a recovered item flies back onto the sad explorer, who then smiles (and shines when nothing else is lost)
+    const found =
+      st.found && st.found.length
+        ? (() => {
+            const without = Object.assign(wornOutfit(prof), { sticker: prof.badge });
+            st.found.forEach((id) => {
+              if (without[ITEM[id].slot] === id) delete without[ITEM[id].slot];
+            });
+            const fly = st.found.map((id, k) => `<span class="rv-fly" style="animation-delay:${0.35 + k * 0.25}s">${itemPic(id)}</span>`).join('');
+            return `<div class="found shine"><span class="recov"><span class="rv-sad">${ART.explorer(prof.look, without, { view: 'front', mood: 'sad' })}</span><span class="rv-happy">${explorer({ view: 'front', mood: prof.lost.length ? 'none' : 'shine' })}</span>${fly}</span><span>You got your <b>${st.found.map((id) => itemName(id)).join(' and ')}</b> back!${prof.lost.length ? '' : ' Your explorer is shining again!'}</span></div>`;
+          })()
+        : '';
     const world = st.world
       ? `<div class="worlddone"><b>🌍 World ${st.world.wi + 1} complete!</b><span>${esc(WORLDS[st.world.wi].name)}: a star in every sūrah.</span>${st.world.heart ? `<span class="hup">${ART.heart(true)} +1 heart! You now have ${st.world.hearts} hearts in review games.</span>` : ''}</div>`
       : '';
@@ -1743,7 +1803,7 @@
     const prof = P(),
       tab = st.tab || 'look',
       worn = wornOutfit(prof);
-    const tabs = ['look', ...SLOTS, 'stickers']
+    const tabs = ['look', ...SLOTS.filter((t) => t !== 'hijab' || kidOf(prof) === 'girl'), 'stickers']
       .map((t) => {
         const ic = t === 'look' ? '🙂' : t === 'stickers' ? '⭐' : SLOT_INFO[t][0];
         const nm = t === 'look' ? 'Me' : t === 'stickers' ? 'Stickers' : SLOT_INFO[t][1];
@@ -1760,7 +1820,7 @@
       <p class="wnote2">${mine.length ? 'Tap a sticker to stick it on. Tap again to take it off.' : 'Finish games to win stickers.'} ${prof.stickers.length} of ${ART.STICKERS.length}</p>`;
     } else {
       // won things newest first, then the starting clothes, then the ones still to find
-      const list = ITEMS.filter((it) => it.slot === tab && (!it.gold || prof.items.includes(it.id) || prof.items.includes(it.base)));
+      const list = ITEMS.filter((it) => it.slot === tab && forKid(it, prof) && (!it.gold || prof.items.includes(it.id) || prof.items.includes(it.base)));
       const won = list.filter((it) => !starter(it) && prof.items.includes(it.id)).sort((a, b) => gotAt(prof, 'i:' + b.id) - gotAt(prof, 'i:' + a.id));
       const rank = (it) => (starter(it) ? 0 : it.track ? 2000 + it.track : 1000);
       const rest = list.filter((it) => !won.includes(it)).sort((a, b) => rank(a) - rank(b));
@@ -1772,7 +1832,7 @@
       : `<button class="wd-side wd-comfy" data-act="comfy" ${fancy ? '' : 'disabled'} aria-label="Just comfy clothes">👕<small>Comfy</small></button>`;
     return `<div class="screen bagscr">
     ${bar('My Explorer', prof.name ? esc(prof.name) : 'Dress up and collect', 'map', giftIcon(prof, 'inbar'))}
-    <div class="wd-stage">${explorer({ view: st.backView ? 'back' : 'front' })}${comfy}<button class="wd-side wd-turn" data-act="turn" aria-label="Turn around">↻<small>Turn</small></button></div>
+    <div class="wd-stage"><button class="wd-ex" data-act="exmove" aria-label="Tap your explorer">${explorer({ view: st.backView ? 'back' : 'front' })}</button>${comfy}<button class="wd-side wd-turn" data-act="turn" aria-label="Turn around">↻<small>Turn</small></button></div>
     <div class="wtabs" id="wtabs">${tabs}</div>
     <div class="wbody">${body}</div>
   </div>`;
@@ -1857,9 +1917,9 @@
       <ol class="tips">
         <li><b>Follow the glowing step.</b> In each sūrah: 1 Look &amp; Repeat, 2 Word Steps, 3 Stepping Stones (levels 1 → 3), then the review games.</li>
         <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Then do the 🏁 whole sūrah.</li>
-        <li><b>One star wins a sūrah's treasure</b> and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, and every few stars wins a prize from the star track (73 of them: an astronaut set, a kufi, new hats, buddies and more). Memorized = Stepping Stones Level 3.</li>
+        <li><b>One star wins a sūrah's treasure</b> and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, and every few stars wins a prize from the star track (an astronaut set, kufis for boys, hijabs for girls, new hats, buddies and more). Memorized = Stepping Stones Level 3.</li>
         <li><b>The summit.</b> A star in every sūrah: the explorer climbs the mountain, and every treasure, every sticker and the Summit cloak are theirs. Three stars in every sūrah: the Hafiz crown. Every single star: the one-of-a-kind Golden hoopoe.</li>
-        <li><b>Revise any sūrah any time:</b> tap it on the map. In review games, tap “Not quite” when a mistake is made.</li>
+        <li><b>Revise any sūrah any time:</b> tap it on the map, or tap the 📖 / ⭐ counters at the top of the map to see every sūrah and jump straight in. In review games, tap “Not quite” when a mistake is made; a 💔 on the map shows where the hearts ran out.</li>
         <li><b>5–10 minutes a day is plenty.</b> Stop while it's still fun; recite again at bedtime or in ṣalāh.</li>
       </ol>
       <div class="notice" role="note"><p>ℹ️ The pictures are memory hooks only, not literal images of the meaning. The simple meanings are written for young children; check a full tafsīr for detail.</p>
@@ -2048,6 +2108,7 @@
     const prof = P();
     // lost items at this sūrah come back after finishing a review game here
     if (['path', 'order', 'next'].includes(st.view)) {
+      prof.fix = prof.fix.filter((n) => n !== s.n);
       const back = prof.lost.filter((x) => x.n === s.n).map((x) => x.id);
       if (back.length) {
         prof.lost = prof.lost.filter((x) => x.n !== s.n);
@@ -2109,7 +2170,7 @@
     const t = totalStars(prof);
     let n = 0;
     TRACK.forEach((it) => {
-      if (it.track > t || prof.items.includes(it.id) || prof.pending.some((g) => g.id === it.id)) return;
+      if (it.track > t || !forKid(it, prof) || prof.items.includes(it.id) || prof.pending.some((g) => g.id === it.id)) return;
       prof.pending.push({ k: 'i', id: it.id });
       n++;
     });
@@ -2334,6 +2395,13 @@
         const L = P().look,
           k = b.dataset.k;
         L[k] = k === 'hair' || k === 'kid' ? b.dataset.v : +b.dataset.v;
+        if (k === 'kid') {
+          // boys don't wear the hijab; things for the other kind of explorer wait unopened no more
+          const prof = P();
+          if (L.kid === 'boy' && L.hair === 'hijab') L.hair = 'short';
+          prof.pending = prof.pending.filter((g) => g.k !== 'i' || forKid(ITEM[g.id], prof));
+          giveTrackPrizes(prof);
+        }
         save();
         const y = scrollY;
         render();
@@ -2451,8 +2519,19 @@
         sfx.tap();
         showGift();
         break;
+      case 'progress':
+        sfx.tap();
+        showProgress(b.dataset.t);
+        break;
+      case 'jump':
+        sfx.tap();
+        jumpTo(+b.dataset.i);
+        break;
       case 'poke':
         poke(b);
+        break;
+      case 'exmove':
+        explorerMove(b.querySelector('svg.ex'));
         break;
       case 'summitok': {
         const after = st.after;
@@ -2920,20 +2999,67 @@
     }
   }
 
+  /* The explorer's moves in My Explorer: tap them (or wait 15 seconds) and they do one of these. */
+  const MOVES = {
+    giggle: () => tone([660, 880, 700, 940, 760], 0.06, 'triangle', 0.12),
+    twirl: () => noise(0.35, 0.22, 500),
+    jump: () => sfx.hop(),
+    wave: () => sfx.chime(),
+    dance: () => tone([523, 659, 523, 784], 0.12, 'triangle', 0.13),
+    pethop: () => sfx.pop(),
+    spin: () => sfx.whoosh(),
+  };
+  let lastMove = '';
+  function explorerMove(svg) {
+    if (!svg || reduceMotion) return;
+    const back = svg.classList.contains('ex-back'),
+      hasPet = !!svg.querySelector('.ex-pet');
+    const names = Object.keys(MOVES).filter((k) => k !== lastMove && !(k === 'pethop' && !hasPet) && !(k === 'spin' && hasPet) && !(back && (k === 'twirl' || k === 'wave')));
+    const k = names[(Math.random() * names.length) | 0];
+    lastMove = k;
+    Object.keys(MOVES).forEach((x) => svg.classList.remove('mv-' + x));
+    void svg.getBoundingClientRect();
+    svg.classList.add('mv-' + k);
+    MOVES[k]();
+    clearTimeout(svg._mv);
+    svg._mv = setTimeout(() => svg.classList.remove('mv-' + k), 1400);
+    if (k === 'giggle') burstAt(svg, 5, ['😄', '✨']);
+  }
+  setInterval(() => {
+    if (st.view !== 'bag' || document.hidden || document.getElementById('modal').classList.contains('show')) return;
+    explorerMove($app.querySelector('.wd-ex svg.ex'));
+  }, 15000);
+
   /* Tap the world: animals hop, plants shake, houses and other things bounce, the explorer jumps for joy. */
   const ANIMAL = /sheep|rabbit|fox|owl|deer|squirrel|crab|turtle|camel|lizard|goat|starfish|snowman/,
     PLANT = /tree|pine|oak|bush|grass|flower|fern|palm|cactus|mushroom|berries|crystal/;
   function poke(el) {
     const k = el.dataset.k || '';
-    const kind = k === 'explorer' ? 'joy' : k === 'cloud' ? 'puff' : ANIMAL.test(k) ? 'hop' : PLANT.test(k) ? 'shake' : 'bounce';
-    el.classList.remove('poke-joy', 'poke-puff', 'poke-hop', 'poke-shake', 'poke-bounce');
+    // on the start screen the explorer has a few moves of their own
+    const spMoves = ['joy', 'spin', 'dance', 'hops'];
+    const kind =
+      k === 'explorer'
+        ? el.closest('.lhq-splash')
+          ? spMoves.filter((x) => x !== el._last)[(Math.random() * 3) | 0]
+          : 'joy'
+        : k === 'flag'
+          ? 'flag'
+          : k === 'cloud'
+            ? 'puff'
+            : ANIMAL.test(k)
+              ? 'hop'
+              : PLANT.test(k)
+                ? 'shake'
+                : 'bounce';
+    el._last = kind;
+    el.classList.remove('poke-joy', 'poke-puff', 'poke-hop', 'poke-shake', 'poke-bounce', 'poke-spin', 'poke-dance', 'poke-hops', 'poke-flag');
     void el.getBoundingClientRect();
     el.classList.add('poke-' + kind);
     clearTimeout(el._pk);
-    el._pk = setTimeout(() => el.classList.remove('poke-' + kind), 900);
-    const set = { joy: ['⭐', '✨', '💛'], puff: ['☁️', '✨'], hop: ['💕', '✨'], shake: ['🍃', '🌸'], bounce: ['✨', '⭐'] }[kind];
-    burstAt(el, kind === 'joy' ? 10 : 5, set);
-    ({ joy: sfx.hop, puff: sfx.whoosh, hop: sfx.pop, shake: () => noise(0.18, 0.12, 2200), bounce: sfx.tap })[kind]();
+    el._pk = setTimeout(() => el.classList.remove('poke-' + kind), kind === 'flag' ? 1600 : 1100);
+    const set = { joy: ['⭐', '✨', '💛'], spin: ['✨', '⭐'], dance: ['🎵', '✨'], hops: ['⭐', '✨'], flag: ['🎉', '⭐', '✨'], puff: ['☁️', '✨'], hop: ['💕', '✨'], shake: ['🍃', '🌸'], bounce: ['✨', '⭐'] }[kind];
+    burstAt(el, kind === 'joy' || kind === 'flag' ? 10 : 5, set);
+    ({ joy: sfx.hop, spin: sfx.whoosh, dance: MOVES.dance, hops: sfx.hop, flag: sfx.win, puff: sfx.whoosh, hop: sfx.pop, shake: () => noise(0.18, 0.12, 2200), bounce: sfx.tap })[kind]();
   }
 
   /* frog hop: animate from the current stone to the next one, then advance */

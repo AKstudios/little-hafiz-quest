@@ -338,27 +338,33 @@
       (h === 'short' ? P('M86 64Q87 52 100 53Q93 58 96 64Z', hc) : L('M74 90Q96 84 116 80', dk(hc), 2))
     );
   }
-  function headFront(look, mood) {
+  // a hijab style's print, kept inside the hijab's outline (hs = { c, pat(view), trim() } from a Hijabs item)
+  function hijabPrint(d, hs, v) {
+    if (!hs || !hs.pat) return '';
+    const id = uid('hj');
+    return '<clipPath id="' + id + '"><path d="' + d + '"/></clipPath>' + G(hs.pat(v), ' clip-path="url(#' + id + ')"') + P(d, 'none');
+  }
+  function headFront(look, mood, hs) {
     const sk = SKIN[look.skin];
     if (look.hair === 'hijab') {
-      const hj = HIJABC[look.hijabColor];
+      const hj = hs ? hs.c : HIJABC[look.hijabColor];
       return (
-        S(HAIR.hijabF, hj, 'M50 150Q34 162 36 178Q54 192 92 192Q130 192 148 178Q150 162 134 150Q122 168 92 168Q62 168 50 150Z') +
+        S(HAIR.hijabF, hj, 'M50 150Q34 162 36 178Q54 192 92 192Q130 192 148 178Q150 162 134 150Q122 168 92 168Q62 168 50 150Z') + hijabPrint(HAIR.hijabF, hs, 'front') +
         L('M53 98Q60 74 84 65', lt(hj, 0.55), 5, ' opacity=".7"') + L('M62 170Q70 180 68 189', dk(hj, 0.35), 2.2) + L('M122 170Q114 180 116 189', dk(hj, 0.35), 2.2) +
         faceShape(sk, true) + face(sk, mood) +
-        P('M52 117C52 92 70 77 92 77C114 77 132 92 132 117C128 98 112 84 92 84C72 84 56 98 52 117Z', lt(hj, 0.55)) +
-        C(132, 152, 4.2, '#fff6dc', sw(2.2)) + CF(130.8, 150.8, 1.4, '#fff')
+        P('M52 117C52 92 70 77 92 77C114 77 132 92 132 117C128 98 112 84 92 84C72 84 56 98 52 117Z', hs && hs.band ? hs.band : lt(hj, 0.55)) +
+        (hs && hs.trim ? hs.trim() : '') + (hs && hs.pin ? hs.pin() : C(132, 152, 4.2, '#fff6dc', sw(2.2)) + CF(130.8, 150.8, 1.4, '#fff'))
       );
     }
     return hairFrontBack(look) + ears(sk) + faceShape(sk, false) + face(sk, mood) + hairFront(look);
   }
-  function headBack(look) {
+  function headBack(look, hs) {
     const sk = SKIN[look.skin],
       hc = HAIRC[look.hairColor],
       dh = dk(hc, 0.35);
     if (look.hair === 'hijab') {
-      const hj = HIJABC[look.hijabColor];
-      return S(HAIR.hijabB, hj, 'M48 154Q32 168 38 194Q64 206 92 206Q120 206 146 194Q152 168 136 154Q124 172 92 172Q60 172 48 154Z') +
+      const hj = hs ? hs.c : HIJABC[look.hijabColor];
+      return S(HAIR.hijabB, hj, 'M48 154Q32 168 38 194Q64 206 92 206Q120 206 146 194Q152 168 136 154Q124 172 92 172Q60 172 48 154Z') + hijabPrint(HAIR.hijabB, hs, 'back') +
         L('M56 92Q64 72 86 64', lt(hj, 0.55), 5, ' opacity=".7"') + L('M92 156Q90 180 92 204', dk(hj, 0.35), 2.2) + L('M66 164Q60 182 62 199', dk(hj, 0.35), 2.2) + L('M118 164Q124 182 122 199', dk(hj, 0.35), 2.2);
     }
     let s = ears(sk) + E(92, 112, 46, 43, sk);
@@ -444,13 +450,18 @@
   });
   /* ---------- the star track: a prize every few stars (more often at the start), on top of each sūrah's treasure ----------
    * Rows: [id, slot, name] for a new design, or [id, slot, name, base item, hue turn in degrees] for a color version. */
+  // ['pair', boy's prize, girl's prize]: at the same star count boys win a kufi and girls a hijab
+  const pair = (k, kn, h, hn) => ['pair', [k, 'hat', kn, 'boy'], [h, 'hijab', hn, 'girl']];
   const TRACK_NEW = [
-    ['kufi', 'hat', 'White kufi'], ['striped-tee', 'top', 'Striped tee'], ['round-specs', 'glasses', 'Round glasses'], ['kitten-buddy', 'pet', 'Kitten buddy'],
-    ['bucket-hat', 'hat', 'Bucket hat'], ['hoodie', 'top', 'Cozy hoodie'], ['shepherd-crook', 'stick', "Shepherd's crook"], ['beanie', 'hat', 'Bobble beanie'],
-    ['bird-buddy', 'pet', 'Bluebird buddy'], ['goggles', 'glasses', 'Adventure goggles'], ['sport-watch', 'watch', 'Sport watch'], ['thobe', 'top', 'Little thobe'],
+    pair('kufi', 'White kufi', 'hijab-rose', 'Rose hijab'), ['striped-tee', 'top', 'Striped tee'], ['round-specs', 'glasses', 'Round glasses'], ['kitten-buddy', 'pet', 'Kitten buddy'],
+    pair('kufi-green', 'Green dotted kufi', 'hijab-dots', 'Polka-dot hijab'), ['bucket-hat', 'hat', 'Bucket hat'], ['hoodie', 'top', 'Cozy hoodie'], ['shepherd-crook', 'stick', "Shepherd's crook"],
+    pair('kufi-stripes', 'Striped kufi', 'hijab-stripes', 'Striped hijab'), ['beanie', 'hat', 'Bobble beanie'], ['bird-buddy', 'pet', 'Bluebird buddy'], ['goggles', 'glasses', 'Adventure goggles'],
+    pair('kufi-blue', 'Blue diamond kufi', 'hijab-lace', 'Lace-trim hijab'), ['sport-watch', 'watch', 'Sport watch'], ['thobe', 'top', 'Little thobe'],
     ['astro-suit', 'top', 'Astronaut suit'], ['astro-pants', 'pants', 'Astronaut pants'], ['astro-boots', 'shoes', 'Moon boots'], ['toy-rocket', 'pet', 'Toy rocket'],
-    ['bamboo-stick', 'stick', 'Bamboo stick'], ['book-pouch', 'bag', 'Book pouch'], ['turtle-buddy', 'pet', 'Turtle buddy'], ['round-shield', 'shield', 'Wooden round shield'],
-    ['umbrella-stick', 'stick', 'Umbrella cane'], ['bee-buddy', 'pet', 'Bumblebee buddy'],
+    pair('kufi-black', 'Black and gold kufi', 'hijab-flowers', 'Daisy hijab'), ['bamboo-stick', 'stick', 'Bamboo stick'], ['book-pouch', 'bag', 'Book pouch'],
+    pair('kufi-rainbow', 'Rainbow kufi', 'hijab-waves', 'Ocean wave hijab'), ['turtle-buddy', 'pet', 'Turtle buddy'], ['round-shield', 'shield', 'Wooden round shield'],
+    pair('kufi-maroon', 'Maroon velvet kufi', 'hijab-twotone', 'Two-tone hijab'), ['umbrella-stick', 'stick', 'Umbrella cane'], ['bee-buddy', 'pet', 'Bumblebee buddy'],
+    pair('kufi-gold', 'Gold-stitched kufi', 'hijab-gold', 'Gold-trim hijab'),
   ];
   const TRACK_COLORS = [
     ['blue', 'explorer-cap', 215], ['green', 'basic-pants', 280], ['blue', 'basic-shoes', 190], ['pink', 'basic-shirt', 128], ['blue', 'little-backpack', 180],
@@ -492,12 +503,14 @@
   TRACK.forEach((r, k) => {
     const t = Math.max(prevT + 2, Math.round(900 * Math.pow((k + 1) / TRACK.length, 1.25)));
     prevT = t;
-    ITEMS.push({ id: r[0], slot: r[1], name: r[2], tier: t < 300 ? 1 : t < 650 ? 2 : 3, from: null, track: t, vof: r[3] || null, deg: r[4] || 0 });
+    const tier = t < 300 ? 1 : t < 650 ? 2 : 3;
+    if (r[0] === 'pair') r.slice(1).forEach((q) => ITEMS.push({ id: q[0], slot: q[1], name: q[2], tier, from: null, track: t, for: q[3] }));
+    else ITEMS.push({ id: r[0], slot: r[1], name: r[2], tier, from: null, track: t, vof: r[3] || null, deg: r[4] || 0 });
   });
   const BYID = Object.create(null);
   ITEMS.forEach((it) => (BYID[it.id] = it));
   const DEFAULTS = { top: 'basic-shirt', pants: 'basic-pants', shoes: 'basic-shoes', stick: 'twig' };
-  const SLOTS = ['hat', 'glasses', 'top', 'pants', 'shoes', 'cape', 'bag', 'stick', 'shield', 'watch', 'pet'];
+  const SLOTS = ['hat', 'hijab', 'glasses', 'top', 'pants', 'shoes', 'cape', 'bag', 'stick', 'shield', 'watch', 'pet'];
   const GOLD = '#ffcf3f';
   const ART = Object.create(null);
 
@@ -606,14 +619,47 @@
   };
 
   /* ---------- more hats and glasses (prizes on the star track) ---------- */
-  ART['kufi'] = {
-    box: [46, 56, 138, 98],
-    ex() {
-      const c = '#f7f3ea';
-      return S('M52 94C50 70 68 60 92 60C116 60 134 70 132 94Q92 86 52 94Z', c, 'M112 63C126 70 134 80 132 94Q122 91 114 90Q118 74 112 63Z') +
-        L('M56 86Q92 79 128 86M60 77Q92 70 124 77M68 68Q92 63 116 68', '#d9cfb8', 1.8, ' stroke-dasharray="2.6 3.2"') + L('M53 92Q92 84 131 92', '#d9cfb8', 2.2);
-    },
+  /* kufis (for boys): a round cap that covers the top of the head, in several kinds */
+  const KUFI = 'M45 99C43 69 63 55 92 55C121 55 141 69 139 99Q92 89 45 99Z',
+    KUFI_SH = 'M114 58C130 65 141 79 139 99Q128 96 118 95Q122 74 114 58Z';
+  function kufiArt(c, extra) {
+    const id = uid('kf');
+    return S(KUFI, c, KUFI_SH) + (extra ? '<clipPath id="' + id + '"><path d="' + KUFI + '"/></clipPath>' + G(extra, ' clip-path="url(#' + id + ')"') : '') + P(KUFI, 'none') + L('M46 96Q92 86 138 96', dk(c, 0.18), 2.2);
+  }
+  const kufiRows = (col, dash) => L('M50 87Q92 78 134 87M55 76Q92 68 129 76M64 65Q92 59 120 65', col, 1.8, dash ? ' stroke-dasharray="' + dash + '"' : '');
+  const KUFIS = {
+    kufi: ['#f7f3ea', () => kufiRows('#d9cfb8', '2.6 3.2')],
+    'kufi-gold': ['#fbf7ee', () => S('M46 96Q92 86 138 96L138.6 88Q92 78 45.6 88Z', '#f1c64a') + L('M50 92L56 88L62 92L68 88L74 92L80 88L86 92L92 88L98 92L104 88L110 92L116 88L122 92L128 88L134 92', '#b8780e', 1.4) + kufiRows('#e6dcc6', '2 3')],
+    'kufi-black': ['#2f2a3a', () => [[60, 80], [78, 72], [92, 68], [106, 72], [124, 80], [70, 90], [92, 84], [114, 90]].map((q) => F(star5(q[0], q[1], 3.6, 1.6), '#f1c64a')).join('')],
+    'kufi-green': ['#2fa36b', () => [64, 78, 92, 106, 120].map((x, k) => CF(x, 84 - Math.abs(2 - k) * 2, 2.2, '#fff') + CF(x + 7, 72 - Math.abs(2 - k) * 2, 1.8, '#fff')).join('')],
+    'kufi-blue': ['#28408f', () => S('M47 92Q92 82 137 92L137.6 84Q92 74 46.6 84Z', '#ffffff') + [56, 68, 80, 92, 104, 116, 128].map((x) => F('M' + x + ' 83L' + (x + 4) + ' 79L' + (x + 8) + ' 83L' + (x + 4) + ' 87Z', '#3f7fe0')).join('')],
+    'kufi-maroon': ['#8a2d3b', () => S('M46 96Q92 86 138 96L138.6 90Q92 80 45.6 90Z', '#f1c64a') + L('M70 62Q92 74 114 62', '#f1c64a', 1.8) + CF(92, 58, 2.6, '#f1c64a')],
+    'kufi-stripes': ['#f7f3ea', () => [58, 70, 82, 94, 106, 118, 130].map((x, k) => L('M' + x + ' 94Q' + (92 + (x - 92) * 0.55) + ' 70 92 57', ['#ef4b4b', '#2fa36b', '#3f7fe0'][k % 3], 2.6)).join('')],
+    'kufi-rainbow': ['#fff1d6', () => ['#ff6b6b', '#ffb43d', '#5fd27a', '#5fb2ff', '#a884ff'].map((c, k) => L('M' + (48 + k * 4) + ' ' + (92 - k * 9) + 'Q92 ' + (82 - k * 10) + ' ' + (136 - k * 4) + ' ' + (92 - k * 9), c, 3.6)).join('')],
   };
+  Object.keys(KUFIS).forEach((id) => {
+    ART[id] = { box: [42, 52, 142, 100], ex: () => kufiArt(KUFIS[id][0], KUFIS[id][1]()) };
+  });
+  /* hijab kinds (for girls): a color, a print kept inside the hijab, sometimes lace or a pin */
+  const grid = (dx, dy, f) => {
+    let o = '';
+    for (let y = 60, r = 0; y < 210; y += dy, r++) for (let x = 30 + (r % 2) * (dx / 2); x < 156; x += dx) o += f(x, y);
+    return o;
+  };
+  const HIJABS = {
+    'hijab-rose': { c: '#ff8db6', pat: () => grid(18, 16, (x, y) => CF(x, y, 3, '#ff5d8f') + CF(x - 1, y - 1, 1.2, '#ffe3ee')) },
+    'hijab-lace': { c: '#b49cff', trim: () => P(bumps(ellPts(92, 118, 43, 41, 192, 348, 12), false, 0.6), 'none', ' stroke="#ffffff" stroke-width="3.2"') },
+    'hijab-dots': { c: '#35c3b0', pat: () => grid(16, 15, (x, y) => CF(x, y, 2.6, '#ffffff', 0.9)) },
+    'hijab-stripes': { c: '#5fb2ff', pat: () => [0, 1, 2, 3, 4, 5, 6, 7, 8].map((k) => L('M20 ' + (70 + k * 17) + 'Q92 ' + (58 + k * 17) + ' 164 ' + (70 + k * 17), '#d6ecff', 4)).join('') },
+    'hijab-twotone': { c: '#ff9c6e', band: '#fff1d6' },
+    'hijab-flowers': { c: '#ffcf4d', pat: () => grid(24, 22, (x, y) => [0, 72, 144, 216, 288].map((a) => CF(n(x + 3.4 * Math.cos((a * Math.PI) / 180)), n(y + 3.4 * Math.sin((a * Math.PI) / 180)), 2.2, '#ffffff')).join('') + CF(x, y, 1.6, '#ff9f1c')) },
+    'hijab-gold': { c: '#fbf7ee', trim: () => P('M48 118C48 90 68 72 92 72C116 72 136 90 136 118', 'none', ' stroke="#e8a91e" stroke-width="3"'), pin: () => P(star5(132, 152, 6, 3), '#f1c64a', sw(1.8)) },
+    'hijab-waves': { c: '#3d8de8', pat: () => [0, 1, 2, 3, 4, 5, 6, 7].map((k) => L('M24 ' + (74 + k * 18) + 'Q40 ' + (66 + k * 18) + ' 56 ' + (74 + k * 18) + 'T88 ' + (74 + k * 18) + 'T120 ' + (74 + k * 18) + 'T152 ' + (74 + k * 18), '#bfe6ff', 2.6)).join('') },
+  };
+  Object.keys(HIJABS).forEach((id) => {
+    ART[id] = { box: [34, 56, 150, 194], hj: HIJABS[id] };
+  });
+
   ART['bucket-hat'] = {
     box: [36, 50, 148, 104],
     ex(v) {
@@ -1309,6 +1355,9 @@
   }
   function explorerInner(look, outfit, back, mood) {
     look = normLook(look);
+    const hjId = outfit && outfit.hijab && ART[outfit.hijab] && ART[outfit.hijab].hj ? outfit.hijab : null,
+      hs = hjId ? ART[hjId].hj : null;
+    if (hs) look = Object.assign({}, look, { hair: 'hijab' });
     const sad = mood === 'sad',
       mess = sad ? scruffy(look, back) : null;
     const o = normOutfit(outfit),
@@ -1343,8 +1392,8 @@
     const bag = o.bag ? ART[o.bag].ex(v) + fxOf('bag') : '';
     const hat = o.hat ? G(ART[o.hat].ex(v, look) + fxOf('hat'), hatFit(look.hair)) : '';
     let head;
-    if (back) head = (mess ? mess.hair : '') + headBack(look) + hat;
-    else head = (mess ? mess.hair : '') + headFront(look, mood) + (o.glasses ? ART[o.glasses].ex('front') + fxOf('glasses') : '') + hat;
+    if (back) head = (mess ? mess.hair : '') + headBack(look, hs) + hat;
+    else head = (mess ? mess.hair : '') + headFront(look, mood, hs) + (o.glasses ? ART[o.glasses].ex('front') + fxOf('glasses') : '') + hat;
     if (sad) head = G(head, ' transform="translate(0 3) rotate(-3 92 150)"'); // a droopy head
     const pet = o.pet ? G(G(OUT(ART[o.pet].pet.d() + fxm(T('pet'), PETFX[o.pet] || [[-30, -50], [30, -36]], 1.4), SW / PET_S), tf(PET_AT[0], PET_AT[1], PET_S)), cls('ex-pet')) : '';
     const wingsF = '';
@@ -1389,6 +1438,8 @@
         return G(a.shoe(), ' transform="translate(-7 0)"') + G(G(a.shoe(), MIR), ' transform="translate(7 0)"');
       case 'pet':
         return a.pet.d();
+      case 'hijab':
+        return headFront({ skin: 1, hair: 'hijab', hijabColor: 0, hairColor: 0 }, '', a.hj);
       case 'shield':
         return a.sh();
       case 'cape':
@@ -1955,7 +2006,7 @@
     [[668, 560, 0.42], [700, 548, 0.36], [1130, 540, 0.4], [1166, 566, 0.46], [744, 512, 0.3]].forEach((t) => { s += G(OUT(PINE(0, 0, 1, N('#4f8f7a')), 3 / t[2]), tf(t[0], t[1], t[2])); });
     s += trail(CLIMB, 17, 4, { N, fill: '#f6e6c4', edge: '#9f86b8', mid: '#fffaf0', steps: true });
     // summit beacon + flag
-    s += '<g class="sp-beacon">' + EF(888, 176, 110, 100, 'url(#lhq-g-aura)') + '</g>' + OUT(S(rr(885, 128, 6, 56, 3), N('#e6ebf5')) + G(S('M891 132Q910 124 922 134Q934 142 948 136L942 152L948 168Q934 174 922 166Q910 158 891 166Z', N('#ff5d6c')) + P(star5(918, 150, 6.4), '#fff', sw(2)), cls('lhq-wave')) + ball(888, 127, 6, 6, '#ffe066', { sh: false }), 3) +
+    s += '<g class="sp-beacon">' + EF(888, 176, 110, 100, 'url(#lhq-g-aura)') + '</g>' + '<g class="sp-poke" data-act="poke" data-k="flag">' + OUT(S(rr(885, 128, 6, 56, 3), N('#e6ebf5')) + G(S('M891 132Q910 124 922 134Q934 142 948 136L942 152L948 168Q934 174 922 166Q910 158 891 166Z', N('#ff5d6c')) + P(star5(918, 150, 6.4), '#fff', sw(2)), cls('lhq-wave')) + ball(888, 127, 6, 6, '#ffe066', { sh: false }), 3) + '</g>' +
       '<path class="lhq-tw" d="' + star4(888, 126, 20) + '" fill="#fffbe0" style="animation-duration:2.2s"/>';
     // cloud cliffs (sky kingdom) + floating island + small rainbow
     s += G(['#ff6b6b', '#ffb43d', '#ffe066', '#5fd27a', '#5fb2ff'].map((c, i) => L('M640 470A' + (84 - i * 9) + ' ' + (84 - i * 9) + ' 0 0 1 ' + (808 - i * 18) + ' 470', N(c), 9)).join(''), ' transform="translate(' + (36) + ' 0)" opacity="' + (night ? 0.4 : 0.75) + '"');

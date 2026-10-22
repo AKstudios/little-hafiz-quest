@@ -4,7 +4,7 @@ A fun, picture-and-gesture adventure that helps young children (around age 4–7
 
 A grown-up who reads Arabic recites each āyah; the child listens, repeats and does a hand action. Every āyah has its own picture and movement, so the picture brings back the words. Step by step, the clues fade until the child recites with no help at all.
 
-Your child's own little explorer starts in a meadow at An-Nās and climbs, sūrah by sūrah, through a forest, a beach, a desert canyon, starry hills and cloud cliffs to the top of the mountain at An-Naba’. Every memorized sūrah gives the explorer a gift to wear or keep: a cap, boots, a cape, a pet buddy, a golden staff.
+Your child's own little explorer starts in a meadow at An-Nās and climbs, sūrah by sūrah, through a forest, a beach, a desert canyon, starry hills and cloud cliffs to the top of the mountain at An-Naba’. Along the way there are over 150 things to win and wear: caps and kufis or hijabs, boots, capes, walking sticks, buddies, an astronaut suit with a toy rocket, and golden editions for the hardest-working explorers.
 
 **Play it:** https://akstudios.github.io/little-hafiz-quest/
 
@@ -12,16 +12,24 @@ Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and c
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/splash.png" width="200" alt="Start screen: the explorer, seen from behind, looks out at the path to the mountain top"></td>
-    <td align="center"><img src="screenshots/map.png" width="200" alt="The quest map: a winding path of sūrahs through the meadow, memorized ones shown in green"></td>
-    <td align="center"><img src="screenshots/surah.png" width="200" alt="Inside a sūrah: numbered quest steps, with the next step glowing"></td>
-    <td align="center"><img src="screenshots/explorer.png" width="200" alt="My Explorer: dress up the explorer with the treasures found so far"></td>
+    <td align="center"><img src="screenshots/splash.png" width="200" alt="Start screen: the explorer, seen from behind, looks up the winding trail to the mountain top"></td>
+    <td align="center"><img src="screenshots/map.png" width="200" alt="The quest map: sūrah stops along a path, a river and bridge between two worlds, animals and trees"></td>
+    <td align="center"><img src="screenshots/surah.png" width="200" alt="Inside a sūrah: its Arabic name, the checkpoints in a row, and the quest steps with the next one glowing"></td>
   </tr>
   <tr>
     <td align="center">Begin the quest</td>
     <td align="center">Climb the map</td>
     <td align="center">Follow the steps</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/explorer.png" width="200" alt="My Explorer: the explorer in a kufi and vest, with a row of categories and the hats to choose from"></td>
+    <td align="center"><img src="screenshots/progress.png" width="200" alt="Progress: every sūrah with its stars; tap one to go there"></td>
+    <td align="center"><img src="screenshots/summit.png" width="200" alt="The summit: the explorer cheers at the top of the mountain, with the Summit cloak as a reward"></td>
+  </tr>
+  <tr>
     <td align="center">Collect and dress up</td>
+    <td align="center">See the progress</td>
+    <td align="center">Reach the summit</td>
   </tr>
 </table>
 
@@ -32,22 +40,28 @@ Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and c
 
 ## How to play (for the grown-up)
 
-1. **Make an explorer.** Tap **Begin**, pick a name, boy or girl, a skin tone, a hair style and a hair color (or a hijab and its color). Girls wear the crowns as tiaras. Each child can have their own explorer, with their own stars and treasures (tap the name on the start screen). Explorers can be removed in the Grown-up Corner, all of them if you like; Begin then makes a new one.
+1. **Make an explorer.** Tap **Begin**, pick a name, boy or girl, a skin tone, a hair style and a hair color (girls can also choose a hijab and its color). Girls wear the crowns as tiaras. Each child can have their own explorer, with their own stars and treasures (tap the name on the start screen). Explorers can be removed in the Grown-up Corner, all of them if you like; Begin then makes a new one.
 2. **Walk the map.** Start at 🚩 An-Nās at the bottom and climb. Tap a sūrah: the explorer pops up beside it, walks in, and the lesson opens. Each world has its own border to cross (a river, the sea, a gorge, a gate, the clouds, a frozen river), and the scenery on the horizon changes as you climb. The world list on the side jumps between worlds. You can go back to any sūrah at any time to revise.
 3. **Follow the glowing step** in each sūrah:
    1. **👀 Look & Repeat.** Read the āyah. Your child repeats it three times while doing the action (pop a bubble each time), then says it with only the picture showing. After each new āyah, chain from the first āyah up to the new one. Tap the numbered dots at the top to practice any āyah in that part. The “Do it” actions can be switched off in the Grown-up Corner. Progress is saved āyah by āyah, so you can stop and carry on later.
    2. **Word Steps.** Build the āyah one word at a time, always going back to the first word. Tap any word to hear just that word. Then your child says it all while you reveal each word.
    3. **🐸 Stepping Stones.** Your child says each āyah and taps the frog to hop. Level 1 shows the picture and first word, Level 2 only the picture, and Level 3 no picture at all. **Hint** reveals a little more each tap (the picture, then one word at a time, then the whole āyah to hear). Level 3 means it's memorized.
    4. **Review games:** 🧩 Picture Puzzle and 🔮 What Comes Next.
-4. **Hearts.** Once a part has been learned, the review games (and Stepping Stones) have 3 hearts, plus one more for each finished world (a star in every sūrah of it), up to 5. A wrong pick, or the grown-up tapping **Not quite**, costs a heart. Losing them all drops the explorer's newest treasure at that sūrah on the map, and the explorer looks a little sad and scruffy until it's found. Finishing a review game there brings it back, and the explorer shines again. You can switch hearts off in the Grown-up Corner.
-5. **Gifts.** The first star in a sūrah wins its own treasure (they get shinier higher up the mountain), and one star is enough to move on. Collecting **every** star in a sūrah wins a special golden edition of its treasure. Crossing a checkpoint wins a small gift (a sticker), and the **star track** gives a prize every few stars, 73 in all (an astronaut set with a toy rocket, a kufi and other hats, a little thobe, new walking sticks, buddies and color versions of the clothes); the end of each game shows how many stars are left to the next one. Gifts wait in a little rattling box at the top; tap it to open them one at a time.
-6. **The summit.** With a star in every sūrah, the explorer climbs to the top of the mountain and cheers: every treasure and sticker is unlocked, plus the **Summit cloak**. Three stars in every sūrah win the **Hafiz crown**, and every single star wins the one-of-a-kind **Golden hoopoe**. The first game finished each day gives a sticker to stick on the explorer's shirt. Open **My Explorer** (the backpack) to dress up: the explorer always stays in view while you pick from a row of categories (a red dot marks new things, which come first), and the 👕 button beside the explorer swaps between just the comfy clothes and everything they were wearing. Tap the explorer, the animals, trees and houses on the map or the start screen and they react.
+4. **Hearts.** Once a part has been learned, the review games (and Stepping Stones) have 3 hearts, plus one more for each finished world (a star in every sūrah of it), up to 5. A wrong pick, or the grown-up tapping **Not quite**, costs a heart. Losing them all drops the explorer's newest treasure at that sūrah, puts a 💔 on it on the map, and leaves the explorer a little sad and scruffy. Finishing a review game there fixes it: the treasure flies back on and the explorer smiles again. You can switch hearts off in the Grown-up Corner.
+5. **Gifts.** One star is enough to move on.
+   - The first star in a sūrah wins its own treasure (they get shinier higher up the mountain); **every** star in a sūrah wins a golden edition of it.
+   - The **star track** gives a prize every few stars, from 4 stars up to 900: an astronaut set with a toy rocket, new hats, a little thobe, walking sticks, buddies and color versions of the clothes. Boys win kufis and girls win hijabs. The end of each game shows how many stars are left to the next prize.
+   - Crossing a checkpoint wins a small gift, and the first game of each day gives a sticker to stick on the explorer's shirt.
+   - Gifts wait in a little rattling box at the top; tap it to open them one at a time.
+6. **My Explorer** (the backpack): the explorer always stays in view while you pick from a row of categories. A red dot marks new things, which come first. The 👕 button beside the explorer swaps between just the comfy clothes and everything they were wearing. Tap the explorer (or just wait) and they giggle, jump, dance, wave or twirl their stick. On the map and the start screen, the explorer, animals, trees, houses and the summit flag react to a tap too.
+7. **Progress.** Tap the 📖 (sūrahs done, at least one star each) or ⭐ (all stars) counters at the top of the map to see every sūrah. Tap one to go straight there: the explorer walks in and the next lesson starts.
+8. **The summit.** With a star in every sūrah, the explorer climbs to the top of the mountain and cheers: every treasure and sticker is unlocked, plus the **Summit cloak**. Three stars in every sūrah win the **Hafiz crown** (a tiara for girls), and every single star wins the one-of-a-kind **Golden hoopoe**.
 
 Longer sūrahs are split into checkpoints of a few āyāt; finish the checkpoints, then the 🏁 whole sūrah. Each sūrah also has a **tip for grown-ups**, sometimes with a toy to tap along (a bell, a drum, a clap).
 
 Five to ten minutes a day is plenty. Stop while it's still fun.
 
-The orange **Listen** button at the top plays the recitation of what's on screen. In the Grown-up Corner (⚙️) you can choose the reciter (Mishary Alafasy, Al-Husary's slow teaching recitation, Al-Minshawi or Abdul Basit), fullscreen (hides the browser's address bar where the browser allows it; on iPhone, use Add to Home Screen instead), a dim night theme, simple meanings or transliteration, repeat or slow down the recitation, and manage explorers and stars.
+The orange **Listen** button at the top plays the recitation of what's on screen. In the Grown-up Corner (⚙️) you can choose the reciter (Mishary Alafasy, Al-Husary's slow teaching recitation, Al-Minshawi or Abdul Basit), hearts, the “Do it” actions, fullscreen (hides the browser's address bar where the browser allows it; on iPhone, use Add to Home Screen instead), a dim night theme, simple meanings or transliteration, repeat or slow down the recitation, and manage explorers and stars.
 
 ## Versions
 

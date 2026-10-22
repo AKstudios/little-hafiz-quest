@@ -279,6 +279,7 @@
             <span class="nring"></span><span class="nplat"><span class="nico">${s.icon}</span></span>
             <span class="nnum">${s.n}</span>
             ${st.done ? '<span class="ncheck">✓</span>' : ''}
+            ${st.fix ? '<span class="nfix" title="Needs fixing">💔</span>' : ''}
             ${st.gift ? `<span class="ngift">${ART.gift({ tier: st.giftTier || 1, open: false, kind: 'item' })}</span>` : ''}
             <span class="nlab"><b>${s.name}</b><small>${st.done ? '✓ Memorized' : `⭐ ${st.stars}/${st.max}`}</small></span>
           </button>`,
