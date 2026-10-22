@@ -4,7 +4,7 @@ A fun, picture-and-gesture game that helps young children (around age 4–7) **m
 
 A grown-up who reads Arabic recites each āyah; the child listens, repeats and does a hand action. Every āyah has its own picture and movement, so the picture brings back the words. Step by step, the clues fade until the child recites with no help at all.
 
-**Play it:** https://akstudios.github.io/little-hafiz-quest/
+**Play it:** https://akramali.github.io/little-hafiz-quest/
 
 Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and computers, and keeps working without internet once it's been opened.
 
