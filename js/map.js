@@ -5,7 +5,7 @@
  * mountain top. Seven worlds are stacked bottom → top (meadow, forest, sands, canyon, starry hills,
  * cloud cliffs, snowy peak). Plain browser JavaScript, used by js/game.js through window.LHQ_MAP.
  *
- * How it is organised
+ * How it is organized
  *   - layout()   works out every position in "map space" (pixels, y from the top of the map):
  *                the winding path through all 37 sūrahs, the world bands, the props beside the path.
  *   - mount()    draws the map into an element and returns a small controller (walkTo, scrollToWorld, destroy).
@@ -22,9 +22,10 @@
   const GAP = 156; // vertical distance between two sūrah stops
   const WGAP = 150; // extra room where one world turns into the next
   const START = 300; // room below the first stop (start meadow)
-  const TOP = 520; // room above the last stop (the summit)
+  const TOP = 680; // room above the last stop: the summit, clear of the horizon at the top of the screen
   const DOT = 30; // distance between the stepping dots of the path
   const EX_FOOT = 33; // the explorer is drawn 72 px wide with its feet at 92/200 of the width
+  const BH = 130; // height of the border strip between two worlds (LHQ_ART.BORDER_H)
   const reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
   /* small seeded random generator, so props land in the same places on every visit */
@@ -96,7 +97,7 @@
       return { i, wi, x: cx + swing, y: H - yb };
     });
     const startPt = { x: cx - amp * 0.2, y: H - 70 };
-    const summit = { x: cx, y: 250 };
+    const summit = { x: cx, y: 410 };
     const path = spline([startPt, ...nodes, summit]);
     nodes.forEach((nd) => {
       let best = 0,
@@ -120,7 +121,17 @@
     });
     // path x at a given y, used to keep props away from the path
     const pathXs = (y) => path.filter((p) => Math.abs(p.y - y) < 40).map((p) => p.x);
-    return { H, nodes, path, bands, pathXs, cx, amp, summit, startPt };
+    // the borders between worlds and where the path crosses them (center, length across the strip, angle)
+    const borders = bands.slice(0, -1).map((b) => {
+      const y = b.top,
+        on = path.filter((p) => Math.abs(p.y - y) <= BH / 2 + 4);
+      const a = on[0] || pointAt(path, 0),
+        z = on[on.length - 1] || a,
+        mid = pointAt(path, (a.s + z.s) / 2);
+      const ang = (Math.atan2(z.x - a.x, a.y - z.y) * 180) / Math.PI; // 0 = straight up the screen
+      return { wi: b.wi, y, x: mid.x, len: Math.max(BH, z.s - a.s) + 8, ang };
+    });
+    return { H, nodes, path, bands, borders, pathXs, cx, amp, summit, startPt };
   }
 
   function mount(root, cfg) {
@@ -142,66 +153,109 @@
       L = layout(cfg, width);
       exState.s = L.nodes[cfg.current] ? L.nodes[cfg.current].s : 0;
       const html = [];
-      // ground bands with soft blends between worlds
+      // ground bands: each world its own ground (css adds a texture per world); the top one rises into the sky
       L.bands.forEach((b) => {
         const p = pal(b.wi),
-          above = b.wi + 1 < L.bands.length ? pal(b.wi + 1) : null;
-        const g = above
-          ? `linear-gradient(180deg, ${above.ground[1]} 0%, ${p.ground[0]} 14%, ${p.ground[1]} 100%)`
-          : `linear-gradient(180deg, ${p.sky[0]} 0%, ${p.sky[1]} 12%, ${p.ground[0]} 30%, ${p.ground[1]} 100%)`;
+          top = b.wi === L.bands.length - 1;
+        const st = top
+          ? `background:linear-gradient(180deg, ${p.sky[0]} 0%, ${p.sky[1]} 12%, ${p.ground[0]} 30%, ${p.ground[1]} 100%)`
+          : `--g0:${p.ground[0]};--g1:${p.ground[1]}`;
         html.push(
-          `<div class="mband mb-${p.key}" style="top:${b.top}px;height:${b.bottom - b.top + 2}px;background:${g}"><div class="mamb" data-w="${b.wi}">${ART.ambient(b.wi)}</div></div>`,
+          `<div class="mband mb-${p.key}${top ? ' mb-top' : ''}" style="top:${b.top}px;height:${b.bottom - b.top + 2}px;${st}"><div class="mamb" data-w="${b.wi}">${ART.ambient(b.wi)}</div></div>`,
+        );
+      });
+      // where one world turns into the next: a river, the sea, a gorge, a wall, the clouds, a frozen river
+      L.borders.forEach((bd) => {
+        html.push(
+          `<div class="mborder" style="top:${(bd.y - BH / 2).toFixed(1)}px;height:${BH}px">${ART.border(bd.wi, Math.round(width), { up: pal(bd.wi + 1).ground[1], down: pal(bd.wi).ground[0], night: !!cfg.night })}</div>`,
         );
       });
       html.push('<div class="mlayer">');
+      // the path crosses each border on a bridge (a gate through the wall)
+      L.borders.forEach((bd) => {
+        if (bd.wi === 3)
+          html.push(
+            `<div class="mgate" data-x="${bd.x.toFixed(1)}" data-y="${(bd.y + 34).toFixed(1)}" style="left:${(bd.x - 64).toFixed(1)}px;top:${(bd.y + 34 - 128).toFixed(1)}px">${ART.bridge(3, cfg.night)}</div>`,
+          );
+        else
+          html.push(
+            `<div class="mbridge" data-x="${bd.x.toFixed(1)}" data-y="${bd.y.toFixed(1)}" style="left:${(bd.x - 28).toFixed(1)}px;top:${(bd.y - bd.len / 2).toFixed(1)}px;height:${bd.len.toFixed(0)}px"><div class="mbr-in" style="transform:rotate(${bd.ang.toFixed(1)}deg)">${ART.bridge(bd.wi, cfg.night)}</div></div>`,
+          );
+      });
       // path dots
       const nodeS = L.nodes.map((nd) => nd.s);
       const total = L.path[L.path.length - 1].s;
       for (let s = DOT; s < total - 20; s += DOT) {
         if (nodeS.some((ns) => Math.abs(ns - s) < 46)) continue;
         const p = pointAt(L.path, s);
-        // keep the dots out from under the name labels
+        // keep the dots out from under the name labels, and off the bridges
         if (L.nodes.some((nd) => p.y > nd.y + 30 && p.y < nd.y + 96 && Math.abs(p.x - nd.x) < 72)) continue;
+        if (L.borders.some((bd) => Math.abs(p.y - bd.y) < BH / 2 + 6)) continue;
         const wi = Math.max(0, L.bands.findIndex((b) => p.y >= b.top && p.y <= b.bottom));
         const reached = s <= (L.nodes[cfg.reached] ? L.nodes[cfg.reached].s : 0);
         html.push(
           `<i class="mdot ${reached ? 'on' : ''}" data-x="${p.x.toFixed(1)}" data-y="${p.y.toFixed(1)}" style="left:${(p.x - 11).toFixed(1)}px;top:${(p.y - 7).toFixed(1)}px;--pf:${pal(wi).path[0]};--pe:${pal(wi).path[1]}"></i>`,
         );
       }
-      // props, seeded per world, kept off the path
+      // props, seeded per world, kept off the path and the borders: first the world's landmark, then lots more
+      const walkers = new Set(ART.WALKERS || []);
+      const isTall = (name) => /viewBox="0 0 100 150"/.test(ART.props[name] || ''); // trees, palms, cacti… are drawn 100×150
+      const grow = Math.max(1, Math.min(1.35, width / 460)); // props a little bigger on tablets and computers
+      const propHTML = (name, x, y, size0, rnd) => {
+        const svg = ART.props[name] || '',
+          size = Math.round(size0 * grow);
+        const tall = isTall(name);
+        const hgt = Math.round(tall ? size * 1.5 : size);
+        // walkers stroll to and fro on the spot (css .mwalk)
+        const inner = walkers.has(name) ? `<div class="mwalk" style="animation-duration:${(7 + rnd() * 6).toFixed(1)}s;animation-delay:-${(rnd() * 8).toFixed(1)}s">${svg}</div>` : svg;
+        return `<div class="mprop${walkers.has(name) ? ' walker' : ''}" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" style="left:${(x - size / 2).toFixed(1)}px;top:${(y - hgt).toFixed(1)}px;width:${size}px;height:${hgt}px">${inner}</div>`;
+      };
+      // world signs go beside each world's first stop; props keep clear of them
+      const signs = L.bands.map((b) => {
+        const nd = L.nodes[b.first],
+          left = nd.x > L.cx;
+        return { x: left ? Math.max(70, nd.x - 150) : Math.min(width - 90, nd.x + 150), y: nd.y + 74 };
+      });
       L.bands.forEach((b) => {
         const rnd = seeded(97 + b.wi * 131),
           names = (ART.PROPS_BY_WORLD[b.wi] || []).filter((nm) => nm !== 'peak-summit');
         if (!names.length) return;
-        const h = b.bottom - b.top,
-          count = Math.round((h / 62) * Math.min(1.6, width / 420));
-        const placed = [];
-        for (let t = 0, made = 0; t < count * 6 && made < count; t++) {
-          const x = 14 + rnd() * (width - 28),
-            y = b.top + 40 + rnd() * (h - 60);
-          if (L.pathXs(y).some((px) => Math.abs(px - x) < 74)) continue;
-          if (L.nodes.some((nd) => Math.hypot(nd.x - x, nd.y - y) < 96)) continue;
-          if (placed.some((q) => Math.hypot(q.x - x, q.y - y) < 54)) continue;
-          if (width < 700 && x > width - 58 && y > 0) continue; // leave the world rail clear on phones
-          placed.push({ x, y });
+        const lo = b.wi ? b.bottom - BH / 2 - 10 : b.bottom - 30,
+          hi = b.wi < L.bands.length - 1 ? b.top + BH / 2 + 96 : b.top + 300;
+        const h = lo - hi,
+          count = Math.round((h / 44) * Math.min(1.8, width / 400));
+        const placed = signs.map((q) => ({ x: q.x, y: q.y - 30, room: 50 }));
+        const free = (x, y, room) =>
+          !L.pathXs(y).some((px) => Math.abs(px - x) < 70 + room) &&
+          !L.nodes.some((nd) => Math.hypot(nd.x - x, nd.y - y) < 92 + room) &&
+          !placed.some((q) => Math.hypot(q.x - x, q.y - y) < 48 + room + q.room) &&
+          !(width < 700 && x > width - 58 - room); // leave the world rail clear on phones
+        const lm = ART.LANDMARKS && ART.LANDMARKS[b.wi];
+        if (lm && ART.props[lm]) {
+          for (let t = 0; t < 40; t++) {
+            const y = hi + 40 + rnd() * (h - 40),
+              px = L.pathXs(y)[0] || L.cx,
+              x = px > L.cx ? 30 + rnd() * Math.max(10, px - 190) : px + 120 + rnd() * Math.max(10, width - px - 220);
+            if (x < 40 || x > width - 40 || !free(x, y, 30)) continue;
+            placed.push({ x, y, room: 40 });
+            html.push(propHTML(lm, x, y, Math.round(Math.min(120, width * 0.3)), rnd)); // grows with the screen too
+            break;
+          }
+        }
+        for (let t = 0, made = 0; t < count * 8 && made < count; t++) {
+          const x = 10 + rnd() * (width - 20),
+            y = hi + rnd() * h;
+          if (!free(x, y, 0)) continue;
+          placed.push({ x, y, room: 0 });
           made++;
           const name = names[(rnd() * names.length) | 0];
-          const svg = ART.props[name] || '';
-          const tall = /viewBox="0 0 100 150"/.test(svg); // trees, palms, cacti… are drawn 100×150
-          const size = Math.round(44 + rnd() * 30 + (tall ? 10 : 0)),
-            hgt = Math.round(tall ? size * 1.5 : size);
-          html.push(
-            `<div class="mprop" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" style="left:${(x - size / 2).toFixed(1)}px;top:${(y - hgt).toFixed(1)}px;width:${size}px;height:${hgt}px">${svg}</div>`,
-          );
+          html.push(propHTML(name, x, y, Math.round(40 + rnd() * 30 + (isTall(name) ? 10 : 0)), rnd));
         }
       });
       // world signs
       L.bands.forEach((b) => {
         const w = cfg.worlds[b.wi],
-          nd = L.nodes[b.first];
-        const left = nd.x > L.cx;
-        const x = left ? Math.max(70, nd.x - 150) : Math.min(width - 90, nd.x + 150),
-          y = nd.y + 74;
+          { x, y } = signs[b.wi];
         // a gentle hint that the climb gets harder higher up: ★☆☆ → ★★★
         const lv = Math.min(3, 1 + Math.floor(b.wi / 2.5)),
           diff = '★'.repeat(lv) + '☆'.repeat(3 - lv);
@@ -224,7 +278,7 @@
         const cls = st.done ? 'st-done' : nd.i === cfg.current ? 'st-cur' : st.started ? 'st-part' : 'st-new';
         const pct = st.max ? Math.round((st.stars / st.max) * 100) : 0;
         html.push(
-          `<button class="node ${cls} ${nd.i === cfg.suggest ? 'suggest' : ''}" data-act="surah" data-i="${nd.i}" data-x="${nd.x.toFixed(1)}" data-y="${nd.y.toFixed(1)}" style="left:${(nd.x - 44).toFixed(1)}px;top:${(nd.y - 44).toFixed(1)}px;--p:${pct}" aria-label="${s.n}. ${s.name}${st.done ? ', memorized' : ''}">
+          `<button class="node ${cls} ${st.gold ? 'st-gold' : ''} ${nd.i === cfg.suggest ? 'suggest' : ''}" data-act="surah" data-i="${nd.i}" data-x="${nd.x.toFixed(1)}" data-y="${nd.y.toFixed(1)}" style="left:${(nd.x - 44).toFixed(1)}px;top:${(nd.y - 44).toFixed(1)}px;--p:${pct}" aria-label="${s.n}. ${s.name}${st.done ? ', memorized' : ''}">
             <span class="nring"></span><span class="nplat"><span class="nico">${s.icon}</span></span>
             <span class="nnum">${s.n}</span>
             ${st.done ? '<span class="ncheck">✓</span>' : ''}
@@ -244,7 +298,7 @@
       // the explorer
       const p0 = exPos();
       html.push(
-        `<div class="mex" data-x="${p0.x.toFixed(1)}" data-y="${p0.y.toFixed(1)}" style="left:${(p0.x - EX_FOOT).toFixed(1)}px;top:${(p0.y - 108).toFixed(1)}px">${cfg.explorerSVG()}</div>`,
+        `<div class="mex appear" data-x="${p0.x.toFixed(1)}" data-y="${p0.y.toFixed(1)}" style="left:${(p0.x - EX_FOOT).toFixed(1)}px;top:${(p0.y - 108).toFixed(1)}px">${cfg.explorerSVG()}</div>`,
       );
       html.push('</div>');
       root.style.height = L.H + 'px';
@@ -288,10 +342,39 @@
         const dx = (it.x - cx) * (s - 1);
         it.el.style.transform = `translate3d(${dx.toFixed(1)}px,${dy.toFixed(1)}px,0) scale(${s.toFixed(3)})${it.ex && exState.face < 0 ? ' scaleX(-1)' : ''}`;
       }
+      horizon(top);
       rail();
     }
     function kick() {
       if (!raf) raf = requestAnimationFrame(frame);
+    }
+
+    /* The horizon: far scenery fixed at the top of the screen, for the world that is meeting the sky there.
+       Near a border it fades into the next world's scenery, and it drifts a little as you climb (parallax).
+       Together with the curved-world effect, the ground seems to roll over the horizon as you scroll. */
+    const hzEl = document.createElement('div');
+    hzEl.className = 'mhz';
+    hzEl.setAttribute('aria-hidden', 'true');
+    hzEl.innerHTML = cfg.worlds
+      .map((w, wi) => `<div class="mhz-w" style="--s0:${pal(wi).sky[0]};--s1:${pal(wi).sky[1]}"><div class="mhz-far">${ART.horizon(wi, cfg.night)}</div></div>`)
+      .join('');
+    const hzLayers = [...hzEl.children];
+    let hzH = 0,
+      hzKey = '';
+    function horizon(top) {
+      if (!hzH) hzH = hzEl.offsetHeight || 140;
+      const y = hzH + 30 - top; // the map just under the horizon line
+      const b = L.bands.find((bb) => y >= bb.top && y <= bb.bottom) || (y < 0 ? L.bands[L.bands.length - 1] : L.bands[0]);
+      const d = y - b.top,
+        f = b.wi + 1 < L.bands.length && d < 280 ? 1 - d / 280 : 0;
+      const prog = Math.max(0, Math.min(1, (b.bottom - y) / (b.bottom - b.top)));
+      const key = b.wi + ':' + f.toFixed(2) + ':' + prog.toFixed(2);
+      if (key === hzKey) return;
+      hzKey = key;
+      hzLayers.forEach((el, wi) => {
+        el.style.opacity = wi === b.wi ? 1 : wi === b.wi + 1 ? f.toFixed(2) : 0;
+      });
+      hzEl.style.setProperty('--hp', prog.toFixed(3));
     }
 
     /* only animate the ambient layers that are on screen */
@@ -361,58 +444,85 @@
       else scrollTo(0, Math.max(0, y));
     }
 
-    /* walk the explorer along the path to stop i, then call done */
+    /* Tapping a stop: the explorer doesn't trek along the whole path. They vanish in a puff, pop up a few
+       steps before the chosen stop, and walk into it. Then done() is called (the map zooms in). */
     function walkTo(i, done) {
       if (walking) return;
       const ex = items.find((it) => it.ex);
       const target = L.nodes[i];
-      if (!ex || !target || i === exState.i || reduceMotion) {
+      if (!ex || !target || reduceMotion) {
         exState.i = i;
-        if (ex) {
-          const p = exPos();
-          moveEx(ex, p);
-        }
+        if (ex) moveEx(ex, exPos());
         setTimeout(done, reduceMotion ? 0 : 250);
         return;
       }
-      const from = exPos(),
-        s0 = L.nodes[exState.i] ? L.nodes[exState.i].s : 0,
-        s1 = target.s;
-      const dist = Math.abs(s1 - s0);
-      const ms = Math.max(700, Math.min(2600, dist * 2.2));
-      const svg = ex.el.querySelector('.ex');
-      if (svg) svg.classList.add('walk');
-      const t0 = performance.now();
-      exState.i = -1;
       walking = true;
-      const end = { i };
-      const step = (t) => {
-        if (!alive) return;
-        const k = Math.min(1, (t - t0) / ms),
-          e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
-        let p;
-        if (k < 0.12) {
-          // step from the side of the old stop onto the path
-          const q = pointAt(L.path, s0);
-          p = { x: from.x + (q.x - from.x) * (k / 0.12), y: from.y + (q.y - from.y) * (k / 0.12) };
-        } else {
-          p = pointAt(L.path, s0 + (s1 - s0) * Math.min(1, (e - 0.06) / 0.94));
-        }
-        exState.face = p.x < ex.x - 0.3 ? -1 : p.x > ex.x + 0.3 ? 1 : exState.face;
-        moveEx(ex, p);
-        scrollTo(0, Math.max(0, mapTop() + p.y - innerHeight * 0.6));
+      const svg = ex.el.querySelector('.ex');
+      const inside = { x: target.x, y: target.y + 28 }; // standing on the stop's platform
+      const s1 = target.s,
+        s0 = Math.max(0, s1 - 110);
+      const finish = () => {
+        exState.i = i;
+        if (svg) svg.classList.remove('walk');
+        walking = null;
         kick();
-        if (k < 1) requestAnimationFrame(step);
-        else {
-          exState.i = end.i;
-          moveEx(ex, exPos());
-          if (svg) svg.classList.remove('walk');
-          walking = null;
-          kick();
-          setTimeout(done, 120);
-        }
+        setTimeout(done, 80);
       };
-      requestAnimationFrame(step);
+      // walk from point a to point b (straight, or along the path between path lengths sa and sb)
+      const stroll = (ms, at, next) => {
+        if (svg) svg.classList.add('walk');
+        const t0 = performance.now();
+        const step = (t) => {
+          if (!alive) return;
+          const k = Math.min(1, (t - t0) / ms),
+            e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+          const p = at(e);
+          exState.face = p.x < ex.x - 0.3 ? -1 : p.x > ex.x + 0.3 ? 1 : exState.face;
+          moveEx(ex, p);
+          kick();
+          if (k < 1) requestAnimationFrame(step);
+          else next();
+        };
+        requestAnimationFrame(step);
+      };
+      const line = (a, b) => (e) => ({ x: a.x + (b.x - a.x) * e, y: a.y + (b.y - a.y) * e });
+      if (i === exState.i) {
+        // already here: just step onto the stop
+        stroll(420, line({ x: ex.x, y: ex.y }, inside), finish);
+        return;
+      }
+      ex.el.classList.remove('appear');
+      ex.el.classList.add('vanish');
+      puff(ex.x, ex.y);
+      let ready = 0;
+      const show = () => {
+        if (++ready < 2 || !alive) return;
+        const from = pointAt(L.path, s0);
+        moveEx(ex, from);
+        exState.face = pointAt(L.path, s0 + 10).x < from.x ? -1 : 1;
+        kick();
+        ex.el.classList.remove('vanish');
+        void ex.el.offsetWidth;
+        ex.el.classList.add('appear');
+        puff(from.x, from.y);
+        setTimeout(() => {
+          const pathPart = (e) => pointAt(L.path, s0 + (s1 - s0) * e);
+          stroll(620, pathPart, () => stroll(300, line(pointAt(L.path, s1), inside), finish));
+        }, 380);
+      };
+      setTimeout(show, 260);
+      smoothScrollTo(mapTop() + target.y - innerHeight * 0.6, 650, show);
+    }
+    /* a little sparkle puff on the map where the explorer vanishes or appears */
+    function puff(x, y) {
+      const layer = root.querySelector('.mlayer');
+      if (!layer) return;
+      const el = document.createElement('i');
+      el.className = 'mpuff';
+      el.style.left = x - 40 + 'px';
+      el.style.top = y - 90 + 'px';
+      layer.appendChild(el);
+      setTimeout(() => el.remove(), 800);
     }
     function moveEx(ex, p) {
       ex.x = p.x;
@@ -446,12 +556,14 @@
     const onResize = () => {
       clearTimeout(rsT);
       rsT = setTimeout(() => {
+        hzH = 0;
         const w = Math.max(320, root.clientWidth || innerWidth);
         if (Math.abs(w - width) < 8) {
           kick();
           return;
         }
         const keep = exState.i;
+        hzH = 0;
         width = w;
         build();
         exState.i = keep;
@@ -464,6 +576,7 @@
 
     build();
     drawRail();
+    root.parentNode.insertBefore(hzEl, root); // under the map's top bar
     focusNode(cfg.focus != null ? cfg.focus : cfg.current, false);
     kick();
 
@@ -479,6 +592,7 @@
         if (io) io.disconnect();
         if (raf) cancelAnimationFrame(raf);
         railEl.remove();
+        hzEl.remove();
       },
     };
   }

@@ -2,13 +2,13 @@
  * Little Hafiz Quest: art library (v2 adventure)
  * ==============================================
  * Every custom picture of the adventure: the little explorer and everything it can wear, gifts,
- * stickers, map props, world colours, ambient decorations and the start-screen scene.
+ * stickers, map props, world colors, ambient decorations and the start-screen scene.
  * Pictures are inline SVG markup built from JavaScript strings: no image files, no fonts, no network,
  * no scripts or event handlers inside the SVG. Animation lives in css/art.css (transform/opacity only).
  *
- * How it is organised
- *   1. Helpers: colours (mix, dk = shadow tone, lt = highlight tone) and shape builders (P, F, E, C, ...).
- *      Shapes are flat colours with one shadow tone and one highlight, outlined in ink (#2b2340).
+ * How it is organized
+ *   1. Helpers: colors (mix, dk = shadow tone, lt = highlight tone) and shape builders (P, F, E, C, ...).
+ *      Shapes are flat colors with one shadow tone and one highlight, outlined in ink (#2b2340).
  *   2. defs(): the shared gradients, inserted once into the page. All ids start with "lhq-".
  *   3. The explorer, drawn in a fixed 200×300 box: feet rest on y≈290 around x=92, the pet stands at
  *      x≈164. BODY parts (head, torso, arms, legs) are constants; hair styles and the hijab come next.
@@ -53,7 +53,7 @@
         .join('')
     );
   }
-  const dk = (c, t) => mix(c, '#3a2463', t == null ? 0.26 : t); // shadow tone (a little purple, never grey)
+  const dk = (c, t) => mix(c, '#3a2463', t == null ? 0.26 : t); // shadow tone (a little purple, never gray)
   const lt = (c, t) => mix(c, '#ffffff', t == null ? 0.5 : t); // highlight tone
 
   // Shapes. P = outlined (stroke comes from the surrounding OUT group), F = fill only, L = line.
@@ -71,9 +71,9 @@
     '<g stroke="' + INK + '" stroke-width="' + n(w || SW) + '" stroke-linejoin="round" stroke-linecap="round">' + inner + '</g>';
   const tf = (x, y, s, r) => ' transform="translate(' + n(x) + ' ' + n(y) + ')' + (r ? ' rotate(' + r + ')' : '') + (s != null && s !== 1 ? ' scale(' + s + ')' : '') + '"';
   const sw = (w) => ' stroke-width="' + w + '"';
-  // base colour + shadow shape + highlight shape + outline on top (crisp outline over the shading)
+  // base color + shadow shape + highlight shape + outline on top (crisp outline over the shading)
   const S = (d, c, sh, hl, x) => F(d, c) + (sh ? F(sh, dk(c)) : '') + (hl ? F(hl, lt(c, 0.55), 0.85) : '') + P(d, 'none', x);
-  // a "double line": thick ink line with a coloured line inside (straps, frames, stems)
+  // a "double line": thick ink line with a colored line inside (straps, frames, stems)
   const DL = (d, c, w) => L(d, INK, (w || 4) + 3.4) + L(d, c, w || 4);
 
   // The part of ellipse (cx,cy,rx,ry) not covered by a copy moved by (-dx,-dy): a soft shadow crescent.
@@ -187,7 +187,7 @@
     }
     return s + C(cx, cy, n(r * 0.36), mid || '#ffd23f', sw(2));
   }
-  // Recolour markup to one flat colour (silhouettes, die-cut sticker borders, masks).
+  // Recolor markup to one flat color (silhouettes, die-cut sticker borders, masks).
   function flat(m, col, w) {
     m = m.replace(/ (fill|stroke)="(?!none")[^"]*"/g, ' $1="' + col + '"').replace(/ (?:stroke-|fill-)?opacity="[^"]*"/g, '').replace(/ class="[^"]*"/g, '');
     if (w) m = m.replace(/ stroke-width="[^"]*"/g, ' stroke-width="' + w + '"').replace(/ stroke="none"/g, ' stroke="' + col + '"');
@@ -262,14 +262,38 @@
       ? EF(92, 116, 40, 38.5, sk) + F(crescent(92, 116, 40, 38.5, 7, 8), dk(sk, 0.1)) + E(92, 116, 40, 38.5, 'none')
       : EF(92, 112, 47, 43, sk) + F(crescent(92, 112, 47, 43, 8, 9), dk(sk, 0.1)) + E(92, 112, 47, 43, 'none');
   }
-  function face(sk) {
+  function face(sk, mood) {
     const dark = sk === SKIN[3] || sk === SKIN[4];
+    if (mood === 'sad')
+      // worried brows, a wobbly frown, a little sweat drop and a smudge on the cheek
+      return (
+        L('M68 106Q75 104.5 81 100.5', INK, 2.4) + L('M103 100.5Q109 104.5 116 106', INK, 2.4) +
+        G(cuteEyes(75, 119, 109, 119, 5.8).replace(/^<g>|<\/g>$/g, ''), cls('ex-eyes')) +
+        cheeks(63, 132, 121, 132, 6.6, dark ? '#c9566e' : '#f4a0b0') +
+        L('M85.5 136Q92 130.5 98.5 136', INK, 2.6) +
+        P('M149 96Q145 103 145.5 106Q146.5 110 150 110Q153.5 110 154 106Q154 103 149 96Z', '#9fd8ff', sw(1.8)) + P('M156 116Q154 120 154.3 121.6Q154.8 124 157 124Q159.2 124 159.6 121.6Q159.8 120 156 116Z', '#9fd8ff', sw(1.6)) +
+        EF(65, 124, 6, 3.4, '#7a5a3a', 0.28)
+      );
     return (
       L('M68 104.5Q75 101 82 104.5', INK, 2.4) + L('M102 104.5Q109 101 116 104.5', INK, 2.4) +
       G(cuteEyes(75, 118, 109, 118, 6.4).replace(/^<g>|<\/g>$/g, ''), cls('ex-eyes')) +
       cheeks(63, 131, 121, 131, 7.6, dark ? '#e0607a' : '#ff8fa3') +
       L('M85 132Q92 139.5 99 132', INK, 2.8)
     );
+  }
+  // scruffy bits for a sad explorer: hair sticking up (not with a hijab) and dusty smudges on the clothes
+  function scruffy(look, back) {
+    const hc = HAIRC[look.hairColor];
+    const hairBits = look.hair === 'hijab' ? '' : DL('M84 64Q78 54 84 46', hc, 2.6) + DL('M98 62Q104 52 112 52', hc, 2.6) + DL('M70 70Q62 64 60 56', hc, 2.4);
+    const dust = EF(back ? 104 : 80, 204, 7, 4.2, '#7a5a3a', 0.32) + EF(back ? 74 : 106, 221, 5.4, 3.2, '#7a5a3a', 0.3) + EF(back ? 84 : 98, 252, 5, 3, '#7a5a3a', 0.3);
+    return { hair: hairBits, dust };
+  }
+  // a sticker stuck on the shirt (front view), drawn from the sticker art with its white die-cut edge
+  function badge(id) {
+    const f = STKBY[id];
+    if (!f) return '';
+    const art = OUT(f());
+    return '<svg x="64" y="163" width="27" height="27" viewBox="0 0 100 100" overflow="visible"><g transform="rotate(-10 50 50)">' + flat(art, '#ffffff', 14) + art + '</g></svg>';
   }
   const HAIR = {
     short: 'M47 120C40 104 41 84 55 74C70 62 114 60 129 74C143 84 144 104 137 120C134 108 130 98 124 92Q114 102 104 94Q94 103 82 94Q70 102 62 92C54 98 50 108 47 120Z',
@@ -312,19 +336,19 @@
       (h === 'short' ? P('M86 64Q87 52 100 53Q93 58 96 64Z', hc) : L('M74 90Q96 84 116 80', dk(hc), 2))
     );
   }
-  function headFront(look) {
+  function headFront(look, mood) {
     const sk = SKIN[look.skin];
     if (look.hair === 'hijab') {
       const hj = HIJABC[look.hijabColor];
       return (
         S(HAIR.hijabF, hj, 'M50 150Q34 162 36 178Q54 192 92 192Q130 192 148 178Q150 162 134 150Q122 168 92 168Q62 168 50 150Z') +
         L('M53 98Q60 74 84 65', lt(hj, 0.55), 5, ' opacity=".7"') + L('M62 170Q70 180 68 189', dk(hj, 0.35), 2.2) + L('M122 170Q114 180 116 189', dk(hj, 0.35), 2.2) +
-        faceShape(sk, true) + face(sk) +
+        faceShape(sk, true) + face(sk, mood) +
         P('M52 117C52 92 70 77 92 77C114 77 132 92 132 117C128 98 112 84 92 84C72 84 56 98 52 117Z', lt(hj, 0.55)) +
         C(132, 152, 4.2, '#fff6dc', sw(2.2)) + CF(130.8, 150.8, 1.4, '#fff')
       );
     }
-    return hairFrontBack(look) + ears(sk) + faceShape(sk, false) + face(sk) + hairFront(look);
+    return hairFrontBack(look) + ears(sk) + faceShape(sk, false) + face(sk, mood) + hairFront(look);
   }
   function headBack(look) {
     const sk = SKIN[look.skin],
@@ -357,7 +381,7 @@
    * ================================================================================================= */
   const CATALOG = [
     ['basic-shirt', 'top', 'Comfy shirt', 0, null],
-    ['basic-pants', 'pants', 'Comfy trousers', 0, null],
+    ['basic-pants', 'pants', 'Comfy pants', 0, null],
     ['basic-shoes', 'shoes', 'Little shoes', 0, null],
     ['twig', 'stick', 'Walking stick', 0, null],
     ['explorer-cap', 'hat', 'Explorer cap', 1, 114],
@@ -368,7 +392,7 @@
     ['green-vest', 'top', 'Explorer vest', 1, 109],
     ['rain-boots', 'shoes', 'River rain boots', 1, 108],
     ['leaf-cape', 'cape', 'Leaf cape', 1, 107],
-    ['traveller-jacket', 'top', 'Traveller jacket', 1, 106],
+    ['traveller-jacket', 'top', 'Traveler jacket', 1, 106],
     ['elephant-buddy', 'pet', 'Baby elephant', 1, 105],
     ['ranger-hat', 'hat', 'Ranger hat', 1, 104],
     ['explorer-watch', 'watch', 'Explorer watch', 1, 103],
@@ -399,6 +423,10 @@
     ['summit-crown', 'hat', 'Summit crown', 4, 78],
   ];
   const ITEMS = CATALOG.map((r) => ({ id: r[0], slot: r[1], name: r[2], tier: r[3], from: r[4] }));
+  // Golden editions: the special reward for every star in a sūrah (id 'gold-<item>', drawn by goldEdition below).
+  CATALOG.filter((r) => r[4]).forEach((r) => {
+    ITEMS.push({ id: 'gold-' + r[0], slot: r[1], name: (/^golden/i.test(r[2]) ? 'Shining ' + r[2].toLowerCase() : 'Golden ' + r[2].charAt(0).toLowerCase() + r[2].slice(1)), tier: 4, from: r[4], gold: true, base: r[0] });
+  });
   const BYID = Object.create(null);
   ITEMS.forEach((it) => (BYID[it.id] = it));
   const DEFAULTS = { top: 'basic-shirt', pants: 'basic-pants', shoes: 'basic-shoes', stick: 'twig' };
@@ -506,7 +534,7 @@
       v === 'back' ? '' : glassesBase('#8b6cff', '#cbb8ff', 0.35) + P('M127 98A7 7 0 1 0 133 110A5.5 5.5 0 1 1 127 98Z', GOLD, sw(2)) + P(star5(57, 104, 4.4), GOLD, sw(1.8)),
   };
 
-  /* ---------- tops: c = body colour, sl = sleeves, cf = cuffs, fr / bk = details ---------- */
+  /* ---------- tops: c = body color, sl = sleeves, cf = cuffs, fr / bk = details ---------- */
   const TOP = Object.create(null);
   TOP['basic-shirt'] = { c: '#7cc8f5', fr: () => P(star5(92, 196, 7.5, 3.4), '#ffe066', sw(2)), bk: () => '' };
   TOP['green-vest'] = {
@@ -835,7 +863,7 @@
     ART[id].fxIn = true;
   });
 
-  /* ---------- pets: local coordinates, feet on y=0, centred on x=0, about 80 wide ---------- */
+  /* ---------- pets: local coordinates, feet on y=0, centered on x=0, about 80 wide ---------- */
   const eye1 = (x, y, r) => EF(x, y, r, n(r * 1.2), INK) + CF(n(x + r * 0.35), n(y - r * 0.45), n(r * 0.42), '#fff') + CF(n(x - r * 0.3), n(y + r * 0.45), n(r * 0.18), '#fff');
   const PET = Object.create(null);
   PET['ladybug-buddy'] = {
@@ -928,6 +956,34 @@
   });
 
   /* ---------- explorer assembly ---------- */
+  /* ---------- golden editions: the same drawing, recoloured in gold (light stays light, dark stays dark) ---------- */
+  const GOLD_RAMP = ['#7a4a06', '#b8780e', '#e8a91e', '#ffcf3f', '#ffe48a', '#fff6d2'];
+  const goldMemo = Object.create(null);
+  function goldC(c) {
+    const k = c.toLowerCase();
+    if (k === INK || goldMemo[k]) return goldMemo[k] || c;
+    const [r, g, b] = rgb(k),
+      l = Math.min(0.999, (0.299 * r + 0.587 * g + 0.114 * b) / 255),
+      f = l * (GOLD_RAMP.length - 1),
+      i = Math.floor(f);
+    return (goldMemo[k] = mix(GOLD_RAMP[i], GOLD_RAMP[i + 1], f - i));
+  }
+  const goldify = (m) => m.replace(/#[0-9a-fA-F]{6}\b/g, goldC);
+  function goldOf(v) {
+    if (typeof v === 'function') return (...a) => { const r = v(...a); return typeof r === 'string' ? goldify(r) : r; };
+    if (typeof v === 'string') return /^#[0-9a-fA-F]{6}$/.test(v) ? goldC(v) : v;
+    if (Array.isArray(v)) return v.map(goldOf);
+    if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = goldOf(v[k]); return o; }
+    return v;
+  }
+  // where the golden sparkle twinkles appear on the explorer, by slot
+  const GOLD_FX = { hat: [[64, 74], [118, 62]], glasses: [[52, 104], [132, 100]], top: [[72, 176], [112, 206]], pants: [[76, 244], [108, 262]], shoes: [[68, 276], [114, 280]], cape: [[44, 240], [140, 236]], bag: [[58, 172], [126, 176]], stick: [[40, 118], [52, 160]] };
+  ITEMS.filter((it) => it.gold).forEach((it) => {
+    const a = goldOf(ART[it.base]);
+    a.fx = a.fx || GOLD_FX[it.slot];
+    if (it.slot === 'pet') PETFX[it.id] = PETFX[it.base];
+    ART[it.id] = a;
+  });
   function normLook(l) {
     l = l || {};
     const i = (v, m) => (Number.isInteger(+v) && +v >= 0 && +v < m ? +v : 0);
@@ -941,8 +997,10 @@
     });
     return out;
   }
-  function explorerInner(look, outfit, back) {
+  function explorerInner(look, outfit, back, mood) {
     look = normLook(look);
+    const sad = mood === 'sad',
+      mess = sad ? scruffy(look, back) : null;
     const o = normOutfit(outfit),
       v = back ? 'back' : 'front',
       sk = SKIN[look.skin],
@@ -966,33 +1024,39 @@
     const sleeve = S(SLEEVE, top.sl, SLEEVE_SH) + S(CUFF, top.cf);
     const hand = ball(HAND[0], HAND[1], HAND[2], HAND[2], sk, { hl: false, dx: 0.2, dy: 0.25 });
     const stickHand = (o.stick ? G(ART[o.stick].ex() + fxOf('stick'), STICK_TILT) : '') + hand + L('M41.6 207.6Q46 205.4 50.6 207', dk(sk, 0.35), 1.6) + (o.watch ? ART[o.watch].ex() : '');
-    const otherHand = hand + (o.shield ? ART[o.shield].ex() : '');
+    const otherHand = G(hand, MIR) + (o.shield ? ART[o.shield].ex() : ''); // the free hand, on the other side from the staff
     const mirIf = (m, yes) => (yes ? G(m, MIR) : m);
     const armsEarly = G(mirIf(sleeve, back), cls('ex-arm-r')) + G(mirIf(sleeve, !back), cls('ex-arm-l'));
     const armsLate = G(mirIf(stickHand, back), cls('ex-arm-r')) + G(back ? G(hand, MIR) + G(o.shield ? ART[o.shield].ex() : '', MIR) : otherHand, cls('ex-arm-l'));
-    const torso = S(TORSO, top.c, TORSO_SH, TORSO_HL) + (back ? top.bk() : top.fr()) + fxOf('top');
+    const torso = S(TORSO, top.c, TORSO_SH, TORSO_HL) + (back ? top.bk() : top.fr()) + fxOf('top') + (mess ? mess.dust : '');
     const cape = o.cape ? G(ART[o.cape].ex(v) + fxOf('cape'), cls('ex-cape')) : '';
     const bag = o.bag ? ART[o.bag].ex(v) + fxOf('bag') : '';
     const hat = o.hat ? G(ART[o.hat].ex(v) + fxOf('hat'), hatFit(look.hair)) : '';
     let head;
-    if (back) head = headBack(look) + hat;
-    else head = headFront(look) + (o.glasses ? ART[o.glasses].ex('front') + fxOf('glasses') : '') + hat;
+    if (back) head = (mess ? mess.hair : '') + headBack(look) + hat;
+    else head = (mess ? mess.hair : '') + headFront(look, mood) + (o.glasses ? ART[o.glasses].ex('front') + fxOf('glasses') : '') + hat;
+    if (sad) head = G(head, ' transform="translate(0 3) rotate(-3 92 150)"'); // a droopy head
     const pet = o.pet ? G(G(OUT(ART[o.pet].pet.d() + fxm(T('pet'), PETFX[o.pet] || [[-30, -50], [30, -36]], 1.4), SW / PET_S), tf(PET_AT[0], PET_AT[1], PET_S)), cls('ex-pet')) : '';
     const wingsF = !back && o.bag === 'glider-pack' ? ART['glider-pack'].wings() : '';
+    const stk = !back && outfit && outfit.sticker ? badge(outfit.sticker) : '';
     const body = back
       ? torso + armsEarly + cape + bag + G(head, cls('ex-head')) + armsLate
-      : torso + armsEarly + bag + G(head, cls('ex-head')) + armsLate;
+      : torso + armsEarly + bag + stk + G(head, cls('ex-head')) + armsLate;
+    // shining again: a warm glow and twinkles all around
+    const shine = mood === 'shine' ? tw(34, 70, 9, 0) + tw(156, 96, 8, 0.6) + tw(26, 200, 7, 1.2) + tw(166, 186, 9, 0.3) + tw(98, 40, 7, 0.9) + tw(150, 250, 6, 1.6) : '';
+    if (mood === 'shine') auras = aura(92, 170, 90, 120) + auras;
     return OUT(
       G(auras, cls('ex-aura')) + EF(92, 291, 36, 5.5, INK, 0.16) + (o.pet ? EF(PET_AT[0], 291, 24, 4.5, INK, 0.14) : '') +
-        G((back ? '' : cape + wingsF) + legs + G(body, cls('ex-body')), cls('ex-all')) + pet
+        G((back ? '' : cape + wingsF) + legs + G(body, cls('ex-body')), cls('ex-all')) + pet + (shine ? OUT(shine, 1.2) : '')
     );
   }
   function explorer(look, outfit, opts) {
     opts = opts || {};
     const back = opts.view === 'back',
       extra = String(opts.cls || '').replace(/[^\w -]/g, '');
-    return '<svg class="ex lhq-art ex-' + (back ? 'back' : 'front') + (opts.walk ? ' walk' : '') + (extra ? ' ' + extra : '') + '" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
-      explorerInner(look, outfit, back) + '</svg>';
+    const mood = opts.mood === 'sad' || opts.mood === 'shine' ? opts.mood : '';
+    return '<svg class="ex lhq-art ex-' + (back ? 'back' : 'front') + (opts.walk ? ' walk' : '') + (mood ? ' ex-' + mood : '') + (extra ? ' ' + extra : '') + '" viewBox="0 0 200 300" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' +
+      explorerInner(look, outfit, back, mood) + '</svg>';
   }
 
   /* =================================================================================================
@@ -1151,7 +1215,7 @@
       L('M38 50Q50 58 62 50', INK, 2.6) + EF(26, 48, 5, 3, '#ff8fa3', 0.6) + EF(74, 48, 5, 3, '#ff8fa3', 0.6) +
       S('M30 90Q24 80 34 78Q40 84 38 90Z', g) + S('M70 90Q76 80 66 78Q60 84 62 90Z', g) + F('M24 40Q26 32 32 30Q28 36 28 42Z', '#fff', 0.6), cls('lhq-frog-b'))));
   }
-  // Stepping stones: viewBox 0 0 100 60, top surface centred at (50, 28) (where the frog lands).
+  // Stepping stones: viewBox 0 0 100 60, top surface centered at (50, 28) (where the frog lands).
   const STONES = [
     () => S('M8 30Q8 14 50 12Q92 14 92 30Q92 46 50 48Q8 46 8 30Z', '#5fc95a', 'M70 16Q92 20 92 30Q92 46 50 48Q78 40 70 16Z', 'M18 26Q20 18 34 16Q22 22 22 30Z') + F('M50 30L60 12L70 14Z', '#bfe6ff') + L('M50 30L50 14M50 30L24 22M50 30L28 40M50 30L72 40M50 30L80 26', dk('#5fc95a', 0.25), 1.8) + daisy(76, 32, 8, '#ffb3d1'),
     () => S('M12 30L12 44Q12 52 50 52Q88 52 88 44L88 30Z', '#a86b3c', 'M70 32L88 30L88 44Q88 52 60 52Q74 44 70 32Z') + L('M30 36L30 50M62 38L62 51', dk('#a86b3c', 0.3), 2) + S('M12 30Q12 18 50 18Q88 18 88 30Q88 42 50 42Q12 42 12 30Z', '#e8c08a') + E(50, 30, 24, 7, 'none', ' stroke="#c99a5a" stroke-width="2"') + E(50, 30, 12, 3.4, 'none', ' stroke="#c99a5a" stroke-width="2"') + S('M80 22Q86 10 94 14Q90 24 80 22Z', '#5fbf4a'),
@@ -1181,7 +1245,7 @@
     ['peak', 'The Great Climb', ['#92d0ff', '#d6ecff'], ['#f6fbff', '#c6dcf0'], ['#ffffff', '#a7c4e0'], '#4aa3ff'],
   ].map((w) => ({ key: w[0], name: w[1], sky: w[2], ground: w[3], path: w[4], accent: w[5], dim: { sky: w[2].map(dimC), ground: w[3].map(dimC), path: w[4].map(dimC) } }));
 
-  // Props: bottom-centre anchored (the point (50, height) stands on the ground).
+  // Props: bottom-center anchored (the point (50, height) stands on the ground).
   const prop = (h, inner, c) => '<svg class="lhq-art lhq-prop' + (c ? ' ' + c : '') + '" viewBox="0 0 100 ' + h + '" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' + OUT(inner) + '</svg>';
   const shad = (h, w) => EF(50, h - 4, w, 4.5, INK, 0.14);
   const sway = (m, d) => '<g class="pr-sway"' + (d ? ' style="animation-delay:' + d + 's"' : '') + '>' + m + '</g>';
@@ -1256,19 +1320,70 @@
     'peak-crystal': prop(100, shad(100, 32) + glow(50, 60, 40, 36, 'lhq-g-crys') + S('M24 96L22 66L32 54L40 70L38 96Z', '#bfe6ff', 'M32 54L40 70L38 96L32 96Z') + S('M60 96L62 62L72 52L80 66L74 96Z', '#d6f0ff', 'M72 52L80 66L74 96L70 96Z') + S('M36 96L38 44L50 22L62 44L62 96Z', '#e8f8ff', 'M50 22L62 44L62 96L52 96Z', 'M42 46L48 30L46 62Z') + G(F(star4(46, 34, 5.4), '#fff'), cls('lhq-tw')) + S('M16 96Q30 86 50 90Q70 86 84 96Z', '#ffffff')),
     'peak-flag': prop(100, shad(100, 24) + S('M30 96Q36 84 50 86Q64 84 70 96Z', '#ffffff') + S(rr(46, 14, 6, 80, 3), '#d7deea') + G(S('M52 18Q68 12 76 20Q84 26 94 22L90 36L94 50Q84 54 76 48Q68 42 52 48Z', '#4aa3ff', 'M76 48Q84 54 94 50L90 36L94 22Q86 32 76 40Z') + P(star5(70, 33, 6), '#fff', sw(2)), cls('lhq-wave')) + ball(49, 13, 5, 5, GOLD, { sh: false })),
   };
+  /* ---------- v2.1: more life on the map: landmarks (one big feature per world) and little walkers ---------- */
+  // m is drawn around (0, 0) and turns about its own center, placed at (cx, cy)
+  const spin = (m, cx, cy, d) => '<g transform="translate(' + cx + ' ' + cy + ')"><g class="pr-spin"' + (d ? ' style="animation-duration:' + d + 's"' : '') + '>' + m + '</g></g>';
+  const bunny = (c) => S('M30 92Q24 70 44 64Q66 62 70 82Q72 94 56 94Z', c, 'M60 66Q72 74 70 86Q68 94 58 94Q66 80 60 66Z') + ball(72, 84, 6, 6, '#ffffff', { sh: false, hl: false }) +
+    S('M38 52Q30 26 38 22Q46 22 46 50Z', c) + F('M39 46Q35 32 39 28Q42 30 42 46Z', '#ffb3c7') + S('M48 50Q48 22 56 22Q64 26 54 52Z', c) + F('M51 46Q52 30 55 28Q58 32 53 46Z', '#ffb3c7') +
+    ball(44, 62, 16, 14, c) + cuteEyes(38, 60, 50, 60, 2.6) + P('M42.5 65.5L45.5 65.5L44 67.5Z', '#ff8fa3', sw(1.4)) + cheeks(34, 66, 54, 66, 3);
+  Object.assign(props, {
+    // meadow: a windmill with turning sails, a cottage, a duck pond, bunnies
+    'meadow-windmill': prop(150, shad(150, 34) + S('M34 146L40 60L60 60L66 146Z', '#fff1d6', 'M54 60L60 60L66 146L56 146Z') + S('M34 62Q50 36 66 62Z', '#ef6b5b', 'M50 44Q60 50 66 62L56 62Q56 52 50 44Z') +
+      P('M44 146L44 124Q44 116 50 116Q56 116 56 124L56 146Z', '#a86b3c') + P(rr(45, 82, 10, 12, 3), '#7fc8ff', sw(2.2)) +
+      spin([0, 90, 180, 270].map((a) => G(S('M-3 -4L-3 -48L12 -48L12 -4Z', '#ffffff', null, null) + L('M-3 -14L12 -14M-3 -26L12 -26M-3 -38L12 -38', '#d8cbb8', 1.6) + S(rr(-3, -50, 3, 48, 1.5), '#a86b3c'), ' transform="rotate(' + a + ')"')).join('') + C(0, 0, 5, '#ffd23f'), 50, 54, 9)),
+    'meadow-cottage': prop(100, shad(100, 42) + S('M16 96L16 56L84 56L84 96Z', '#ffe8c2', 'M70 56L84 56L84 96L70 96Z') + S('M8 58L50 22L92 58Z', '#ef6b5b', 'M50 22L92 58L74 58Q70 40 50 22Z', 'M20 52L46 30L28 52Z') + S(rr(64, 26, 10, 18, 2), '#c98a4b') +
+      '<g class="pr-smoke">' + CF(69, 18, 5, '#ffffff', 0.8) + CF(74, 8, 6.5, '#ffffff', 0.6) + '</g>' + P('M42 96L42 74Q42 68 50 68Q58 68 58 74L58 96Z', '#a86b3c') + P(rr(22, 64, 14, 12, 2), '#7fc8ff', sw(2)) + P(rr(66, 64, 12, 12, 2), '#7fc8ff', sw(2)) + S('M14 96Q20 86 28 92Q34 84 40 96Z', '#6cc65a') + daisy(24, 88, 4, '#ff8fcf')),
+    'meadow-pond': prop(100, S('M6 82Q8 64 50 62Q92 64 94 82Q92 98 50 98Q8 98 6 82Z', '#5fc9e8', null, 'M18 76Q30 68 48 68Q30 72 22 80Z') + G(L('M24 86Q32 82 40 86M58 90Q66 86 74 90', '#ffffff', 2.2, ' opacity=".8"'), cls('pr-ripple')) +
+      S('M66 78Q60 72 68 70Q78 70 80 76Q76 82 66 78Z', '#5fbf4a') + bob(S('M28 80Q26 70 36 70Q38 62 46 64Q50 68 46 72Q52 74 50 80Q40 84 28 80Z', '#ffffff') + P('M46 66L54 67L46 70Z', '#ffb23d', sw(1.6)) + CF(43, 66, 1.6, INK))),
+    'meadow-rabbit': prop(100, shad(100, 26) + bunny('#f4efe9')),
+    // forest: a deer, a squirrel, a giant old tree with a door, berry bushes
+    'forest-deer': prop(100, shad(100, 30) + L('M38 76L36 96M48 78L48 96M66 76L68 96M74 74L78 96', INK, 4.4) + L('M38 76L36 96M48 78L48 96M66 76L68 96M74 74L78 96', '#b8743f', 2.2) +
+      S('M30 70Q30 56 50 56Q80 54 82 66Q84 78 66 80L40 80Q30 80 30 70Z', '#c9834a', 'M74 58Q84 64 82 72Q80 80 66 80Q76 70 74 58Z') + [[50, 64], [60, 62], [66, 70], [54, 72]].map((q) => CF(q[0], q[1], 2.2, '#fff3dc', 0.9)).join('') +
+      S('M28 70Q20 52 26 40L36 42Q36 56 40 66Z', '#c9834a') + L('M26 28Q22 18 16 16M26 28Q28 18 34 14M30 26Q36 22 40 24M22 24Q16 26 14 22', '#8a5a35', 2.6) + ball(30, 38, 11, 10, '#c9834a') + EF(25, 43, 5, 4, '#fff3dc') + CF(22, 42, 2, INK) + G(eye1(31, 35, 2.4), cls('lhq-blink')) + S('M38 30Q46 26 44 34Z', '#c9834a')),
+    'forest-squirrel': prop(100, shad(100, 22) + S('M58 92Q86 90 84 62Q82 42 68 46Q76 56 70 70Q64 80 58 92Z', '#d9813f', 'M80 56Q86 70 80 82Q72 90 60 92Q78 80 80 56Z') + S('M30 94Q26 74 42 68Q60 68 60 94Z', '#d9813f') + EF(42, 84, 8, 9, '#ffe8c8') + ball(40, 58, 13, 12, '#d9813f') + P('M30 50L30 40L38 46Z', '#d9813f') + P('M48 48L50 38L42 44Z', '#d9813f') + cuteEyes(35, 58, 45, 58, 2.4) + CF(40, 63, 1.6, INK) + ball(52, 78, 5, 5, '#8a5a35', { hl: false }) + S('M48 74Q52 70 56 74Z', '#5a3a28')),
+    'forest-bigtree': prop(150, shad(150, 44) + S('M30 146Q38 116 34 84L66 84Q62 116 70 146Z', '#8a5a35', 'M56 84L66 84Q62 116 70 146L58 146Q60 112 56 84Z') + L('M30 146Q20 140 14 146M70 146Q80 140 88 146', '#8a5a35', 5) +
+      P('M42 146L42 124Q42 114 50 114Q58 114 58 124L58 146Z', '#5a3a28') + CF(55, 132, 1.8, GOLD) + P(rr(44, 96, 12, 10, 5), '#ffe27a', sw(2)) + sway(crown(50, 92, 98, 82, '#3a9a52', 8) + crown(28, 74, 40, 30, '#45b45e', 4) + crown(72, 70, 40, 30, '#45b45e', 4) + [[30, 56], [64, 50], [48, 70]].map((q) => ball(q[0], q[1], 4, 4, '#ff5d6c', { sh: false })).join(''))),
+    'forest-berries': prop(100, shad(100, 36) + crown(50, 94, 76, 44, '#3f9a52', 6) + [[30, 76], [40, 68], [56, 64], [66, 76], [48, 82], [62, 86], [36, 86]].map((q) => ball(q[0], q[1], 4, 4, '#6b5bd6', { sh: false })).join('')),
+    // sands: a lighthouse with a turning beam, a beach umbrella, a turtle
+    'sands-lighthouse': prop(150, shad(150, 30) + S('M28 146Q30 136 50 134Q70 136 72 146Z', '#b9c3cf') + S('M34 136L40 56L60 56L66 136Z', '#ffffff', 'M54 56L60 56L66 136L56 136Z') + F('M37.6 104L62.4 104L63.8 120L36.2 120Z', '#ef4b4b') + F('M39.4 72L60.6 72L61.6 86L38.4 86Z', '#ef4b4b') + P('M34 136L40 56L60 56L66 136Z', 'none') +
+      S(rr(36, 48, 28, 8, 2), '#5a4a7a') + S(rr(40, 30, 20, 18, 3), '#fff6c8') + glow(50, 39, 30, 22) + S('M38 30Q50 14 62 30Z', '#ef4b4b') + CF(50, 16, 3, GOLD) +
+      '<g class="pr-beam"><path d="M50 39L100 24L100 54Z" fill="#fff6c8" stroke="none" opacity=".5"/><path d="M50 39L0 24L0 54Z" fill="#fff6c8" stroke="none" opacity=".5"/></g>'),
+    'sands-umbrella': prop(150, shad(150, 30) + S('M48 146L50 60L54 60L52 146Z', '#f3efe6') + S('M10 70Q14 34 52 32Q90 34 94 70Q82 62 72 70Q62 62 52 70Q42 62 32 70Q22 62 10 70Z', '#ff6b6b', null, null) + F('M32 70Q36 40 52 32Q44 44 42 66Z', '#ffffff', 0.85) + F('M72 70Q68 40 52 32Q62 44 62 66Z', '#ffffff', 0.85) + P('M10 70Q14 34 52 32Q90 34 94 70Q82 62 72 70Q62 62 52 70Q42 62 32 70Q22 62 10 70Z', 'none') + S(rr(14, 136, 40, 8, 3), '#5fb2ff') + S('M58 146Q60 132 74 132Q88 132 90 146Z', '#ffd23f')),
+    'sands-turtle': prop(100, shad(100, 30) + G(STKBY.turtle(), ' transform="translate(50 96) scale(.8) translate(-50 -92)"')),
+    // canyon: a great stone arch, a tent with a pennant, a lizard, a rolling tumbleweed
+    'canyon-arch': prop(100, shad(100, 48) + S('M4 96L10 44Q14 26 34 22L66 22Q86 26 90 44L96 96L74 96L72 62Q68 44 50 44Q32 44 28 62L26 96Z', '#e0773f', 'M66 22Q86 26 90 44L96 96L80 96Q84 50 66 22Z', 'M14 50Q18 32 32 26Q20 36 18 56Z') + L('M12 70L24 70M78 64L92 64M16 56L28 54', '#c25e34', 2.4) + S('M34 22Q50 14 66 22Z', '#ffb36b')),
+    'canyon-tent': prop(100, shad(100, 40) + G(STKBY.tent(), ' transform="translate(50 96) scale(.9) translate(-50 -91)"')),
+    'canyon-lizard': prop(100, shad(100, 30) + S('M14 86Q30 76 50 80Q70 76 86 84Q70 92 50 90Q30 92 14 86Z', '#6fbf5a', 'M50 90Q70 92 86 84Q70 86 50 88Z') + L('M30 84L24 94M40 86L40 96M62 86L66 96M72 84L80 92', '#4f9a42', 3) + L('M14 86Q6 84 4 78', '#6fbf5a', 3) + ball(84, 82, 8, 6, '#6fbf5a', { hl: false }) + G(eye1(86, 79, 2), cls('lhq-blink')) + [[40, 82], [52, 81], [64, 82]].map((q) => CF(q[0], q[1], 2.2, '#ffd23f')).join('')),
+    'canyon-tumbleweed': prop(100, shad(100, 26) + '<g class="pr-roll">' + C(50, 72, 22, '#d9b06a') + L('M32 62Q50 52 68 64M30 78Q50 88 70 76M40 54Q36 72 42 92M60 52Q66 70 58 92M28 70L72 72', '#a8823e', 2) + '</g>'),
+    // starry: an observatory with a telescope, a glowing pond
+    'starry-observatory': prop(150, shad(150, 40) + S('M18 146L18 92L82 92L82 146Z', '#c9b8f2', 'M70 92L82 92L82 146L70 146Z') + S('M14 94Q14 56 50 54Q86 56 86 94Z', '#e9e2ff', 'M64 58Q86 66 86 94L72 94Q72 70 64 58Z') + F('M46 56L56 56L60 94L42 94Z', '#3a2f74') +
+      G(S(rr(-6, -30, 12, 40, 4), '#ffd23f', null, null) + S(rr(-8, -34, 16, 8, 3), '#5a4a7a'), ' transform="translate(52 70) rotate(28)"') + P('M42 146L42 122Q42 114 50 114Q58 114 58 122L58 146Z', '#5a4a7a') + P(rr(26, 104, 10, 10, 5), '#ffe27a', sw(2)) + P(rr(64, 104, 10, 10, 5), '#ffe27a', sw(2)) + tw(80, 30, 7, 0) + tw(20, 40, 5, 1.3)),
+    'starry-pond': prop(100, glow(50, 82, 50, 22, 'lhq-g-mush') + S('M6 82Q8 66 50 64Q92 66 94 82Q92 96 50 96Q8 96 6 82Z', '#3a5c8a', null, 'M18 76Q30 70 48 70Q30 74 22 80Z') + [[30, 82], [56, 78], [72, 88], [44, 90]].map((q, i) => '<path class="lhq-tw" d="' + star4(q[0], q[1], 4) + '" fill="#fff8d0" stroke="none" style="animation-delay:-' + i * 0.7 + 's"/>').join('') + G(F(crescent(64, 84, 6, 6, -3, 2), '#fff3b0'), cls('pr-ripple'))),
+    // sky: a floating castle and a little airship
+    'sky-castle': prop(150, bob(S(cloudD(50, 134, 96, 34, 6), '#ffffff', 'M80 116Q96 122 94 134L64 136Q84 128 80 116Z') + S(rr(24, 74, 52, 52, 3), '#ffeaf6', 'M64 74L76 74L76 126L64 126Z') + S(rr(14, 56, 18, 70, 3), '#ffd6ea') + S(rr(68, 56, 18, 70, 3), '#ffd6ea') + S(rr(40, 46, 20, 40, 3), '#ffeaf6') +
+      S('M12 58L23 32L34 58Z', '#8a63d2') + S('M66 58L77 32L88 58Z', '#8a63d2') + S('M38 48L50 18L62 48Z', '#ff8fc8') + L('M50 18L50 6', INK, 2) + G(P('M50 6L62 9L50 13Z', '#ffd23f', sw(1.8)), cls('lhq-wave')) + P('M42 126L42 106Q42 98 50 98Q58 98 58 106L58 126Z', '#8a63d2') + P(rr(18, 72, 9, 12, 4), '#7fc8ff', sw(2)) + P(rr(73, 72, 9, 12, 4), '#7fc8ff', sw(2)) + S(cloudD(30, 132, 46, 16, 4), '#ffffff'), 0)),
+    'sky-airship': prop(100, bob(S('M14 40Q14 20 50 18Q86 20 86 40Q86 58 50 60Q14 58 14 40Z', '#ffb36b', 'M70 22Q86 28 86 40Q86 58 50 60Q78 50 70 22Z', 'M22 34Q26 24 40 22Q28 28 26 38Z') + L('M24 40L76 40', dk('#ffb36b', 0.2), 2) + S('M84 36L96 28L96 52L84 44Z', '#ff6b6b') + L('M34 58L38 72M66 58L62 72', INK, 2) + S('M30 72L70 72L64 86L36 86Z', '#a86b3c') + C(44, 79, 3, '#7fc8ff', sw(1.6)) + C(56, 79, 3, '#7fc8ff', sw(1.6)) + spin(S('M-1.5 -9L1.5 -9L1.5 9L-1.5 9Z', '#d7deea'), 22, 79, 0.6), 0.7)),
+    // peak: an igloo, a mountain goat, a snowy cabin with a warm window
+    'peak-igloo': prop(100, shad(100, 44) + S('M8 96Q8 46 50 44Q92 46 92 96Z', '#ffffff', 'M66 48Q92 58 92 96L74 96Q76 66 66 48Z') + L('M12 80L88 80M18 64L82 64M30 50L70 50M30 64L26 80M54 64L50 80M76 64L72 80M42 50L38 64M62 50L60 64', '#c6dcf0', 2) + S('M38 96L38 78Q38 66 50 66Q62 66 62 78L62 96Z', '#e8f6ff') + F('M43 96L43 80Q43 72 50 72Q57 72 57 80L57 96Z', '#3a5c8a')),
+    'peak-goat': prop(100, shad(100, 30) + L('M38 76L36 96M48 78L48 96M64 76L66 96M72 74L76 96', INK, 4.4) + L('M38 76L36 96M48 78L48 96M64 76L66 96M72 74L76 96', '#e8e2d6', 2.2) + S(bumps(ellPts(56, 66, 26, 14, 0, 360, 10).slice(0, 10), true, 0.6), '#f6f3ee', 'M78 60Q86 68 78 78Q66 82 56 80Q74 74 78 60Z') +
+      S('M30 64Q24 50 30 42L40 46Q38 56 42 62Z', '#f6f3ee') + ball(32, 42, 10, 9, '#f6f3ee', { shc: '#d6d0c4' }) + L('M28 36Q22 24 30 20M36 34Q40 24 46 26', '#8a7a62', 3) + G(eye1(34, 40, 2.2), cls('lhq-blink')) + S('M26 48Q28 58 32 52Z', '#d6d0c4')),
+    'peak-cabin': prop(100, shad(100, 44) + S(rr(16, 56, 68, 40, 2), '#a86b3c', 'M70 56L84 56L84 96L70 96Z') + L('M16 66L84 66M16 76L84 76M16 86L84 86', '#7a4a28', 2) + S('M8 60L50 26L92 60Z', '#ffffff', 'M50 26L92 60L76 60Q70 42 50 26Z') + S(rr(64, 30, 10, 18, 2), '#7a4a28') + '<g class="pr-smoke">' + CF(69, 22, 5, '#ffffff', 0.8) + CF(74, 12, 6.5, '#ffffff', 0.6) + '</g>' + glow(34, 78, 18, 14) + P(rr(26, 70, 16, 14, 2), '#ffe27a', sw(2)) + P('M56 96L56 78Q56 72 62 72Q68 72 68 78L68 96Z', '#5a3a28')),
+  });
+  const WALKERS = ['meadow-sheep', 'meadow-rabbit', 'forest-fox', 'forest-deer', 'forest-squirrel', 'sands-crab', 'sands-turtle', 'canyon-camel', 'canyon-lizard', 'canyon-tumbleweed', 'peak-goat', 'peak-snowman'];
+  const LANDMARKS = ['meadow-windmill', 'forest-bigtree', 'sands-lighthouse', 'canyon-arch', 'starry-observatory', 'sky-castle', 'peak-cabin'];
   props['peak-summit'] = '<svg class="lhq-art lhq-prop" viewBox="0 0 200 160" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' + OUT(
     EF(100, 154, 90, 6, INK, 0.12) + glow(110, 34, 50, 40) + S('M4 156L70 52Q86 30 104 46L120 62Q132 50 146 66L196 156Z', '#9aa6bf', 'M104 46L120 62Q132 50 146 66L196 156L130 156Q136 100 104 46Z', 'M24 132L62 72Q50 100 34 136Z') +
     S('M52 82L70 52Q86 30 104 46L120 62Q132 50 146 66L158 86Q146 80 136 88Q124 78 112 90Q98 76 86 88Q72 78 62 88Q56 82 52 82Z', '#ffffff', 'M104 46L120 62Q132 50 146 66L158 86Q146 80 136 88Q124 78 118 84Q120 64 104 46Z') +
     S(rr(105, 4, 5, 40, 2.4), '#d7deea') + G(S('M110 6Q124 2 132 8Q140 14 150 10L146 22L150 34Q140 38 132 32Q124 26 110 32Z', '#ff5d6c', 'M132 32Q140 38 150 34L146 22L150 10Q142 20 132 26Z') + P(star5(128, 19, 5.4), '#fff', sw(2)), cls('lhq-wave')) + ball(107.5, 4, 4.4, 4.4, GOLD, { sh: false }) + tw(84, 24, 6, 0) + tw(150, 46, 5, 1)
   ) + '</svg>';
   const PROPS_BY_WORLD = [
-    ['meadow-grass', 'meadow-flower-pink', 'meadow-flower-yellow', 'meadow-flower-blue', 'meadow-bush', 'meadow-tree', 'meadow-fence', 'meadow-sign', 'meadow-sheep'],
-    ['forest-pine', 'forest-oak', 'forest-mushroom', 'forest-log', 'forest-fern', 'forest-fox', 'forest-owl'],
-    ['sands-palm', 'sands-shell', 'sands-starfish', 'sands-castle', 'sands-crab', 'sands-boat', 'sands-rock'],
-    ['canyon-cactus', 'canyon-mesa', 'canyon-dune', 'canyon-lantern', 'canyon-flower', 'canyon-camel'],
-    ['starry-mushroom', 'starry-crystal', 'starry-lantern', 'starry-moon', 'starry-owl', 'starry-star'],
-    ['sky-island', 'sky-rainbow', 'sky-kite', 'sky-rock', 'sky-balloon', 'sky-cloud'],
-    ['peak-pine', 'peak-rock', 'peak-snowman', 'peak-crystal', 'peak-flag', 'peak-summit'],
+    ['meadow-grass', 'meadow-flower-pink', 'meadow-flower-yellow', 'meadow-flower-blue', 'meadow-bush', 'meadow-tree', 'meadow-fence', 'meadow-sign', 'meadow-sheep', 'meadow-rabbit', 'meadow-pond', 'meadow-cottage', 'meadow-sheep', 'meadow-rabbit', 'meadow-tree'],
+    ['forest-pine', 'forest-oak', 'forest-mushroom', 'forest-log', 'forest-fern', 'forest-fox', 'forest-owl', 'forest-deer', 'forest-squirrel', 'forest-berries', 'forest-pine', 'forest-pine', 'forest-oak'],
+    ['sands-palm', 'sands-shell', 'sands-starfish', 'sands-castle', 'sands-crab', 'sands-rock', 'sands-umbrella', 'sands-turtle', 'sands-palm', 'sands-crab', 'sands-shell'],
+    ['canyon-cactus', 'canyon-mesa', 'canyon-dune', 'canyon-lantern', 'canyon-flower', 'canyon-camel', 'canyon-tent', 'canyon-lizard', 'canyon-tumbleweed', 'canyon-cactus'],
+    ['starry-mushroom', 'starry-crystal', 'starry-lantern', 'starry-moon', 'starry-owl', 'starry-star', 'starry-pond', 'starry-mushroom', 'starry-crystal'],
+    ['sky-island', 'sky-rainbow', 'sky-kite', 'sky-rock', 'sky-balloon', 'sky-cloud', 'sky-airship', 'sky-cloud', 'sky-balloon'],
+    ['peak-pine', 'peak-rock', 'peak-snowman', 'peak-crystal', 'peak-flag', 'peak-igloo', 'peak-goat', 'peak-pine', 'peak-summit'],
   ];
 
   /* ---------- ambient layers: small, slow, low-contrast decorations over a world ---------- */
@@ -1330,27 +1445,173 @@
     return '<div class="lhq-amb lhq-art lhq-amb-' + key + '" aria-hidden="true">' + h + '</div>';
   }
 
+  /* ---------- v2.1: borders between worlds, their bridges, and the horizon ----------
+   * border(i, w, o): the strip (w × 130 px) between world i (below) and world i + 1 (above): a river, a sea
+   *   inlet, a gorge, a stone wall, a gap in the clouds, a frozen river. o.up / o.down = the ground colors
+   *   above and below, o.night dims it. The path crosses it on bridge(i): drawn 60 wide along the path
+   *   (viewBox 0 0 60 100, stretched to the crossing length), except the gate (i = 3), which stands upright.
+   * horizon(i, night): far scenery for the top of the map while world i meets the sky (viewBox 0 0 400 120).
+   */
+  const BORDER_H = 130;
+  // a wavy band edge across the strip: y0 ± amp, k waves
+  function wavy(w, y0, amp, k, phase) {
+    let d = '';
+    for (let j = 0; j <= 40; j++) {
+      const x = (w * j) / 40;
+      d += (j ? 'L' : 'M') + n(x) + ' ' + n(y0 + Math.sin((j / 40) * Math.PI * 2 * k + (phase || 0)) * amp);
+    }
+    return d;
+  }
+  function band(w, top, bot, amp, k, ph) {
+    return wavy(w, top, amp, k, ph) + 'L' + w + ' ' + n(bot) + wavy(w, bot, amp, k, (ph || 0) + 1.3).replace(/^M/, 'L').split('L').slice(1).reverse().map((q) => 'L' + q).join('') + 'Z';
+  }
+  function border(i, w, o) {
+    o = o || {};
+    const N = (c) => (o.night ? dimC(c) : c),
+      up = o.up || '#ffffff',
+      down = o.down || '#ffffff',
+      r = rnd(i * 7 + 5),
+      H = BORDER_H;
+    let g = F('M0 0H' + w + 'V' + n(H / 2) + 'H0Z', up) + F('M0 ' + n(H / 2) + 'H' + w + 'V' + H + 'H0Z', down);
+    const reeds = (x, y, c) => G(OUT(S('M-6 0Q-8 -14 -4 -22Q-2 -10 -1 0Z', c) + S('M0 0Q2 -20 8 -28Q6 -12 5 0Z', lt(c, 0.12)) + L('M2 -12L2 -26', '#8a5a35', 2) + EF(2, -28, 2.6, 5, '#8a5a35'), 2.2), tf(x, y, 1));
+    if (i === 0) {
+      // a river: grassy banks, blue water, ripples drifting along, reeds
+      g += F(band(w, 40, 92, 6, 2.2, 0.4), N('#8fd07a')) + F(band(w, 48, 86, 5, 2.2, 0.8), N('#4fb8e8')) + F(band(w, 56, 78, 4, 2.2, 1.1), N('#7fd3f5'), 0.6);
+      for (let j = 0; j < 6; j++) g += '<path class="bd-flow" style="animation-delay:-' + n(r() * 6) + 's" d="M' + n(r() * w) + ' ' + n(58 + r() * 20) + 'q8 -4 16 0t16 0" fill="none" stroke="#ffffff" stroke-width="2.2" stroke-linecap="round" opacity=".8"/>';
+      [[0.08, 40], [0.3, 92], [0.62, 40], [0.9, 94]].forEach((q) => { g += reeds(n(q[0] * w), q[1], N('#5fba52')); });
+    } else if (i === 1) {
+      // a sea inlet: forest bank below, a sandy beach above, waves rolling in
+      g += F(band(w, 30, 100, 5, 1.6, 0.2), N('#ffe8b0')) + F(band(w, 40, 92, 6, 1.6, 0.6), N('#22b8d0')) + F(band(w, 44, 70, 5, 1.6, 0.9), N('#5fd8e8'), 0.7);
+      for (let j = 0; j < 5; j++) g += '<path class="bd-wave" style="animation-delay:-' + n(r() * 4) + 's" d="' + wavy(w, 48 + j * 9, 2.4, 3 + j, j) + '" fill="none" stroke="#ffffff" stroke-width="2" opacity=".75"/>';
+      g += G(OUT(STKBY.boat(), 3 / 0.4), tf(n(w * 0.18), 40, 0.4)).replace('<g', '<g class="pr-bob"');
+    } else if (i === 2) {
+      // a deep gorge with layered rock walls
+      g += F(band(w, 38, 98, 7, 2.6, 0.5), N('#c25e34')) + F(band(w, 46, 90, 6, 2.6, 0.9), N('#6a2f3a')) + F(band(w, 56, 82, 4, 2.6, 1.4), N('#3d1c2e')) +
+        L(wavy(w, 40, 6, 2.6, 0.5), N('#ffb36b'), 3) + L(wavy(w, 48, 5, 2.6, 0.9), N('#e0773f'), 3, ' opacity=".8"');
+      for (let j = 0; j < 7; j++) g += EF(n(r() * w), n(30 + r() * 6), n(3 + r() * 4), 2.6, N('#f2a65e'), 0.9);
+    } else if (i === 3) {
+      // a stone wall with glowing lanterns; the path goes through the gate (drawn by bridge(3))
+      g += F('M0 56H' + w + 'V92H0Z', N('#9a8fc2')) + F('M0 50H' + w + 'V58H0Z', N('#c9c1e6'));
+      let st = '';
+      for (let row = 0; row < 3; row++) for (let x = (row % 2) * -14; x < w; x += 28) st += P(rr(x + 1, 58 + row * 11, 26, 10, 3), N(row % 2 ? '#8a7fb6' : '#a499cc'), sw(1.6));
+      g += OUT(st, 1.6) + F('M0 92H' + w + 'V98H0Z', '#3a2463', 0.15);
+      for (let x = 40; x < w - 20; x += 120) g += glow(x, 44, 22, 18) + OUT(S(rr(x - 3, 30, 6, 22, 2), N('#5a4a7a')) + S('M' + (x - 7) + ' 18H' + (x + 7) + 'L' + (x + 8) + ' 30H' + (x - 8) + 'Z', '#ffe27a'), 2);
+    } else if (i === 4) {
+      // a gap in the clouds: far below, the sky; fluffy cloud banks on both sides
+      g += F(band(w, 44, 90, 6, 2, 0.3), N('#bfe6ff')) + F(band(w, 60, 86, 4, 2, 0.6), N('#e2f2ff'), 0.8);
+      for (let x = -20; x < w + 40; x += 46) {
+        g += OUT(S(cloudD(x, 52, 70, 22, 4), N('#ffffff')), 2) + OUT(S(cloudD(x + 22, 100, 72, 18, 4), N('#ffeaf6')), 2);
+      }
+      for (let j = 0; j < 3; j++) g += '<g class="pr-bob" style="animation-delay:-' + j + 's">' + F(cloudD(n(r() * w), 76, 40, 10, 3), '#ffffff', 0.85) + '</g>';
+    } else {
+      // a frozen river: snow banks, blue ice with cracks and shine, icicles
+      g += F(band(w, 38, 94, 5, 2, 0.2), N('#ffffff')) + F(band(w, 46, 86, 5, 2, 0.6), N('#a8dcf5')) + F(band(w, 52, 72, 4, 2, 1), N('#d6f0ff'), 0.8);
+      for (let j = 0; j < 6; j++) { const x = r() * w; g += L('M' + n(x) + ' ' + n(54 + r() * 10) + 'l' + n(8 + r() * 10) + ' 8l-4 10l10 6', '#7fb8d8', 1.6); }
+      for (let x = 10; x < w; x += 22) g += F('M' + x + ' 44l4 0l-2 ' + n(6 + r() * 8) + 'Z', N('#e8f8ff'));
+      for (let j = 0; j < 5; j++) g += '<path class="lhq-tw" d="' + star4(n(r() * w), n(56 + r() * 26), 4) + '" fill="#ffffff" stroke="none" style="animation-delay:-' + n(r() * 3) + 's"/>';
+    }
+    return '<svg class="lhq-art lhq-border" viewBox="0 0 ' + w + ' ' + H + '" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' + g + '</svg>';
+  }
+  function bridge(i, night) {
+    const N = (c) => (night ? dimC(c) : c);
+    let g;
+    if (i === 3) {
+      // the moon gate: an upright stone arch with a lantern on top (viewBox 0 0 120 100)
+      g = S('M8 98L8 40Q8 6 60 6Q112 6 112 40L112 98L86 98L86 48Q86 26 60 26Q34 26 34 48L34 98Z', N('#b3a9d8'), 'M86 98L86 48Q86 26 60 26L60 6Q112 6 112 40L112 98Z', 'M14 44Q16 18 40 12Q22 24 20 46Z') +
+        L('M8 60L34 60M86 60L112 60M8 80L34 80M86 80L112 80M30 14L36 28M90 14L84 28M60 6L60 26', N('#8a7fb6'), 2) + glow(60, 0, 26, 22) + S(rr(54, -10, 12, 14, 3), '#ffe27a') + S('M52 -10L68 -10L60 -18Z', N('#5a4a7a')) +
+        tw(14, 20, 5, 0) + tw(106, 24, 5, 1.1);
+      return '<svg class="lhq-art lhq-gate" viewBox="0 -20 120 120" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' + OUT(g, 3) + '</svg>';
+    }
+    const planks = (c, ec, gap) => { let o = ''; for (let y = 4; y < 98; y += gap || 7) o += P(rr(9, y, 42, (gap || 7) - 2, 1.4), c, sw(1.4) + ' stroke="' + ec + '"'); return o; };
+    if (i === 0) g = S(rr(8, 0, 44, 100, 3), N('#c98a4b')) + planks(N('#e0a86a'), INK) + DL('M6 0L6 100', N('#a86b3c'), 3) + DL('M54 0L54 100', N('#a86b3c'), 3);
+    else if (i === 1) g = S(rr(8, 0, 44, 100, 3), N('#b8834a')) + planks(N('#d9b07a'), INK, 9) + [0, 50, 100].map((y) => ball(6, y, 3.4, 3.4, N('#8a5a35'), { hl: false }) + ball(54, y, 3.4, 3.4, N('#8a5a35'), { hl: false })).join('') + L('M6 0Q2 25 6 50Q2 75 6 100M54 0Q58 25 54 50Q58 75 54 100', N('#e8d6b0'), 2);
+    else if (i === 2) g = planks(N('#d9a46a'), INK, 8) + L('M6 0Q14 50 6 100M54 0Q46 50 54 100', N('#c9a36a'), 3) + L('M6 0Q14 50 6 100M54 0Q46 50 54 100', INK, 1, ' opacity=".5"') + [0, 100].map((y) => S(rr(2, y - 5, 8, 10, 2), N('#8a5a35')) + S(rr(50, y - 5, 8, 10, 2), N('#8a5a35'))).join('');
+    else if (i === 4) g = ['#ff6b6b', '#ffb43d', '#ffe066', '#5fd27a', '#5fb2ff', '#a884ff'].map((c, j) => F(rr(8 + j * 7.4, 0, 7.4, 100, 0), N(c))).join('') + P(rr(8, 0, 44, 100, 3), 'none') + [20, 50, 80].map((y, j) => '<path class="lhq-tw" d="' + star4(30, y, 4) + '" fill="#ffffff" stroke="none" style="animation-delay:-' + j + 's"/>').join('');
+    else g = S(rr(8, 0, 44, 100, 10), N('#e8f8ff'), null, 'M14 8L22 8L18 92L14 92Z') + L('M30 6L26 30L34 50L28 74L32 96', '#a8dcf5', 1.6) + [10, 30, 50, 70, 90].map((y) => F('M8 ' + y + 'l-5 3l5 3Z', N('#d6f0ff')) + F('M52 ' + y + 'l5 3l-5 3Z', N('#d6f0ff'))).join('');
+    return '<svg class="lhq-art lhq-bridge" viewBox="0 0 60 100" preserveAspectRatio="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' + OUT(g, 2.4) + '</svg>';
+  }
+  function horizon(i, night) {
+    const w = WORLDS[i],
+      N = (c) => (night ? dimC(c) : c),
+      far = (c) => N(mix(c, w.sky[1], 0.55)),
+      midc = (c) => N(mix(c, w.sky[1], 0.25)),
+      key = w.key;
+    let g = '';
+    const hills = (y, amp, k, c, ph) => F(wavy(400, y, amp, k, ph) + 'L400 120L0 120Z', c);
+    if (key === 'meadow') {
+      g = hills(64, 8, 1.6, far('#69c25a'), 0.3) + hills(84, 7, 2.2, midc('#7acb6a'), 1) + G(OUT(props['meadow-windmill'].replace(/^<svg[^>]*>|<\/svg>$/g, ''), 3 / 0.22), tf(300, 52, 0.22)) +
+        [60, 120, 200, 250, 350].map((x, j) => F(cloudD(x, 70 + (j % 2) * 8, 26, 14, 3), midc('#3f9a52'))).join('');
+    } else if (key === 'forest') {
+      g = hills(70, 6, 2, far('#3f9a52'), 0.5);
+      for (let x = -10; x < 410; x += 18) { const h = 22 + ((x * 7) % 17); g += F('M' + (x - 10) + ' 96L' + x + ' ' + (92 - h) + 'L' + (x + 10) + ' 96Z', midc(x % 36 ? '#2f8a5a' : '#3a9a5c')); }
+      g += hills(94, 3, 3, N('#7acb6a'), 0);
+    } else if (key === 'sands') {
+      g = F('M0 70H400V120H0Z', N('#22c3c9')) + F('M0 70H400V76H0Z', '#ffffff', 0.5) + F('M300 70Q320 54 344 56Q356 50 368 70Z', far('#45b45e')) + '<g class="pr-bob">' + G(OUT(STKBY.boat(), 3 / 0.22), tf(120, 52, 0.22)) + '</g>' + hills(96, 4, 2, N('#ffe6a6'), 0.4);
+    } else if (key === 'canyon') {
+      g = hills(76, 4, 1, far('#f2a65e'), 0) + [[20, 120, 50], [150, 210, 60], [260, 380, 44]].map((m) => F('M' + m[0] + ' 100L' + (m[0] + 12) + ' ' + m[2] + 'L' + (m[1] - 12) + ' ' + m[2] + 'L' + m[1] + ' 100Z', midc('#d4733e')) + F('M' + (m[0] + 6) + ' ' + (m[2] + 14) + 'H' + (m[1] - 6) + 'V' + (m[2] + 18) + 'H' + (m[0] + 6) + 'Z', midc('#ffb36b'))).join('') + hills(98, 3, 2, N('#f2a65e'), 0.6);
+    } else if (key === 'starry') {
+      g = [[40, 20], [120, 34], [200, 14], [260, 40], [330, 22], [380, 44], [80, 50]].map((q, j) => '<path class="lhq-tw" d="' + star4(q[0], q[1], 4) + '" fill="#fff8d0" stroke="none" style="animation-delay:-' + j * 0.5 + 's"/>').join('') + F(crescent(330, 40, 14, 14, -7, 5), '#fff3b0') + hills(70, 10, 1.5, far('#4f3f8c'), 0.2) + hills(90, 6, 2.4, midc('#7d66c2'), 1);
+    } else if (key === 'sky') {
+      g = [[60, 70, 120], [210, 80, 150], [350, 66, 110], [130, 96, 160], [300, 100, 170]].map((c) => F(cloudD(c[0], c[1], c[2], c[2] * 0.3, 5), N(c[1] > 90 ? '#ffffff' : '#ffeaf6'), 0.95)).join('') + '<g class="pr-bob">' + G(OUT(props['sky-island'].replace(/^<svg[^>]*>|<\/svg>$/g, ''), 3 / 0.3), tf(260, 30, 0.3)) + '</g>';
+    } else {
+      g = F('M0 100L60 44L100 70L170 20L230 66L290 34L350 70L400 50L400 120L0 120Z', far('#a7c4e0')) + F('M150 38L170 20L190 38L180 34L170 42L160 34Z', '#ffffff') + F('M272 50L290 34L306 48L296 46L290 52Z', '#ffffff') + hills(94, 5, 2, N('#f6fbff'), 0.3);
+    }
+    return '<svg class="lhq-art lhq-horizon" viewBox="0 0 400 120" preserveAspectRatio="xMidYMax slice" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">' + g + '</svg>';
+  }
+
   /* ---------- the start-screen scene ---------- */
   // viewBox 0 0 1600 1000, preserveAspectRatio xMidYMid slice. Safe column for portrait phones: x 570…1030.
   // Explorer feet at (670, 722); summit at (888, 186); bottom 30% (y > 700) is plain rock for the title and button.
-  // A smooth tapering road through pts (Catmull-Rom): all outline strokes first, then all fills, so joints vanish.
-  function road(pts, w0, w1, fill, edge) {
+  // Catmull-Rom samples through pts (k per segment), each with its direction (tx, ty).
+  function smooth(pts, k) {
     const sm = [];
     for (let i = 0; i < pts.length - 1; i++) {
       const a = pts[Math.max(0, i - 1)], b = pts[i], c = pts[i + 1], d = pts[Math.min(pts.length - 1, i + 2)];
-      for (let k = 0; k < 4; k++) {
-        const t = k / 4, t2 = t * t, t3 = t2 * t;
-        sm.push([0, 1].map((j) => n(0.5 * (2 * b[j] + (c[j] - a[j]) * t + (2 * a[j] - 5 * b[j] + 4 * c[j] - d[j]) * t2 + (3 * b[j] - a[j] - 3 * c[j] + d[j]) * t3))));
+      for (let j = 0; j < k; j++) {
+        const t = j / k, t2 = t * t, t3 = t2 * t;
+        sm.push([0, 1].map((q) => 0.5 * (2 * b[q] + (c[q] - a[q]) * t + (2 * a[q] - 5 * b[q] + 4 * c[q] - d[q]) * t2 + (3 * b[q] - a[q] - 3 * c[q] + d[q]) * t3)));
       }
     }
-    sm.push(pts[pts.length - 1]);
-    let o = '', f = '';
-    for (let i = 0; i < sm.length - 1; i += 3) {
-      const seg = sm.slice(i, i + 4), w = n(w0 + ((w1 - w0) * i) / (sm.length - 1)), d = 'M' + seg.map((p) => p[0] + ' ' + p[1]).join('L');
-      o += L(d, edge, w + 7, ' stroke-linecap="round" stroke-linejoin="round"');
-      f += L(d, fill, w, ' stroke-linecap="round" stroke-linejoin="round"');
+    sm.push(pts[pts.length - 1].slice());
+    return sm.map((p, i) => {
+      const a = sm[Math.max(0, i - 1)], b = sm[Math.min(sm.length - 1, i + 1)], l = Math.hypot(b[0] - a[0], b[1] - a[1]) || 1;
+      return { x: p[0], y: p[1], tx: (b[0] - a[0]) / l, ty: (b[1] - a[1]) / l };
+    });
+  }
+  // A walking trail through pts that narrows from w0 (near) to w1 (far): an edge, the packed earth, a worn
+  // lighter middle, pebbles along both sides (o.stones) and stone steps across it (o.steps).
+  // Drawn as round-capped strokes in short chunks (all edges first, then the fill), so hairpin bends stay clean.
+  function trail(pts, w0, w1, o) {
+    o = o || {};
+    const sm = smooth(pts, 10),
+      last = sm.length - 1,
+      wAt = (i) => w0 + ((w1 - w0) * i) / last,
+      C = o.N || ((c) => c);
+    let edge = '', fill = '', mid = '', extra = '';
+    for (let i = 0; i < last; i += 3) {
+      const seg = sm.slice(i, i + 4), w = n(wAt(i)), d = 'M' + seg.map((p) => n(p.x) + ' ' + n(p.y)).join('L'), cap = ' stroke-linecap="round" stroke-linejoin="round"';
+      edge += L(d, C(o.edge || '#b8875a'), n(w + 6), cap);
+      fill += L(d, C(o.fill || '#f2d9a4'), w, cap);
+      mid += L(d, C(o.mid || '#fff3d4'), n(w * 0.34), cap + ' opacity=".75"');
     }
-    return o + f;
+    let side = 1;
+    for (let i = 4; i < last; i += o.stoneGap || 5) {
+      const p = sm[i], w = wAt(i);
+      if (o.stones) {
+        side = -side;
+        const r = Math.max(1.6, w * 0.13), x = n(p.x - p.ty * side * (w / 2 + r * 0.9)), y = n(p.y + p.tx * side * (w / 2 + r * 0.9));
+        extra += E(x, y, n(r * 1.3), n(r), C(i % 3 ? '#c9c3b8' : '#b3aca0'), sw(n(Math.max(1.2, w * 0.05))));
+      }
+      if (o.steps && i % 2 === 0) {
+        const hw = w * 0.42;
+        extra += L('M' + n(p.x - p.ty * hw) + ' ' + n(p.y + p.tx * hw) + 'L' + n(p.x + p.ty * hw) + ' ' + n(p.y - p.tx * hw), C('#c79a64'), n(Math.max(1.2, w * 0.1)));
+      }
+    }
+    return edge + fill + mid + extra;
+  }
+  // a small pennant on a pole (the trail's checkpoints), standing at (x, y), scaled by s
+  function pennant(x, y, s, c) {
+    return G(OUT(EF(0, 0, 9, 2.6, INK, 0.18) + S(rr(-1.8, -40, 3.6, 40, 1.8), '#f3efe6') + G(S('M1.8 -39Q12 -42 20 -36L14 -31L20 -25Q12 -21 1.8 -24Z', c), cls('lhq-wave')) + ball(0, -41, 2.8, 2.8, GOLD, { sh: false, hl: false }), 2.4 / s), tf(x, y, s));
   }
   function splash(look, outfit, opts) {
     opts = opts || {};
@@ -1377,6 +1638,10 @@
     s += NF(PEAK, '#a9abe3') + NF('M906 194L962 258Q990 238 1012 262L1230 610L1010 610Q1000 420 906 194Z', '#8f90d2') +
       NF('M758 336L780 300Q830 212 870 190Q888 180 906 194L962 258Q990 238 1012 262L1044 304Q1014 292 994 308Q972 288 950 306Q930 284 906 302Q890 282 870 300Q850 282 830 302Q802 292 792 312Q772 322 758 336Z', '#ffffff') +
       NF('M906 194L962 258Q990 238 1012 262L1044 304Q1014 292 994 308Q972 288 950 306Q940 296 928 296Q930 240 906 194Z', '#dfe6ff') + NF('M800 300Q830 230 860 204Q836 250 822 300Z', '#ffffff', 0.8);
+    // rocky crags and a few hardy pines on the slopes, then the switchback trail up the mountain face
+    s += L('M700 520Q716 488 742 470M1120 520Q1100 470 1060 440M820 300Q806 330 812 360M980 290Q996 320 990 350', N('#8f90d2'), 4, ' opacity=".7"');
+    [[668, 560, 0.42], [700, 548, 0.36], [1130, 540, 0.4], [1166, 566, 0.46], [744, 512, 0.3]].forEach((t) => { s += G(OUT(PINE(0, 0, 1, N('#4f8f7a')), 3 / t[2]), tf(t[0], t[1], t[2])); });
+    s += trail([[905, 512], [902, 462], [900, 420], [960, 398], [1000, 380], [930, 358], [790, 340], [860, 318], [960, 300], [900, 280], [842, 262], [880, 246], [912, 232], [892, 214], [888, 198]], 17, 4, { N, fill: '#f6e6c4', edge: '#9f86b8', mid: '#fffaf0', steps: true });
     // summit beacon + flag
     s += '<g class="sp-beacon">' + EF(888, 176, 110, 100, 'url(#lhq-g-aura)') + '</g>' + OUT(S(rr(885, 128, 6, 56, 3), N('#e6ebf5')) + G(S('M891 132Q910 124 922 134Q934 142 948 136L942 152L948 168Q934 174 922 166Q910 158 891 166Z', N('#ff5d6c')) + P(star5(918, 150, 6.4), '#fff', sw(2)), cls('lhq-wave')) + ball(888, 127, 6, 6, '#ffe066', { sh: false }), 3) +
       '<path class="lhq-tw" d="' + star4(888, 126, 20) + '" fill="#fffbe0" style="animation-duration:2.2s"/>';
@@ -1406,10 +1671,29 @@
     // meadow hills with flowers
     s += NF('M-10 800L-10 722Q220 690 460 712Q700 694 900 714Q1140 690 1380 710Q1500 702 1610 714L1610 800Z', '#8fdc6a') + NF('M-10 800L-10 752Q400 728 800 744Q1200 728 1610 748L1610 800Z', '#7ccf5c');
     [[120, 726, '#ff8fcf'], [260, 716, '#ffd23f'], [380, 724, '#fff'], [1240, 716, '#ff8fcf'], [1340, 724, '#ffd23f'], [1480, 718, '#fff'], [1060, 726, '#7fb6ff'], [560, 720, '#7fb6ff']].forEach((f) => { s += CF(f[0], f[1], 5, N(f[2])) + CF(f[0], f[1], 2, N('#ffb000')); });
-    // the winding path to the summit (wide near us, thin far away) with glowing level dots
-    const PATH = [[720, 746], [846, 764], [978, 724], [870, 678], [952, 632], [872, 590], [928, 550], [878, 510], [918, 472], [880, 432], [908, 392], [876, 344], [892, 294], [880, 244], [888, 200]];
-    s += road(PATH, 40, 4, N('#fff2cf'), N('#c99a5a'));
-    [[846, 764], [870, 678], [872, 590], [878, 510], [880, 432], [876, 344]].forEach((q, i) => { s += '<g class="pr-glow" style="animation-delay:-' + i * 0.5 + 's">' + EF(q[0], q[1], 22 - i * 2, 16 - i * 1.5, 'url(#lhq-g-aura)') + '</g>' + CF(q[0], q[1], 6 - i * 0.6, N('#ffd23f')); });
+    // the trail from our ledge to the mountain: across the meadow, over a little bridge on the lake,
+    // up through the canyon and the starry hills; a pennant in each world's color at every bend
+    const lowA = [[742, 786], [860, 752], [972, 716], [948, 688], [931, 664]],
+      lowB = [[918, 620], [892, 600], [866, 584], [884, 552], [904, 530], [905, 508]];
+    s += trail(lowA, 46, 26, { N, stones: true, stoneGap: 4 }) + trail(lowB, 21, 16, { N, stones: true, stoneGap: 6 });
+    // the bridge: a plank deck narrowing into the distance, with rails and posts standing in the water
+    const BR = [[931, 666, 15], [918, 618, 11.5]],
+      bx = (t, side) => n(BR[0][0] + (BR[1][0] - BR[0][0]) * t + side * (BR[0][2] + (BR[1][2] - BR[0][2]) * t)),
+      by = (t) => n(BR[0][1] + (BR[1][1] - BR[0][1]) * t);
+    let planks = '', posts = '';
+    for (let k = 0; k <= 8; k++) { const t = k / 8; planks += L('M' + bx(t, -1) + ' ' + by(t) + 'L' + bx(t, 1) + ' ' + by(t), N('#8a5a35'), 1.6); }
+    [0, 0.5, 1].forEach((t) => { [-1, 1].forEach((sd) => { posts += S(rr(bx(t, sd * 1.05) - 2, by(t) - 12 + t * 3, 4, 14 - t * 3, 1.5), N('#8a5a35')); }); });
+    s += F('M' + bx(0, -1.3) + ' ' + (by(0) + 3) + 'Q931 676 ' + bx(0, 1.3) + ' ' + (by(0) + 3), '#ffffff', 0.4) +
+      OUT(S('M' + bx(0, -1) + ' ' + by(0) + 'L' + bx(1, -1) + ' ' + by(1) + 'L' + bx(1, 1) + ' ' + by(1) + 'L' + bx(0, 1) + ' ' + by(0) + 'Z', N('#d9a46a'), 'M' + bx(0, 0.55) + ' ' + by(0) + 'L' + bx(1, 0.55) + ' ' + by(1) + 'L' + bx(1, 1) + ' ' + by(1) + 'L' + bx(0, 1) + ' ' + by(0) + 'Z') + planks + posts +
+        L('M' + bx(0, -1.05) + ' ' + (by(0) - 11) + 'L' + bx(1, -1.05) + ' ' + (by(1) - 9), N('#a86b3c'), 2.4) + L('M' + bx(0, 1.05) + ' ' + (by(0) - 11) + 'L' + bx(1, 1.05) + ' ' + (by(1) - 9), N('#a86b3c'), 2.4), 2.2);
+    // a signpost where the trail starts, and lanterns along the way
+    s += G(OUT(S(rr(-4, -64, 8, 64, 3), N('#a86b3c')) + S('M-46 -62L30 -62L44 -50L30 -38L-46 -38Q-50 -38 -50 -42L-50 -58Q-50 -62 -46 -62Z', N('#e0a86a'), 'M-46 -44L38 -44L30 -38L-46 -38Q-50 -38 -50 -42Z') +
+      '<text x="-6" y="-44" text-anchor="middle" font-family="Baloo 2, ui-rounded, system-ui, sans-serif" font-weight="800" font-size="17" fill="#fff8e6" stroke="none">Summit</text>' + S('M-18 2Q-16 -8 -6 -6Q2 -12 10 -4Q18 -4 16 2Z', N('#6cc65a')), 3 / 0.72), tf(1006, 704, 0.72));
+    [[1040, 760, 0.85], [858, 610, 0.55]].forEach((q, i) => {
+      s += '<g class="pr-glow" style="animation-delay:-' + i + 's">' + EF(q[0], q[1] - 40 * q[2], 34 * q[2], 30 * q[2], 'url(#lhq-g-aura)') + '</g>' +
+        G(OUT(S(rr(-2.5, -46, 5, 46, 2), N('#5a4a7a')) + S('M-8 -54L8 -54L10 -48L-10 -48Z', N('#5a4a7a')) + S('M-9 -48L9 -48Q12 -40 8 -32L-8 -32Q-12 -40 -9 -48Z', '#ffe27a') + S('M-7 -32L7 -32L5 -28L-5 -28Z', N('#5a4a7a')), 3 / q[2]), tf(q[0], q[1], q[2]));
+    });
+    [[906, 712, 1], [838, 586, 0.8], [935, 512, 0.62], [1026, 382, 0.5], [770, 344, 0.46], [984, 300, 0.4], [826, 264, 0.36]].forEach((f, i) => { s += pennant(f[0], f[1], f[2], N(WORLDS[i].accent)); });
     // foreground rocky ledge (the explorer stands on it); the lower part stays calm for the title
     const LEDGE = 'M-20 1010L-20 772Q120 742 300 750Q470 726 560 726Q660 712 780 724Q860 732 920 760Q980 788 1060 790Q1260 776 1620 800L1620 1010Z';
     s += OUT(S(LEDGE, N('#b79c8a'), 'M-20 1010L-20 880Q500 846 1000 866Q1300 872 1620 890L1620 1010Z') + NF('M-20 780Q120 750 300 758Q470 734 560 734Q660 720 780 732Q860 740 920 768Q980 796 1060 798Q1260 784 1620 808L1620 790Q1260 768 1060 782Q980 780 920 752Q860 724 780 716Q660 704 560 718Q470 718 300 742Q120 734 -20 764Z', '#6cc65a') +
@@ -1417,7 +1701,11 @@
     [[430, 734, 0], [800, 734, 1], [1010, 790, 2], [210, 758, 0.5], [1380, 792, 1.5]].forEach((t) => { s += '<g class="sp-grass" style="animation-delay:-' + t[2] + 's"><g transform="translate(' + t[0] + ' ' + t[1] + ')">' + OUT(S('M-14 4Q-16 -14 -10 -26Q-6 -10 -4 4Z', N('#6cc65a')) + S('M-6 4Q-4 -24 6 -36Q4 -14 6 4Z', N('#7ad366')) + S('M4 4Q10 -16 22 -22Q14 -8 14 4Z', N('#5fba52')), 3) + '</g></g>'; });
     s += G(OUT(flower('#ff8fcf').replace('class="pr-sway"', 'class="sp-grass"'), 3), ' transform="translate(300 668) scale(.8)"') + G(OUT(flower('#ffd23f', '#ff8a3d').replace('class="pr-sway"', 'class="sp-grass"'), 3), ' transform="translate(1100 712) scale(.8)"');
     // the explorer, seen from behind
-    s += '<svg x="560" y="374" width="240" height="360" viewBox="0 0 200 300" class="ex ex-back lhq-art" overflow="visible">' + explorerInner(look, outfit, true) + '</svg>';
+    // The explorer is never still: they hop with excitement, raise the staff at the summit, look around, and
+    // now and then turn round to wave at us (css/art.css .sp-ex*). Both views are drawn; the animation swaps them.
+    const mood = opts.mood === 'sad' ? 'sad' : '';
+    const exv = (back) => '<svg x="560" y="374" width="240" height="360" viewBox="0 0 200 300" class="ex ex-' + (back ? 'back' : 'front') + (mood ? ' ex-sad' : '') + ' lhq-art" overflow="visible">' + explorerInner(look, outfit, back, mood) + '</svg>';
+    s += '<g class="sp-ex"><g class="sp-exb">' + exv(true) + '</g><g class="sp-exf">' + exv(false) + '</g></g>';
     if (night) {
       s += '<rect width="1600" height="1000" fill="#141a4a" opacity=".22"/>' + '<g class="sp-beacon">' + EF(888, 176, 90, 80, 'url(#lhq-g-glow)') + '</g>';
       for (let i = 0; i < 9; i++) s += '<g class="amb-drift" style="animation-duration:' + rp(8, 13) + 's;animation-delay:-' + rp(0, 8) + 's">' + EF(rp(120, 1480), rp(690, 790), 9, 9, 'url(#lhq-g-fly)') + '</g>';
@@ -1448,7 +1736,13 @@
     WORLDS,
     props,
     PROPS_BY_WORLD,
+    WALKERS,
+    LANDMARKS,
     ambient,
+    border,
+    BORDER_H,
+    bridge,
+    horizon,
     splash,
   };
 })();

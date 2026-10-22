@@ -32,21 +32,21 @@ Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and c
 
 ## How to play (for the grown-up)
 
-1. **Make an explorer.** Tap **Begin**, pick a name, skin and hair (or hijab). Each child can have their own explorer, with their own stars and treasures (tap the name on the start screen).
-2. **Walk the map.** Start at 🚩 An-Nās at the bottom and climb. Tap a sūrah: the explorer walks there and the lesson opens. The world list on the side jumps between worlds. You can go back to any sūrah at any time to revise.
+1. **Make an explorer.** Tap **Begin**, pick a name, a skin tone, a hair style and a hair color (or a hijab and its color). Each child can have their own explorer, with their own stars and treasures (tap the name on the start screen). Explorers can be removed in the Grown-up Corner, all of them if you like; Begin then makes a new one.
+2. **Walk the map.** Start at 🚩 An-Nās at the bottom and climb. Tap a sūrah: the explorer pops up beside it, walks in, and the lesson opens. Each world has its own border to cross (a river, the sea, a gorge, a gate, the clouds, a frozen river), and the scenery on the horizon changes as you climb. The world list on the side jumps between worlds. You can go back to any sūrah at any time to revise.
 3. **Follow the glowing step** in each sūrah:
-   1. **👀 Look & Repeat.** Read the āyah. Your child repeats it three times while doing the action (pop a bubble each time), then says it with only the picture showing. After each new āyah, chain from the first āyah up to the new one.
+   1. **👀 Look & Repeat.** Read the āyah. Your child repeats it three times while doing the action (pop a bubble each time), then says it with only the picture showing. After each new āyah, chain from the first āyah up to the new one. Tap the numbered dots at the top to practice any āyah in that part. Progress is saved āyah by āyah, so you can stop and carry on later.
    2. **Word Steps.** Build the āyah one word at a time, always going back to the first word. Tap any word to hear just that word. Then your child says it all while you reveal each word.
    3. **🐸 Stepping Stones.** Your child says each āyah and taps the frog to hop. Level 1 shows the picture and first word, Level 2 only the picture, and Level 3 no picture at all. **Grown-up help** shows you the āyah if you need it. Level 3 means it's memorized, and the sūrah's gift appears.
    4. **Review games:** 🧩 Picture Puzzle and 🔮 What Comes Next.
-4. **Hearts.** Once a part has been learned, the review games (and Stepping Stones) have 3 hearts. A wrong pick, or the grown-up tapping **Not quite**, costs a heart. Losing all three drops the explorer's newest treasure at that sūrah on the map; finishing a game there brings it back. You can switch hearts off in the Grown-up Corner.
-5. **Gifts.** Memorizing a sūrah gives its own treasure (they get shinier higher up the mountain). The first game finished each day gives a sticker. Open **My Explorer** (the backpack) to dress up and see the collection.
+4. **Hearts.** Once a part has been learned, the review games (and Stepping Stones) have 3 hearts, plus one more for each finished world (a star in every sūrah of it), up to 5. A wrong pick, or the grown-up tapping **Not quite**, costs a heart. Losing them all drops the explorer's newest treasure at that sūrah on the map, and the explorer looks a little sad and scruffy until it's found. Finishing a review game there brings it back, and the explorer shines again. You can switch hearts off in the Grown-up Corner.
+5. **Gifts.** The first star in a sūrah wins its own treasure (they get shinier higher up the mountain), and one star is enough to move on. Collecting **every** star in a sūrah wins a special golden edition of its treasure. The first game finished each day gives a sticker to stick on the explorer's shirt. Open **My Explorer** (the backpack) to dress up: the newest finds are always at the top (with a red dot until you've seen them), **Comfy clothes** takes everything off again, and you can change the explorer's look or switch explorers there.
 
 Longer sūrahs are split into checkpoints of a few āyāt; finish the checkpoints, then the 🏁 whole sūrah. Each sūrah also has a **tip for grown-ups**, sometimes with a toy to tap along (a bell, a drum, a clap).
 
 Five to ten minutes a day is plenty. Stop while it's still fun.
 
-The orange **Listen** button at the top plays the recitation of what's on screen. In the Grown-up Corner (⚙️) you can choose the reciter (Mishary Alafasy, Al-Husary's slow teaching recitation, Al-Minshawi or Abdul Basit), a dim night theme, simple meanings or transliteration, repeat or slow down the recitation, and manage explorers and stars.
+The orange **Listen** button at the top plays the recitation of what's on screen. In the Grown-up Corner (⚙️) you can choose the reciter (Mishary Alafasy, Al-Husary's slow teaching recitation, Al-Minshawi or Abdul Basit), fullscreen (hides the browser's address bar where the browser allows it; on iPhone, use Add to Home Screen instead), a dim night theme, simple meanings or transliteration, repeat or slow down the recitation, and manage explorers and stars.
 
 ## Versions
 
@@ -100,7 +100,7 @@ versions.json              the versions offered in the version chooser
 audio/reciters.json        the reciters offered in the Grown-up Corner
 audio/<reciter>/NNN.mp3    recitation, one file per sūrah (plus 001.mp3 for the Basmalah)
 audio/<reciter>/timings.json  where each āyah and each word sits in those files
-fonts/                     Amiri Quran and Baloo 2, with their licences
+fonts/                     Amiri Quran and Baloo 2, with their licenses
 icons/                     app icons
 tools/serve.py             local preview server
 tools/build_audio.py       rebuilds the recitation files and timings (see below)
@@ -140,7 +140,7 @@ Little Hafiz Quest is a free tool, made only to help parents and other grown-ups
 
 See also the warranty and liability terms in [LICENSE](LICENSE).
 
-## Credits and licences
+## Credits and licenses
 
 - **Code and drawings** (`index.html`, `css/`, `js/boot.js`, `js/game.js`, `js/map.js`, `js/art.js`, `sw.js`, `tools/`, `manifest.webmanifest`, `icons/`): MIT, see [LICENSE](LICENSE).
 - **Qur'an text** in `js/data.js`: from [quran-json](https://github.com/risan/quran-json) by Risan Bagja Pradana (Uthmani text from [The Noble Qur'an Encyclopedia](https://quranenc.com)), licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). `js/data.js` adapts it (open tanwīn marks converted to standard Unicode, memory cues added) and is shared under CC BY-SA 4.0 as well.

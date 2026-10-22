@@ -97,7 +97,7 @@
       const looks = [];
       A.LOOKS.hair.forEach((hair, hi) => [0, 2, 4].forEach((skin, si) => looks.push({ skin, hair, hairColor: (hi + si) % 4, hijabColor: (hi * 2 + si) % 6 })));
       sec('ex-hair', 'Explorer: hair × skin (front, back)', grid(looks.map((l) => cell(A.explorer(l, {}), l.hair + ' s' + l.skin, 'ex') + cell(A.explorer(l, {}, { view: 'back' }), 'back', 'ex')).join('')) +
-        '<h3>All skin tones / hair colours / hijab colours</h3>' + grid([0, 1, 2, 3, 4].map((s) => cell(A.explorer({ skin: s, hair: 'curly', hairColor: s % 4 }, {}), 'skin ' + s + ' hair ' + (s % 4), 'ex tiny')).join('') +
+        '<h3>All skin tones / hair colors / hijab colors</h3>' + grid([0, 1, 2, 3, 4].map((s) => cell(A.explorer({ skin: s, hair: 'curly', hairColor: s % 4 }, {}), 'skin ' + s + ' hair ' + (s % 4), 'ex tiny')).join('') +
         [0, 1, 2, 3, 4, 5].map((c) => cell(A.explorer({ skin: c % 5, hair: 'hijab', hijabColor: c }, {}), 'hijab ' + c, 'ex tiny')).join('')));
 
       // each item on the explorer

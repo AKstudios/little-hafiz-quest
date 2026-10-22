@@ -392,3 +392,112 @@ svg.lhq-art {
     display: none;
   }
 }
+
+/* ---------- splash: the explorer's idle routine (one 18 s loop) ----------
+ * back view: hop hop … raise the staff towards the summit … look left and right
+ * then turn round (squash and swap to the front view), wave at us, and turn back.
+ * Without animation (reduced motion) only the back view shows. */
+.lhq-splash .sp-ex,
+.lhq-splash .sp-exb,
+.lhq-splash .sp-exf {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.lhq-splash .sp-exf {
+  opacity: 0;
+}
+.lhq-splash .sp-ex {
+  animation: sp-hop 18s ease-in-out infinite;
+}
+.lhq-splash .sp-exb {
+  animation: sp-turnb 18s ease-in-out infinite;
+}
+.lhq-splash .sp-exf {
+  animation: sp-turnf 18s ease-in-out infinite;
+}
+.lhq-splash .sp-exb .ex-arm-r {
+  animation: sp-raise 18s ease-in-out infinite;
+}
+.lhq-splash .sp-exb .ex-head {
+  animation: sp-look 18s ease-in-out infinite;
+}
+.lhq-splash .sp-exf .ex-arm-l {
+  animation: sp-wave 18s ease-in-out infinite;
+}
+@keyframes sp-hop {
+  0%, 6%, 9.5%, 13%, 100% { transform: translateY(0) scale(1, 1); }
+  6.6% { transform: translateY(0) scale(1.04, 0.95); }
+  7.8% { transform: translateY(-26px) scale(0.97, 1.04); }
+  9% { transform: translateY(0) scale(1.03, 0.96); }
+  10.2% { transform: translateY(0) scale(1.04, 0.95); }
+  11.4% { transform: translateY(-20px) scale(0.97, 1.04); }
+  12.6% { transform: translateY(0) scale(1.03, 0.97); }
+  52% { transform: translateY(0); }
+  54% { transform: translateY(-12px); }
+  56% { transform: translateY(0); }
+}
+@keyframes sp-raise {
+  0%, 16%, 30%, 100% { transform: rotate(0deg); }
+  19%, 27% { transform: rotate(-128deg); }
+  23% { transform: rotate(-140deg); }
+}
+@keyframes sp-look {
+  0%, 32%, 46%, 100% { transform: rotate(0deg); }
+  35%, 38% { transform: rotate(-9deg) translateX(-3px); }
+  41%, 44% { transform: rotate(9deg) translateX(3px); }
+}
+@keyframes sp-turnb {
+  0%, 48%, 74%, 100% { transform: scaleX(1); opacity: 1; }
+  50% { transform: scaleX(0.06); opacity: 1; }
+  50.1%, 71.9% { transform: scaleX(0.06); opacity: 0; }
+  72% { transform: scaleX(0.06); opacity: 1; }
+}
+@keyframes sp-turnf {
+  0%, 49.9%, 72.1%, 100% { transform: scaleX(0.06); opacity: 0; }
+  50% { transform: scaleX(0.06); opacity: 1; }
+  52%, 70% { transform: scaleX(1); opacity: 1; }
+  72% { transform: scaleX(0.06); opacity: 1; }
+}
+@keyframes sp-wave {
+  0%, 54%, 68%, 100% { transform: rotate(0deg); }
+  56%, 60%, 64% { transform: rotate(-132deg); }
+  58%, 62%, 66% { transform: rotate(-104deg); }
+}
+
+/* ---------- v2.1 map life: turning sails, lighthouse beam, smoke, ripples, rolling weeds ---------- */
+.pr-spin,
+.pr-beam,
+.pr-roll {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+}
+.pr-spin {
+  animation: lhq-spin 8s linear infinite;
+}
+.pr-beam {
+  animation: lhq-beam 6s ease-in-out infinite;
+}
+.pr-roll {
+  animation: lhq-spin 3s linear infinite;
+}
+.pr-smoke {
+  animation: lhq-smoke 3.6s ease-out infinite;
+}
+.pr-ripple {
+  transform-box: fill-box;
+  transform-origin: 50% 50%;
+  animation: lhq-ripple 3s ease-in-out infinite;
+}
+@keyframes lhq-beam {
+  0%, 100% { transform: scaleX(1); opacity: 1; }
+  50% { transform: scaleX(0.15); opacity: 0.4; }
+}
+@keyframes lhq-smoke {
+  0% { transform: translateY(6px); opacity: 0; }
+  30% { opacity: 1; }
+  100% { transform: translate(6px, -14px); opacity: 0; }
+}
+@keyframes lhq-ripple {
+  0%, 100% { transform: scale(1); opacity: 0.6; }
+  50% { transform: scale(1.12); opacity: 1; }
+}

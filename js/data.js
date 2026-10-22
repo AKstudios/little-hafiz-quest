@@ -12,7 +12,7 @@
  *       ar:      Arabic name.
  *       name:    transliterated name.        meaning: English meaning of the name.
  *       icon:    one emoji for the map island. theme:  a kid-friendly place name for the island.
- *       color:   island colour (#rrggbb).
+ *       color:   island color (#rrggbb).
  *       pattern: a short memory trick for the grown-up (may contain <b> tags).
  *       toy:     (optional) [emoji, sound] a button the child taps along with the trick, e.g. ["🔔", "bell"].
  *                Sounds: bell, clap, drum, chime, pop, boop, whoosh, hum (see sfx in js/game.js).
@@ -36,7 +36,7 @@
  *   - Within a sūrah, every scene should be different (except "twin" āyāt), so the puzzles stay fair.
  *   - After any change, bump VERSION in sw.js so installed copies pick it up.
  *
- * Sources and licences (see README.md)
+ * Sources and licenses (see README.md)
  *   - Arabic text: quran-json by Risan Bagja Pradana (Uthmani text from The Noble Qur'an Encyclopedia,
  *     quranenc.com), CC BY-SA 4.0. This file is an adaptation and is shared under CC BY-SA 4.0 too.
  *     Open tanwīn marks were converted to the standard Unicode characters (U+08F0–U+08F2).
@@ -628,7 +628,7 @@ window.LHQ_DATA = {
         {"ar": "فَأَكۡثَرُواْ فِيهَا ٱلۡفَسَادَ", "tr": "Fa aktharū fīhal-fasād", "kid": "And they spread lots of trouble there", "scene": ["🗑️", "🌪️"], "hook": "Lots of mess", "gesture": "🙌 Throw your hands up: what a mess!", "anim": "shake"},
         {"ar": "فَصَبَّ عَلَيۡهِمۡ رَبُّكَ سَوۡطَ عَذَابٍ", "tr": "Fa ṣabba ‘alayhim rabbuka sawṭa ‘adhāb", "kid": "So your Lord poured punishment down on them", "scene": ["⛈️"], "hook": "Poured down", "gesture": "👇 Pour from a pretend jug, down, down", "anim": "heavy"},
         {"ar": "إِنَّ رَبَّكَ لَبِٱلۡمِرۡصَادِ", "tr": "Inna rabbaka labil-mirṣād", "kid": "Your Lord is always watching", "scene": ["☝️", "✨"], "hook": "Allah sees all", "gesture": "☝️ Point up, then circle your finger all around", "anim": "search"},
-        {"ar": "فَأَمَّا ٱلۡإِنسَٰنُ إِذَا مَا ٱبۡتَلَىٰهُ رَبُّهُۥ فَأَكۡرَمَهُۥ وَنَعَّمَهُۥ فَيَقُولُ رَبِّيٓ أَكۡرَمَنِ", "tr": "Fa ammal-insānu idhā mabtalāhu rabbuhū fa akramahū wa na‘‘amahū fa yaqūlu rabbī akraman", "kid": "When Allah tests a person by giving him nice things, he says: My Lord honoured me!", "scene": ["🎁", "😃"], "hook": "Gifts — yay!", "gesture": "🎁 Open a pretend present and smile", "anim": "jump"},
+        {"ar": "فَأَمَّا ٱلۡإِنسَٰنُ إِذَا مَا ٱبۡتَلَىٰهُ رَبُّهُۥ فَأَكۡرَمَهُۥ وَنَعَّمَهُۥ فَيَقُولُ رَبِّيٓ أَكۡرَمَنِ", "tr": "Fa ammal-insānu idhā mabtalāhu rabbuhū fa akramahū wa na‘‘amahū fa yaqūlu rabbī akraman", "kid": "When Allah tests a person by giving him nice things, he says: My Lord honored me!", "scene": ["🎁", "😃"], "hook": "Gifts — yay!", "gesture": "🎁 Open a pretend present and smile", "anim": "jump"},
         {"ar": "وَأَمَّآ إِذَا مَا ٱبۡتَلَىٰهُ فَقَدَرَ عَلَيۡهِ رِزۡقَهُۥ فَيَقُولُ رَبِّيٓ أَهَٰنَنِ", "tr": "Wa ammā idhā mabtalāhu fa qadara ‘alayhi rizqahū fa yaqūlu rabbī ahānan", "kid": "And when Allah tests him with less to live on, he says: My Lord put me down!", "scene": ["🍞", "🤏"], "hook": "Just a little", "gesture": "🤏 Show a tiny bit with your fingers", "anim": "dim"},
         {"ar": "كَلَّاۖ بَل لَّا تُكۡرِمُونَ ٱلۡيَتِيمَ", "tr": "Kallā, bal lā tukrimūnal-yatīm", "kid": "No! You don’t treat orphans kindly", "scene": ["🧸", "💝"], "hook": "Kind to orphans", "gesture": "💝 Hold out a pretend gift with both hands", "anim": "pulse"},
         {"ar": "وَلَا تَحَـٰٓضُّونَ عَلَىٰ طَعَامِ ٱلۡمِسۡكِينِ", "tr": "Wa lā taḥāḍḍūna ‘alā ṭa‘āmil-miskīn", "kid": "And you don’t tell each other to feed the poor", "scene": ["🍲", "🤲"], "hook": "Feed the poor", "gesture": "🥄 Pretend to share a spoonful of food", "anim": "wave"},
@@ -993,7 +993,7 @@ window.LHQ_DATA = {
         {"ar": "مَّتَٰعࣰا لَّكُمۡ وَلِأَنۡعَٰمِكُمۡ", "tr": "Matā‘al lakum wa li-an‘āmikum", "kid": "All for you and your animals to enjoy", "scene": ["🐄", "🐑"], "hook": "For you & animals", "gesture": "🐄 Point to yourself, then pretend to pat a cow", "anim": "march"},
         {"ar": "فَإِذَا جَآءَتِ ٱلصَّآخَّةُ", "tr": "Fa idhā jā’atiṣ-ṣākhkhah", "kid": "But when the very loud Blast comes", "scene": ["🔊", "💥"], "hook": "Loud blast", "gesture": "🙉 Cover your ears with your hands", "anim": "shout"},
         {"ar": "يَوۡمَ يَفِرُّ ٱلۡمَرۡءُ مِنۡ أَخِيهِ", "tr": "Yawma yafirrul-mar’u min akhīh", "kid": "On that Day a person runs away from his brother", "scene": ["🏃", "👦"], "hook": "Runs from brother", "gesture": "🏃 Turn and pretend to tiptoe away fast", "anim": "march"},
-        {"ar": "وَأُمِّهِۦ وَأَبِيهِ", "tr": "Wa ummihī wa abīh", "kid": "And from his mother and his father", "scene": ["👩", "👨"], "hook": "Mum & dad", "gesture": "👐 Hold up one hand for mum, then the other for dad", "anim": "sway"},
+        {"ar": "وَأُمِّهِۦ وَأَبِيهِ", "tr": "Wa ummihī wa abīh", "kid": "And from his mother and his father", "scene": ["👩", "👨"], "hook": "Mom & dad", "gesture": "👐 Hold up one hand for mom, then the other for dad", "anim": "sway"},
         {"ar": "وَصَٰحِبَتِهِۦ وَبَنِيهِ", "tr": "Wa ṣāḥibatihī wa banīh", "kid": "And from his wife and his children", "scene": ["💍", "👧", "👦"], "hook": "Wife & children", "gesture": "💍 Point to your ring finger, then pat a pretend small head", "anim": "pulse"},
         {"ar": "لِكُلِّ ٱمۡرِيࣲٕ مِّنۡهُمۡ يَوۡمَئِذࣲ شَأۡنࣱ يُغۡنِيهِ", "tr": "Li-kullimri’im minhum yawma’idhin sha’nuy-yughnīh", "kid": "That Day everyone will be busy with his own worry", "scene": ["⏳", "🎒"], "hook": "Busy with himself", "gesture": "🎒 Hug a pretend bag tight and look down", "anim": "heavy"},
         {"ar": "وُجُوهࣱ يَوۡمَئِذࣲ مُّسۡفِرَةࣱ", "tr": "Wujūhuy-yawma’idhim musfirah", "kid": "Some faces that Day will be shining bright", "scene": ["🌟", "😊"], "hook": "Shining faces", "gesture": "🌟 Open your hands next to your face like sunshine", "anim": "pulse"},
