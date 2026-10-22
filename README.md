@@ -6,7 +6,7 @@ A grown-up who reads Arabic recites each āyah; the child listens, repeats and d
 
 Your child's own little explorer starts in a meadow at An-Nās and climbs, sūrah by sūrah, through a forest, a beach, a desert canyon, starry hills and cloud cliffs to the top of the mountain at An-Naba’. Along the way there are over 150 things to win and wear: caps and kufis or hijabs, boots, capes, walking sticks, buddies, an astronaut suit with a toy rocket, and golden editions for the hardest-working explorers.
 
-**Play it:** https://akstudios.github.io/little-hafiz-quest/
+**Play it:** https://akramali.github.io/little-hafiz-quest/
 
 Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and computers, and keeps working without internet once it's been opened.
 
@@ -65,7 +65,7 @@ The orange **Listen** button at the top plays the recitation of what's on screen
 
 ## Versions
 
-The newest version opens by default. Tap the version badge on the start screen (or Grown-up Corner → Version) to switch to the classic **v1**, which keeps the original island list. The choice is remembered on that device, and you can switch back the same way. If something goes wrong, opening https://akstudios.github.io/little-hafiz-quest/?latest always brings back the newest version.
+The newest version opens by default. Tap the version badge on the start screen (or Grown-up Corner → Version) to switch to the classic **v1**, which keeps the original island list. The choice is remembered on that device, and you can switch back the same way. If something goes wrong, opening https://akramali.github.io/little-hafiz-quest/?latest always brings back the newest version.
 
 ## Put it on a phone like an app
 

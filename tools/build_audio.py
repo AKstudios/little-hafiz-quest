@@ -90,7 +90,7 @@ LEAD, GAP, TAIL = 0.25, 0.45, 0.3        # seconds of silence: before, between, 
 # Quran.com's own; change it here and rebuild if single words sound clipped.
 WORD_SHIFT = 0.0
 MAX_PARALLEL = 4                         # downloads at once (be kind to the servers)
-USER_AGENT = 'LittleHafizQuest-audio-builder/2 (+https://github.com/AKstudios/little-hafiz-quest)'
+USER_AGENT = 'LittleHafizQuest-audio-builder/2 (+https://github.com/akramali/little-hafiz-quest)'
 
 
 # ---------------------------------------------------------------- game text (js/data.js)
