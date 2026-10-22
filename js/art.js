@@ -235,7 +235,9 @@
   const SKIN = ['#ffe1c8', '#f6c49c', '#d99c72', '#a86d48', '#6f452e'];
   const HAIRC = ['#3a2f45', '#5a3726', '#87552f', '#b04a2c'];
   const HIJABC = ['#ff8db6', '#b49cff', '#35c3b0', '#5fb2ff', '#ff9c6e', '#ffcf4d'];
-  const LOOKS = { skin: SKIN.slice(), hair: ['short', 'curly', 'ponytail', 'hijab'], hairColor: HAIRC.slice(), hijabColor: HIJABC.slice() };
+  const LOOKS = { skin: SKIN.slice(), hair: ['short', 'curly', 'ponytail', 'hijab'], hairColor: HAIRC.slice(), hijabColor: HIJABC.slice(), kid: ['boy', 'girl'] };
+  // boy or girl: chosen by the grown-up; until then a ponytail or hijab means girl
+  const isGirl = (look) => !!look && (look.kid === 'girl' || (look.kid !== 'boy' && (look.hair === 'ponytail' || look.hair === 'hijab')));
 
   // Body geometry (front view; the character's right side is on the viewer's left).
   const MIR = ' transform="matrix(-1 0 0 1 184 0)"'; // mirror around x = 92
@@ -400,7 +402,7 @@
     ['butterfly-buddy', 'pet', 'Butterfly buddy', 2, 101],
     ['gallop-boots', 'shoes', 'Galloping boots', 2, 100],
     ['sturdy-shield', 'shield', 'Sturdy shield', 2, 99],
-    ['crystal-staff', 'stick', 'Crystal staff', 2, 98],
+    ['crystal-staff', 'stick', 'Trekking pole', 2, 98],
     ['night-cape', 'cape', 'Night-sky cape', 2, 97],
     ['reading-satchel', 'bag', 'Reading satchel', 2, 96],
     ['fig-jacket', 'top', 'Fig-green jacket', 2, 95],
@@ -411,13 +413,13 @@
     ['star-jacket', 'top', 'Star jacket', 3, 90],
     ['dawn-cape', 'cape', 'Dawn cape', 3, 89],
     ['camel-buddy', 'pet', 'Camel buddy', 3, 88],
-    ['star-staff', 'stick', 'Star staff', 3, 87],
+    ['star-staff', 'stick', 'Rainbow walking stick', 3, 87],
     ['comet-watch', 'watch', 'Comet watch', 3, 86],
-    ['star-helmet', 'hat', 'Constellation helmet', 3, 85],
+    ['star-helmet', 'hat', 'Astronaut helmet', 3, 85],
     ['cloud-boots', 'shoes', 'Cloud boots', 3, 84],
-    ['glider-pack', 'bag', 'Sky glider pack', 3, 83],
-    ['starry-shield', 'shield', 'Starry shield', 3, 82],
-    ['sun-staff', 'stick', 'Golden sun staff', 4, 81],
+    ['glider-pack', 'bag', 'Jet pack', 3, 83],
+    ['starry-shield', 'shield', "Hero's shield", 3, 82],
+    ['sun-staff', 'stick', 'Golden hiking staff', 4, 81],
     ['golden-jacket', 'top', 'Golden explorer jacket', 4, 80],
     ['eagle-buddy', 'pet', 'Mountain eagle', 4, 79],
     ['summit-crown', 'hat', 'Summit crown', 4, 78],
@@ -425,14 +427,72 @@
   // The three summit rewards (not from one sūrah): feat = what the whole quest needs
   const FEATS = [
     ['summit-cloak', 'cape', 'Summit cloak', 'once'], // a star in every sūrah
-    ['rainbow-wings', 'bag', 'Rainbow wings', 'three'], // three stars in every sūrah
+    ['hafiz-crown', 'hat', 'Hafiz crown', 'three'], // three stars in every sūrah
     ['golden-hoopoe', 'pet', 'Golden hoopoe', 'all'], // every star of the whole Juz: one of a kind
   ];
   const ITEMS = CATALOG.map((r) => ({ id: r[0], slot: r[1], name: r[2], tier: r[3], from: r[4] }));
   FEATS.forEach((r) => ITEMS.push({ id: r[0], slot: r[1], name: r[2], tier: 4, from: null, feat: r[3] }));
+  // names shown to girls, where the drawing changes too
+  const GIRL_NAME = { 'summit-crown': 'Summit tiara', 'hafiz-crown': 'Hafiz tiara' };
   // Golden editions: the special reward for every star in a sūrah (id 'gold-<item>', drawn by goldEdition below).
   CATALOG.filter((r) => r[4]).forEach((r) => {
     ITEMS.push({ id: 'gold-' + r[0], slot: r[1], name: (/^golden/i.test(r[2]) ? 'Shining ' + r[2].toLowerCase() : 'Golden ' + r[2].charAt(0).toLowerCase() + r[2].slice(1)), tier: 4, from: r[4], gold: true, base: r[0] });
+  });
+  GIRL_NAME['gold-summit-crown'] = 'Golden summit tiara';
+  ITEMS.forEach((it) => {
+    if (GIRL_NAME[it.id]) it.girl = GIRL_NAME[it.id];
+  });
+  /* ---------- the star track: a prize every few stars (more often at the start), on top of each sūrah's treasure ----------
+   * Rows: [id, slot, name] for a new design, or [id, slot, name, base item, hue turn in degrees] for a color version. */
+  const TRACK_NEW = [
+    ['kufi', 'hat', 'White kufi'], ['striped-tee', 'top', 'Striped tee'], ['round-specs', 'glasses', 'Round glasses'], ['kitten-buddy', 'pet', 'Kitten buddy'],
+    ['bucket-hat', 'hat', 'Bucket hat'], ['hoodie', 'top', 'Cozy hoodie'], ['shepherd-crook', 'stick', "Shepherd's crook"], ['beanie', 'hat', 'Bobble beanie'],
+    ['bird-buddy', 'pet', 'Bluebird buddy'], ['goggles', 'glasses', 'Adventure goggles'], ['sport-watch', 'watch', 'Sport watch'], ['thobe', 'top', 'Little thobe'],
+    ['astro-suit', 'top', 'Astronaut suit'], ['astro-pants', 'pants', 'Astronaut pants'], ['astro-boots', 'shoes', 'Moon boots'], ['toy-rocket', 'pet', 'Toy rocket'],
+    ['bamboo-stick', 'stick', 'Bamboo stick'], ['book-pouch', 'bag', 'Book pouch'], ['turtle-buddy', 'pet', 'Turtle buddy'], ['round-shield', 'shield', 'Wooden round shield'],
+    ['umbrella-stick', 'stick', 'Umbrella cane'], ['bee-buddy', 'pet', 'Bumblebee buddy'],
+  ];
+  const TRACK_COLORS = [
+    ['blue', 'explorer-cap', 215], ['green', 'basic-pants', 280], ['blue', 'basic-shoes', 190], ['pink', 'basic-shirt', 128], ['blue', 'little-backpack', 180],
+    ['red', 'basic-pants', 139], ['green', 'explorer-cap', 125], ['blue', 'sunrise-shades', 180], ['green', 'basic-shirt', 278], ['red', 'hoodie', 99],
+    ['blue', 'beanie', 210], ['green', 'bucket-hat', 80], ['red', 'rain-boots', 148], ['yellow', 'basic-shirt', 210], ['blue', 'explorer-watch', 70],
+    ['purple', 'basic-pants', 50], ['blue', 'striped-tee', 200], ['purple', 'explorer-cap', 275], ['green', 'little-backpack', 90], ['pink', 'comfy-sneakers', 125],
+    ['red', 'sturdy-shield', 142], ['pink', 'sunrise-shades', 300], ['teal', 'hoodie', 270], ['red', 'crystal-staff', 142], ['blue', 'traveller-jacket', 185],
+    ['yellow', 'beanie', 60], ['red', 'basic-shoes', 337], ['purple', 'basic-shirt', 70], ['red', 'leaf-cape', 240], ['yellow', 'rain-boots', 198],
+    ['red', 'explorer-watch', 216], ['pink', 'bird-buddy', 130], ['teal', 'basic-pants', 320], ['orange', 'explorer-cap', 30], ['green', 'striped-tee', 120],
+    ['red', 'bucket-hat', 320], ['pink', 'little-backpack', 300], ['green', 'sunrise-shades', 100], ['orange', 'hoodie', 130], ['green', 'basic-shoes', 100],
+    ['blue', 'leaf-cape', 100], ['green', 'crystal-staff', 260], ['orange', 'basic-shirt', 188], ['green', 'rain-boots', 270], ['purple', 'explorer-watch', 130],
+    ['green', 'beanie', 140], ['green', 'sturdy-shield', 260], ['brown', 'basic-pants', 170], ['orange', 'comfy-sneakers', 190], ['blue', 'bucket-hat', 170],
+    ['ocean', 'dawn-cape', 120],
+  ];
+  const baseName = (id) => {
+    const it = ITEMS.find((i) => i.id === id);
+    if (it) return it.name;
+    const r = TRACK_NEW.find((x) => x[0] === id);
+    return r ? r[2] : id;
+  };
+  const colorName = (c, base) => {
+    const nm = baseName(base);
+    return c.charAt(0).toUpperCase() + c.slice(1) + ' ' + nm.charAt(0).toLowerCase() + nm.slice(1);
+  };
+  // interleave: a new design, then the color versions in between, spread evenly
+  const TRACK = [];
+  const per = TRACK_COLORS.length / TRACK_NEW.length;
+  let ci = 0;
+  TRACK_NEW.forEach((r, k) => {
+    TRACK.push(r);
+    const upTo = Math.round((k + 1) * per);
+    for (; ci < upTo && ci < TRACK_COLORS.length; ci++) {
+      const [c, base, deg] = TRACK_COLORS[ci];
+      TRACK.push([c + '-' + base, (ITEMS.find((i) => i.id === base) || { slot: (TRACK_NEW.find((x) => x[0] === base) || [])[1] }).slot, colorName(c, base), base, deg]);
+    }
+  });
+  // stars needed for each prize: small steps at first (4, 10, 18, …), larger later, the last one at 900
+  let prevT = 0;
+  TRACK.forEach((r, k) => {
+    const t = Math.max(prevT + 2, Math.round(900 * Math.pow((k + 1) / TRACK.length, 1.25)));
+    prevT = t;
+    ITEMS.push({ id: r[0], slot: r[1], name: r[2], tier: t < 300 ? 1 : t < 650 ? 2 : 3, from: null, track: t, vof: r[3] || null, deg: r[4] || 0 });
   });
   const BYID = Object.create(null);
   ITEMS.forEach((it) => (BYID[it.id] = it));
@@ -488,27 +548,31 @@
     },
   };
   ART['star-helmet'] = {
-    box: [36, 14, 148, 106],
-    fx: [[92, 26], [52, 70], [132, 78]],
+    box: [28, 36, 156, 172],
+    // the icon has no face behind the visor, so its glass is tinted
+    ic: () => ART['star-helmet'].ex('front').replace('fill="#bfe6ff" stroke="none" opacity="0.16"', 'fill="#5fa8e8" stroke="none" opacity="0.75"'),
+    fx: [[52, 70], [134, 66], [92, 44]],
     ex(v) {
-      const c = '#4b55d8';
-      return (
-        L('M92 46L92 32', INK, 3.4) + S(star5(92, 26, 10, 4.6), GOLD, null, star5(90, 24, 4, 1.8)) +
-        S('M44 96C42 62 64 46 92 46C120 46 142 62 140 96Z', c, 'M110 49C130 56 141 72 140 96L122 96C124 76 120 60 110 49Z', 'M54 78C56 64 64 56 74 52C66 60 60 70 58 82Z') +
-        L('M66 72L80 62L98 70L114 60L126 74', '#aebdff', 1.6) +
-        [[66, 72, 3.6], [80, 62, 2.8], [98, 70, 3.8], [114, 60, 2.6], [126, 74, 3]].map((p) => F(star4(p[0], p[1], p[2] + 1.6), '#fff')).join('') +
-        (v === 'back' ? '' : F(star5(100, 86, 3.4), '#fff')) +
-        S('M41 92Q92 84 143 92L143 99Q143 103 139 103Q92 96 45 103Q41 103 41 99Z', GOLD) +
-        ball(43, 100, 6.5, 6.5, GOLD, { hl: false }) + ball(141, 100, 6.5, 6.5, GOLD, { hl: false })
-      );
+      const w = '#f4f7fb',
+        shell = 'M32 110A60 60 0 1 0 152 110A60 60 0 1 0 32 110Z';
+      if (v === 'back')
+        return S(shell, w, 'M120 58A60 60 0 0 1 150 128Q140 150 118 164Q138 120 120 58Z', 'M46 92Q52 70 72 58Q58 74 54 96Z') + S(rr(78, 150, 28, 16, 5), '#c9d2e3') + L('M92 50L92 34', INK, 2.4) + ball(92, 32, 4, 4, '#ef4b4b', { hl: false }) +
+          P('M36 132Q92 152 148 132', 'none', ' stroke="#ff8a3d" stroke-width="4"');
+      const visor = 'M48 116A44 38 0 1 0 136 116A44 38 0 1 0 48 116Z';
+      return '<path d="' + shell + visor + '" fill="' + w + '" fill-rule="evenodd" stroke="none"/>' + F('M120 58A60 60 0 0 1 150 128L136 120Q134 84 120 58Z', '#d4dbe8') +
+        F(visor, '#bfe6ff', 0.16) + L('M60 98Q66 84 80 80', '#ffffff', 4, ' opacity=".85"') + L('M118 140Q126 134 128 124', '#ffffff', 2.6, ' opacity=".6"') +
+        P(shell, 'none') + P(visor, 'none') + P(rr(124, 70, 14, 10, 3), '#ff8a3d', sw(2)) + CF(54, 150, 3, '#ef4b4b') + CF(130, 150, 3, '#3fd08a');
     },
   };
   ART['summit-crown'] = {
     box: [44, 34, 140, 94],
     fx: [[52, 50], [132, 50], [92, 36], [70, 88]],
     aura: [92, 66, 58, 40],
-    ex(v) {
+    ex(v, look) {
       const g = '#ffc93a';
+      if (isGirl(look))
+        return tiara(v, g, '#f5a524', ball(92, 47, 4, 4, '#fff1a8', { sh: false, hlo: 0.9 }),
+          ball(92, 66, 4.8, 4.8, '#ff4f7b', { sh: false, hlo: 0.9 }) + ball(76, 82, 3.2, 3.2, '#4aa3ff', { sh: false }) + ball(108, 82, 3.2, 3.2, '#3fd08a', { sh: false }));
       return (
         S('M58 85L52 54L68 66L76 46L86 62L92 40L98 62L108 46L116 66L132 54L126 85Q92 93 58 85Z', g, 'M108 46L116 66L132 54L126 85Q116 88 108 89Q112 70 108 46Z', 'M58 80L55 62L62 68Z') +
         S('M57 76Q92 84 127 76L126 86Q92 94 58 86Z', '#f5a524') +
@@ -539,6 +603,42 @@
     fx: [[132, 102]],
     ex: (v) =>
       v === 'back' ? '' : glassesBase('#8b6cff', '#cbb8ff', 0.35) + P('M127 98A7 7 0 1 0 133 110A5.5 5.5 0 1 1 127 98Z', GOLD, sw(2)) + P(star5(57, 104, 4.4), GOLD, sw(1.8)),
+  };
+
+  /* ---------- more hats and glasses (prizes on the star track) ---------- */
+  ART['kufi'] = {
+    box: [46, 56, 138, 98],
+    ex() {
+      const c = '#f7f3ea';
+      return S('M52 94C50 70 68 60 92 60C116 60 134 70 132 94Q92 86 52 94Z', c, 'M112 63C126 70 134 80 132 94Q122 91 114 90Q118 74 112 63Z') +
+        L('M56 86Q92 79 128 86M60 77Q92 70 124 77M68 68Q92 63 116 68', '#d9cfb8', 1.8, ' stroke-dasharray="2.6 3.2"') + L('M53 92Q92 84 131 92', '#d9cfb8', 2.2);
+    },
+  };
+  ART['bucket-hat'] = {
+    box: [36, 50, 148, 104],
+    ex(v) {
+      const c = '#f2b84b';
+      return S('M60 86C58 64 72 54 92 54C112 54 126 64 124 86Z', c, 'M110 57C122 62 126 72 124 86L114 86Q116 68 110 57Z') + S('M58 78Q92 70 126 78L126 86Q92 78 58 86Z', '#e0773f') +
+        S('M40 90Q92 76 144 90Q148 98 138 101Q92 92 46 101Q36 98 40 90Z', c, 'M120 86Q138 88 144 90Q148 98 138 101Q128 98 120 96Z') + (v === 'back' ? '' : L('M52 96Q92 88 132 96', dk(c, 0.25), 1.6, ' stroke-dasharray="3 3"'));
+    },
+  };
+  ART['beanie'] = {
+    box: [42, 34, 142, 104],
+    ex() {
+      const c = '#e85d75';
+      return S('M48 96C46 64 66 50 92 50C118 50 138 64 136 96Z', c, 'M114 54C130 62 138 76 136 96L124 96Q126 70 114 54Z') + L('M70 60L66 92M92 52L92 90M114 60L118 92', dk(c, 0.2), 1.6) +
+        S('M45 88Q92 80 139 88L139 100Q92 92 45 100Z', dk(c, 0.15)) + L('M58 86L58 97M72 84L72 95M86 83L86 94M100 83L100 94M114 84L114 95M128 86L128 97', dk(c, 0.35), 1.4) + ball(92, 44, 9, 9, '#ffffff', { shc: '#e3e6f0' });
+    },
+  };
+  ART['round-specs'] = { box: [44, 102, 140, 134], ex: (v) => (v === 'back' ? '' : glassesBase('#c99a3a', '#e8f6ff', 0.25)) };
+  ART['goggles'] = {
+    box: [42, 100, 142, 136],
+    ex(v) {
+      const st = '#ff8a3d';
+      if (v === 'back') return DL('M44 114Q92 124 140 114', st, 6);
+      return DL('M44 116L60 116M124 116L140 116', st, 6) + S(rr(58, 104, 68, 28, 13), '#5c6680') + F(rr(63, 108, 26, 20, 9), '#7fd6ff', 0.7) + F(rr(95, 108, 26, 20, 9), '#7fd6ff', 0.7) +
+        P(rr(63, 108, 26, 20, 9), 'none', sw(2)) + P(rr(95, 108, 26, 20, 9), 'none', sw(2)) + L('M67 114Q69 110 74 110M99 114Q101 110 106 110', '#fff', 2.2, ' opacity=".85"');
+    },
   };
 
   /* ---------- tops: c = body color, sl = sleeves, cf = cuffs, fr / bk = details ---------- */
@@ -623,6 +723,45 @@
         P(raysD(92, 194, 11, 20, 12, 12), '#ff8a3d', sw(1.8)) + ball(92, 194, 11, 11, '#fff3b0', { sh: false });
     },
   };
+  // the torso narrows to the top: its left and right edge at height y (for stripes that stay inside it)
+  const torsoX = (y) => [66 - ((y - 162) * 6) / 60, 118 + ((y - 162) * 6) / 60];
+  TOP['astro-suit'] = {
+    c: '#f1f4fa',
+    cf: '#ff8a3d',
+    fr: () => P(rr(80, 170, 24, 18, 4), '#c9d2e3', sw(2)) + CF(86, 176, 2.4, '#ef4b4b') + CF(92, 176, 2.4, '#ffd23f') + CF(98, 176, 2.4, '#3fd08a') + F(rr(84, 182, 16, 3, 1.4), '#5c6680') +
+      C(108, 168, 6, '#3f7fe0', sw(2)) + P(star5(108, 168, 3.6), '#fff', sw(1)) + L('M61 212L123 212', '#c9d2e3', 3.4) + L('M92 152L92 230', '#d4dbe8', 1.6),
+    bk: () => S(rr(68, 160, 48, 52, 8), '#d4dbe8', rr(104, 160, 12, 52, 6)) + L('M76 172L108 172M76 182L108 182', '#8d97b0', 2) + CF(84, 198, 3, '#3fd08a') + CF(100, 198, 3, '#ef4b4b'),
+  };
+  TOP['thobe'] = {
+    c: '#f7f3ea',
+    fr() {
+      // a long robe over the legs, with a little collar and buttons
+      const robe = 'M60 220L55 276Q92 283 129 276L124 220Z';
+      return S(robe, '#f7f3ea', 'M110 220L124 220L129 276Q122 278 114 279Q114 248 110 220Z') + P('M84 152Q92 162 100 152L100 158Q92 167 84 158Z', '#e6dcc6', sw(2)) + L('M92 160L92 200', '#d9cfb8', 1.8) + [170, 182, 194].map((y) => C(92, y, 1.8, '#d9cfb8', sw(1))).join('');
+    },
+    bk() {
+      return S('M60 220L55 276Q92 283 129 276L124 220Z', '#f7f3ea', 'M110 220L124 220L129 276Q122 278 114 279Q114 248 110 220Z') + L('M80 156Q92 162 104 156', '#d9cfb8', 2);
+    },
+  };
+  TOP['hoodie'] = {
+    c: '#8a63d2',
+    fr: () => P('M72 196L112 196L116 222L68 222Z', dk('#8a63d2', 0.12), sw(2)) + L('M86 158L84 180M98 158L100 180', '#ffffff', 2) + CF(84, 181, 1.8, '#fff') + CF(100, 181, 1.8, '#fff'),
+    bk: () => S('M68 156Q92 144 116 156Q118 176 92 182Q66 176 68 156Z', dk('#8a63d2', 0.08), 'M104 150Q116 154 116 156Q118 176 92 182Q108 172 104 150Z') + F('M76 158Q92 152 108 158Q108 170 92 174Q76 170 76 158Z', dk('#8a63d2', 0.3)),
+  };
+  TOP['striped-tee'] = {
+    c: '#ffffff',
+    sl: '#ff7a59',
+    fr() {
+      let o = '';
+      for (let y = 166; y < 228; y += 14) {
+        const a = torsoX(y),
+          b = torsoX(y + 6);
+        o += F('M' + n(a[0]) + ' ' + y + 'L' + n(a[1]) + ' ' + y + 'L' + n(b[1]) + ' ' + (y + 6) + 'L' + n(b[0]) + ' ' + (y + 6) + 'Z', '#ff7a59');
+      }
+      return o;
+    },
+  };
+  TOP['striped-tee'].bk = TOP['striped-tee'].fr;
   Object.keys(TOP).forEach((id) => {
     const t = TOP[id];
     t.sl = t.sl || t.c;
@@ -633,6 +772,7 @@
 
   /* ---------- pants ---------- */
   ART['basic-pants'] = { pants: '#3d5a99', box: [44, 202, 140, 286] };
+  ART['astro-pants'] = { pants: '#e6ebf3', box: [44, 202, 140, 286] };
 
   /* ---------- shoes: drawn for the viewer-left foot, mirrored for the other ---------- */
   const SHOE = Object.create(null);
@@ -672,6 +812,12 @@
       d = bumps(pts, false, 0.6) + 'Z',
       so = 'M62.6 282.6L97.4 282.6L97.4 287C97.4 290 95.4 292 92.4 292L67 292C64 292 62.6 290 62.6 287Z';
     return S(d, '#ffffff', 'M88 250Q93 252 94 260L94.6 270L97 280L96 284L88 284Q92 266 88 250Z') + S(so, '#9cc8ff') + CF(73, 258, 3, '#fff', 0.9) + P(star5(80, 268, 5), GOLD, sw(1.8));
+  };
+  SHOE['astro-boots'] = () => {
+    const c = '#f1f4fa',
+      d = BOOT(250);
+    return F(d, c) + F('M84 250L87.5 250Q92.6 250 92.6 255L92.4 271C95 273.5 95.6 278 95.6 284L88 284C88 276 86 262 84 250Z', '#d4dbe8') + F(SOLE.replace(/94\.4/g, '95.6'), '#8d97b0') +
+      F('M68 262L92.6 262L92.6 268L68 268Z', '#ff8a3d') + P(d, 'none') + L('M68 262L92.6 262M68 268L92.6 268', INK, 1.6);
   };
   const SHOEFX = { 'gallop-boots': [[80, 266]], 'comfy-sneakers': [[70, 272]], 'cloud-boots': [[66, 252], [92, 262]] };
   Object.keys(SHOE).forEach((id) => (ART[id] = { shoe: SHOE[id], box: [52, 236, 132, 296], fx: SHOEFX[id] }));
@@ -749,22 +895,22 @@
       return DL('M70 156L114 210', '#8a4a26', 4.5) + satchel(true);
     },
   };
-  function wings(c) {
-    const w = 'M66 172C54 160 34 150 18 152C14 160 20 168 26 170C18 174 18 182 26 184C20 190 24 198 32 196C30 204 40 208 46 202C52 208 60 206 66 200Z';
-    const one = S(w, c, 'M66 186C58 194 50 200 46 202C40 208 30 204 32 196C42 198 56 192 66 186Z') + L('M60 178Q44 168 28 168M60 186Q44 182 30 184M60 194Q48 194 36 198', dk(c, 0.22), 1.8);
-    return G(G(one, cls('lhq-wing-l')) + G(G(one, cls('lhq-wing-l')), MIR));
-  }
   ART['glider-pack'] = {
-    box: [14, 146, 170, 232],
-    fx: [[24, 156], [160, 156], [92, 190]],
-    wings: () => wings('#ffffff'),
+    box: [60, 150, 124, 258],
+    fx: [[70, 170], [114, 170], [92, 244]],
     ex(v) {
-      const c = '#5bb8f5';
-      if (v !== 'back') return DL('M73 155L75 212', dk(c, 0.2), 5) + DL('M111 155L109 212', dk(c, 0.2), 5);
-      return wings('#ffffff') + S(rr(66, 166, 52, 60, 15), c, 'M104 166Q118 166 118 181L118 211Q118 226 103 226L98 226Q108 196 104 166Z', 'M71 182Q72 172 80 170Q75 178 75 190Z') +
-        P(cloudD(92, 206, 28, 10, 3), '#fff', sw(2)) + L('M66 186L118 186', dk(c, 0.3), 2) + CF(92, 177, 3, '#fff', 0.8);
+      const m = '#c9d2e3',
+        r = '#ef4b4b',
+        st = '#5c6680';
+      if (v !== 'back') return DL('M73 155L75 212', st, 5) + DL('M111 155L109 212', st, 5) + P(rr(84, 196, 16, 8, 3), '#ffd23f', sw(1.8));
+      const tank = (x) =>
+        S(rr(x - 11, 166, 22, 54, 10), m, rr(x + 3, 166, 8, 54, 4), rr(x - 8, 172, 4, 38, 2)) + S('M' + (x - 11) + ' 176Q' + x + ' 156 ' + (x + 11) + ' 176Z', r) +
+        S('M' + (x - 7) + ' 220L' + (x + 7) + ' 220L' + (x + 5) + ' 230L' + (x - 5) + ' 230Z', st) +
+        '<g class="pr-flame">' + F('M' + (x - 5) + ' 231Q' + x + ' 258 ' + (x + 5) + ' 231Z', '#ffb347') + F('M' + (x - 2.6) + ' 231Q' + x + ' 247 ' + (x + 2.6) + ' 231Z', '#fff3b0') + '</g>';
+      return tank(78) + tank(106) + S(rr(86, 178, 12, 32, 4), st) + CF(92, 186, 2.2, '#3fd08a') + CF(92, 196, 2.2, '#ffd23f');
     },
   };
+
 
   /* ---------- sticks: upright at x=46, held by the character's right hand (viewer's left) ---------- */
   /* ---------- the summit rewards ---------- */
@@ -783,23 +929,72 @@
       return S(CAPE_F, lining, null, null) + trim('M70 156L114 156') + [[44, 246], [140, 246]].map((p) => F(star4(p[0], p[1], 4), '#ffffff')).join('');
     },
   };
-  ART['rainbow-wings'] = {
-    box: [10, 140, 174, 236],
-    fx: [[22, 152], [162, 152], [40, 196], [144, 196]],
-    aura: [92, 180, 86, 50],
-    wings: () => rainbowWings(),
-    ex(v) {
-      if (v !== 'back') return DL('M74 155L76 196', '#ff8fc8', 4) + DL('M110 155L108 196', '#ff8fc8', 4);
-      return rainbowWings() + S(rr(80, 170, 24, 30, 10), '#ffffff', null, null) + P(star5(92, 185, 6), GOLD, sw(1.8));
+  /* A tiara (for girls, in place of a crown): a thin curved band on top of the head with a raised filigree
+     front. top = what sits in the middle (a jewel, or the crescent for the Hafiz tiara); gems = side jewels. */
+  function tiara(v, g, band, top, gems) {
+    const rim = S('M54 92Q92 70 130 92L128 98Q92 78 56 98Z', g, 'M104 80Q118 84 130 92L128 98Q118 90 106 86Z');
+    if (v === 'back') return rim + L('M60 93Q92 76 124 93', band, 2);
+    const lace = S('M60 90Q66 76 76 82Q80 66 88 64Q90 52 92 48Q94 52 96 64Q104 66 108 82Q118 76 124 90Q108 80 92 80Q76 80 60 90Z', g, 'M96 64Q104 66 108 82Q118 76 124 90Q114 84 104 82Q102 70 96 64Z', 'M66 86Q70 80 74 82Z');
+    return rim + lace + L('M60 91Q92 74 124 91', band, 2.4) + gems + top;
+  }
+  // a gold crown with an emerald band and a crescent on top (drawn on the short-hair head, like the other hats)
+  ART['hafiz-crown'] = {
+    box: [44, 10, 140, 98],
+    fx: [[50, 48], [134, 48], [70, 30], [114, 30]],
+    aura: [92, 62, 60, 46],
+    ex(v, look) {
+      const g = '#ffc93a',
+        band = '#1f9a62';
+      if (isGirl(look))
+        return tiara(v, g, band, L('M92 50L92 40', INK, 2) + P('M92 24A8 8 0 1 0 100 36A6.2 6.2 0 1 1 92 24Z', g, sw(2)) + P(star5(97.6, 28, 2.8), '#fff6d8', sw(1.2)),
+          ball(92, 66, 4.6, 4.2, '#3fd08a', { hlo: 0.9 }) + ball(76, 82, 2.8, 2.8, '#fff6d8', { sh: false }) + ball(108, 82, 2.8, 2.8, '#fff6d8', { sh: false }));
+      const body = S('M58 80L52 46Q62 52 70 56L80 34Q86 44 92 46Q98 44 104 34L114 56Q122 52 132 46L126 80Q92 88 58 80Z', g, 'M104 34L114 56Q122 52 132 46L126 80Q116 84 108 85Q114 62 104 34Z', 'M58 74L55 54L62 60Z');
+      const ring = S('M56 76Q92 85 128 76L127 92Q92 101 57 92Z', band, 'M110 82Q120 81 128 78L127 92Q120 94 112 95Q114 88 110 82Z') + L('M56.5 79Q92 88 127.5 79M57 89Q92 98 127 89', '#ffe27a', 1.8);
+      const tips = [[52, 45], [80, 33], [104, 33], [132, 45]].map((p) => ball(p[0], p[1], 4.2, 4.2, '#fff6d8', { sh: false, hlo: 0.9 })).join('');
+      const moon = L('M92 46L92 30', INK, 2.4) + P('M92 12A9 9 0 1 0 101 25A7 7 0 1 1 92 12Z', g, sw(2.2)) + P(star5(98.5, 16.5, 3.2), '#fff6d8', sw(1.4));
+      const gems = v === 'back' ? ball(92, 87, 3.6, 3.6, '#fff6d8', { sh: false }) : ball(92, 86.5, 5.4, 4.6, '#3fd08a', { hlo: 0.9 }) + ball(72, 84, 3.4, 3.4, '#fff6d8', { sh: false }) + ball(112, 84, 3.4, 3.4, '#fff6d8', { sh: false });
+      return moon + body + tips + ring + gems;
     },
   };
-  function rainbowWings() {
-    const RB = ['#ff6b6b', '#ffb43d', '#ffe066', '#5fd27a', '#5fb2ff', '#a884ff'];
-    const one = RB.map((c, i) => {
-      return S('M70 ' + (176 + i * 2) + 'C' + n(58 - 6 * i) + ' ' + n(162 - i) + ' ' + n(40 - 4 * i) + ' ' + n(150 + i * 6) + ' ' + n(20 + i * 6) + ' ' + n(152 + i * 8) + 'C' + n(18 + i * 6) + ' ' + n(162 + i * 8) + ' ' + n(30 + i * 4) + ' ' + n(176 + i * 6) + ' 70 ' + n(190 + i * 1.5) + 'Z', c);
-    }).join(''); // the biggest (red) feather first, each smaller colour on top
-    return G(G(G(one, cls('lhq-wing-l')) + G(G(one, cls('lhq-wing-l')), MIR)), ' transform="translate(0 -4)"');
-  }
+  ART['shepherd-crook'] = {
+    box: [14, 116, 60, 292],
+    rot: 36,
+    fs: 108,
+    ex() {
+      const w = '#b07a43';
+      return DL('M46 286L46 140Q46 122 32 122Q20 122 20 134Q20 140 25 141', w, 4.4) + L('M44 180Q47 182 49 179M44 246Q47 248 49 245', dk(w, 0.4), 1.6) + EF(46, 288, 2.6, 1.6, INK);
+    },
+  };
+  ART['bamboo-stick'] = {
+    box: [30, 138, 62, 292],
+    rot: 42,
+    fs: 108,
+    ex() {
+      const c = '#8fcf5a';
+      let nodes = '';
+      for (let y = 170; y < 286; y += 24) nodes += P(rr(41.6, y, 8.8, 4, 2), dk(c, 0.18), sw(1.6));
+      return S(limb(46, 148, 46, 287, 3.8, 3.6), c, limb(48, 150, 48, 285, 1.4, 1.4)) + nodes + S('M46 150Q40 138 32 140Q36 148 46 152Z', '#5fbf4a') + EF(46, 288, 2.6, 1.6, INK);
+    },
+  };
+  ART['umbrella-stick'] = {
+    box: [26, 190, 62, 292],
+    rot: 30,
+    fs: 100,
+    ex() {
+      const c = '#ff5d8f';
+      return DL('M46 226L46 206Q46 196 38 196Q31 196 31 203', '#8a5a35', 4) + S('M46 224Q55 236 50 274L46 280L42 274Q37 236 46 224Z', c, 'M46 224Q55 236 50 274L46 280Q50 250 46 224Z') +
+        L('M46 228L46 276M43 232Q41 252 44 272', dk(c, 0.3), 1.4) + P(rr(42.6, 224, 6.8, 4, 1.6), '#ffd23f', sw(1.4)) + L('M46 280L46 288', '#8d97b0', 2.6);
+    },
+  };
+  ART['book-pouch'] = {
+    box: [64, 150, 120, 232],
+    ex(v) {
+      const c = '#2fa36b';
+      if (v !== 'back') return DL('M112 156L74 214', dk(c, 0.15), 4.5) + P(rr(70, 210, 9, 8, 2), GOLD, sw(1.6));
+      return DL('M74 156L110 186', dk(c, 0.15), 4.5) + S(rr(70, 176, 44, 44, 9), c, rr(102, 176, 12, 44, 6)) + S('M70 186Q92 200 114 186L114 182Q114 176 108 176L76 176Q70 176 70 182Z', dk(c, 0.15)) +
+        C(92, 206, 7.5, 'none', ' stroke="' + GOLD + '" stroke-width="2.2"') + P(star5(92, 206, 4.4), GOLD, sw(1.2)) + L('M92 222L92 230', '#ffd23f', 2) + CF(92, 231, 2.4, '#ffd23f');
+    },
+  };
   ART['twig'] = {
     box: [26, 140, 60, 292],
     rot: 42,
@@ -811,44 +1006,49 @@
     },
   };
   ART['crystal-staff'] = {
-    box: [28, 88, 64, 292],
+    box: [30, 150, 62, 292],
     rot: 42,
     fs: 108,
-    fx: [[46, 98], [58, 118]],
+    fx: [[46, 158], [46, 224]],
     ex() {
-      const w = '#c99a64',
-        s = '#d7deea',
-        cr = '#62e3f2';
-      return S(limb(46, 136, 46, 287, 3.8, 3.8), w, limb(48, 138, 48, 285, 1.6, 1.6)) + P(rr(41.6, 176, 8.8, 6, 2.4), s, sw(1.8)) + P(rr(41.6, 244, 8.8, 6, 2.4), s, sw(1.8)) +
-        S('M46 90L57.6 107L53.6 128L46 135L38.4 128L34.4 107Z', cr, 'M46 112L57.6 107L53.6 128L46 135Z', 'M46 90L46 112L34.4 107Z') + L('M34.4 107L46 112L57.6 107M46 112L46 135', dk(cr, 0.3), 1.6) +
-        P('M38 124Q38 140 46 142Q54 140 54 124L50 132L46 128L42 132Z', s, sw(2.2));
+      const sh = '#5c6680',
+        gr = '#3f7fe0';
+      return S(limb(46, 160, 46, 286, 3.2, 2.4), sh, limb(47.6, 162, 47.6, 284, 1.2, 1)) + P(rr(42.4, 240, 7.2, 4, 1.6), '#c9d2e3', sw(1.4)) +
+        E(46, 270, 8.5, 2.4, '#8d97b0', sw(1.6)) + EF(46, 287.5, 2.4, 1.6, INK) + L('M43 200Q34 214 40 228', gr, 2.4) +
+        S(rr(41, 194, 10, 32, 4.5), gr, rr(46.5, 194, 4.5, 32, 2.2)) + L('M41.5 202L50.5 202M41.5 210L50.5 210M41.5 218L50.5 218', dk(gr, 0.3), 1.4) +
+        EF(46, 233, 8, 6, 'url(#lhq-g-crys)') + P(rr(42.6, 231, 6.8, 4, 1.6), '#7ff0ff', sw(1.4)) + ball(46, 158, 4.6, 3.8, '#3a3f52', { hl: false });
     },
   };
+
   ART['star-staff'] = {
-    box: [24, 98, 68, 292],
+    box: [32, 140, 60, 292],
     rot: 42,
     fs: 108,
-    fx: [[46, 102], [28, 128], [64, 130]],
+    fx: [[46, 146], [46, 232]],
     ex() {
-      const w = '#8a63d2';
-      return S(limb(46, 134, 46, 287, 3.8, 3.8), w, limb(48, 136, 48, 285, 1.6, 1.6)) + L('M42.4 160L49.6 168M42.4 190L49.6 198M42.4 250L49.6 258', GOLD, 2.4) +
-        DL('M42 138Q34 150 38 160', '#ff8fcf', 3) + DL('M50 138Q58 150 54 160', '#7fd6ff', 3) +
-        S(star5(46, 122, 16.5, 7.8), GOLD, 'M46 122L46 105.5L50.6 115.7L61.7 116.9L53.4 124.4L55.7 135.3L46 129.8Z', star5(41.6, 117, 4.4, 2.1)) + CF(46, 122, 2.2, '#fff', 0.8);
+      const RB = ['#ff6b6b', '#ffb43d', '#ffe066', '#5fd27a', '#5fb2ff', '#a884ff'],
+        d = limb(46, 150, 46, 287, 3.8, 3.2);
+      let bands = '';
+      for (let y = 150, k = 0; y < 287; y += 12, k++) bands += F(rr(41.8, y, 8.4, 12.4, 0), RB[k % RB.length]);
+      return '<g>' + bands + '</g>' + F(limb(48.4, 152, 48.4, 285, 1.2, 1), '#ffffff', 0.35) + P(d, 'none') + ball(46, 146, 6.2, 6.2, '#ffffff') + EF(46, 288, 2.6, 1.6, INK);
     },
   };
+
   ART['sun-staff'] = {
-    box: [20, 88, 72, 292],
+    box: [32, 128, 60, 292],
     rot: 42,
     fs: 108,
-    fx: [[46, 92], [22, 112], [70, 120], [46, 140]],
-    aura: [34, 117, 34, 34],
+    fx: [[46, 136], [46, 182], [46, 250]],
+    aura: [46, 182, 22, 22],
     ex() {
       const g = '#ffc83d';
-      return S(limb(46, 132, 46, 287, 4, 4), g, limb(48, 134, 48, 285, 1.6, 1.6)) + L('M42 150L50 160M42 176L50 186M42 202L50 212M42 236L50 246M42 262L50 272', '#ff9f1c', 2.2) +
-        P(rr(40.6, 128, 10.8, 7, 2.6), '#ff8a3d', sw(2)) +
-        P(raysD(46, 116, 12, 21, 12, 11), '#ff9f1c', sw(2)) + ball(46, 116, 12.5, 12.5, '#ffe066') + C(46, 116, 7.4, 'none', ' stroke="#ffb22e" stroke-width="2"') + CF(46, 116, 3, '#fff', 0.85);
+      return S(limb(46, 150, 46, 287, 3.8, 3.2), g, limb(48, 152, 48, 285, 1.4, 1.2)) + L('M42.4 232L49.6 240M42.4 250L49.6 258M42.4 268L49.6 276', '#e8a91e', 1.8) +
+        S(rr(41.4, 196, 9.2, 30, 3.6), '#8a5a35', rr(46.4, 196, 4.2, 30, 2)) + L('M41.6 202L50.8 206M41.6 210L50.8 214M41.6 218L50.8 222', '#5a3a20', 1.4) +
+        EF(46, 182, 10, 8, 'url(#lhq-g-sun)') + P(rr(41.6, 179, 8.8, 6, 2.4), '#ffb347', sw(1.8)) +
+        S('M39.6 152Q38.6 136 46 132Q53.4 136 52.4 152Z', '#a86b3c', 'M46 132Q53.4 136 52.4 152L47 152Q49 140 46 132Z') + EF(46, 288, 2.6, 1.6, INK);
     },
   };
+
 
   /* ---------- shields: local coordinates around (0,0), worn on the other arm ---------- */
   const KITE = 'M0 -26Q16 -26 23 -20Q23 6 0 27Q-23 6 -23 -20Q-16 -26 0 -26Z';
@@ -874,12 +1074,25 @@
     box: [-26, -29, 26, 30],
     fx: [[-12, -12], [12, 10], [0, -22]],
     sh() {
-      const pts = [[-11, -12], [-4, -6], [-9, 6], [8, -14], [11, 5], [3, 14]];
-      return S(KITE, GOLD, KITE_SH) + S(KITE_IN, '#2f3b8f', 'M0 -19.5Q12 -19.5 17.5 -15Q17.5 4.5 0 20.5Q9 4 7.5 -18Z') + L('M-11 -12L-4 -6L-9 6M-4 -6L8 -14M11 5L3 14', '#9fb0ff', 1.4) +
-        pts.map((p) => F(star4(p[0], p[1], 3), '#fff')).join('') + P(star5(1, -1, 7.5), GOLD, sw(1.8)) + F('M-14 -14Q-12 -17 -8 -17Q-12 -10 -13 -2Z', '#fff', 0.35);
+      return S(KITE, '#d5dceb', KITE_SH) + S(KITE_IN, '#2f5fc4', 'M0 -19.5Q12 -19.5 17.5 -15Q17.5 4.5 0 20.5Q9 4 7.5 -18Z') +
+        // a red bird with stepped feathers, its head turned to one side, and a fanned tail
+        P('M-2 -3L-15 -11L-13.5 -7L-16 -5L-11.5 -2.6L-13 0.6L-5 0.6L-3.4 5L-6 10L0 7.6L6 10L3.4 5L5 0.6L13 0.6L11.5 -2.6L16 -5L13.5 -7L15 -11L2 -3Z', '#e8433f', sw(1.5)) +
+        C(0, -5.6, 3.2, '#e8433f', sw(1.4)) + P('M2.6 -7L6.6 -6.4L3 -4.6Z', '#ffd23f', sw(1)) + CF(0.8, -6.4, 0.9, '#fff') +
+        P('M0 -17.6L2.6 -14.4L0 -11.4L-2.6 -14.4Z', '#ffd23f', sw(1.3)) + [[-17, -20], [17, -20], [0, 22.5]].map((p) => CF(p[0], p[1], 1.8, '#8d97b0')).join('') + F('M-14 -14Q-12 -17 -8 -17Q-12 -10 -13 -2Z', '#fff', 0.5);
     },
   };
-  ['sturdy-shield', 'sun-shield', 'starry-shield'].forEach((id) => (ART[id].ex = () => G(OUT(ART[id].sh(), SW / 0.85), tf(SHIELD_AT[0], SHIELD_AT[1], 0.85))));
+
+  ART['round-shield'] = {
+    box: [-26, -26, 26, 26],
+    fx: [[-10, -12]],
+    sh() {
+      const R = 'M0 -24A24 24 0 1 0 0.01 -24Z';
+      return S(R, '#b9844e', 'M8 -22A24 24 0 0 1 0.01 24Q14 4 8 -22Z') + L('M-12 -21L-12 21M0 -24L0 24M12 -21L12 21', dk('#b9844e', 0.3), 1.6) + C(0, 0, 19.5, 'none', ' stroke="#8d97b0" stroke-width="2.6"') +
+        ball(0, 0, 6, 6, '#c9d2e3') + [0, 90, 180, 270].map((a) => CF(n(15 * Math.cos((a * Math.PI) / 180)), n(15 * Math.sin((a * Math.PI) / 180)), 1.8, '#8d97b0')).join('');
+    },
+  };
+  const SHIELDS = () => Object.keys(ART).filter((id) => ART[id].sh);
+  SHIELDS().forEach((id) => (ART[id].ex = () => G(OUT(ART[id].sh(), SW / 0.85), tf(SHIELD_AT[0], SHIELD_AT[1], 0.85))));
 
   /* ---------- watches: ex = small band on the wrist, ic = big icon ---------- */
   function watch(band, face, inner, big) {
@@ -897,7 +1110,12 @@
     fx: [[-14, -14], [14, 12]],
     w: (big) => watch('#7a5cd6', { rim: '#c9b8ff', c: '#2c2f7a', mini: F(star4(0, 0, 2.6), '#ffe066') }, F('M-12 10Q-2 2 4 -4L8 0Q0 6 -12 10Z', '#9fd8ff', 0.8) + P(star5(5, -5, 6.5), GOLD, sw(1.6)) + F(star4(-8, -8, 2.4), '#fff') + F(star4(9, 9, 2), '#fff'), big),
   };
-  ['explorer-watch', 'comet-watch'].forEach((id) => {
+  ART['sport-watch'] = {
+    box: [-27, -46, 27, 46],
+    w: (big) => watch('#ff5d5d', { rim: '#3a3f52', c: '#c8f7d4', mini: F(rr(-2, -1, 4, 2, 1), '#2b2340') }, F(rr(-11, -5, 22, 10, 2), '#2b2340', 0.85) + F(rr(-8, -2, 4, 4, 1), '#3fd08a') + F(rr(-2, -2, 4, 4, 1), '#3fd08a') + F(rr(4, -2, 4, 4, 1), '#3fd08a'), big),
+  };
+  const WATCHES = () => Object.keys(ART).filter((id) => ART[id].w);
+  WATCHES().forEach((id) => {
     ART[id].ex = () => G(OUT(ART[id].w(false), 2.2), WATCH_AT);
     ART[id].ic = () => ART[id].w(true);
     ART[id].fxIn = true;
@@ -990,6 +1208,19 @@
     },
   };
   const PET_S = 0.76;
+  // buddies drawn from the sticker art (bottom of the sticker on the ground)
+  [['kitten-buddy', 'cat'], ['bird-buddy', 'bird'], ['turtle-buddy', 'turtle'], ['bee-buddy', 'bee']].forEach(([id, st]) => {
+    PET[id] = { box: [-46, -84, 46, 2], d: () => G(STKBY[st](), tf(-45, -82.8, 0.9)) };
+  });
+  PET['toy-rocket'] = {
+    box: [-24, -88, 24, 4],
+    d() {
+      const r = '#ef4b4b';
+      return EF(0, 0, 14, 3.4, INK, 0.14) + '<g class="pr-bob">' + '<g class="pr-flame">' + F('M-6 -22Q0 2 6 -22Z', '#ffb347') + F('M-3 -22Q0 -8 3 -22Z', '#fff3b0') + '</g>' +
+        S('M-10 -26L-20 -14L-10 -34Z', r) + S('M10 -26L20 -14L10 -34Z', r) + S('M-10 -24Q-12 -60 0 -84Q12 -60 10 -24Z', '#ffffff', 'M4 -78Q12 -60 10 -24L4 -24Q8 -56 4 -78Z') +
+        S('M-6.6 -70Q0 -86 6.6 -70Z', r) + C(0, -50, 6, '#7fd6ff', sw(2.2)) + CF(-2, -52, 1.8, '#fff', 0.8) + S(rr(-9, -28, 18, 5, 2), '#c9d2e3') + '</g>';
+    },
+  };
   Object.keys(PET).forEach((id) => (ART[id] = { pet: PET[id], box: PET[id].box, aura: PET[id].aura }));
 
   /* ---------- tier effects on the explorer ---------- */
@@ -1001,11 +1232,11 @@
     if (tier === 2) return glint(spots[0][0], spots[0][1], n(8 * k), dl(spots[0], 0));
     return spots.map((p, i) => tw(p[0], p[1], n((i % 2 ? 5.5 : 7.5) * k), dl(p, i), tier === 4 && i % 2 ? '#fff3a8' : '#fff')).join('') + (tier === 4 ? glint(spots[0][0], spots[0][1], n(9 * k), 1.3) : '');
   }
-  ['sturdy-shield', 'sun-shield', 'starry-shield'].forEach((id) => {
+  SHIELDS().forEach((id) => {
     const a = ART[id];
     a.ex = () => G(OUT(a.sh() + fxm(BYID[id].tier, a.fx), SW / 0.85), tf(SHIELD_AT[0], SHIELD_AT[1], 0.85));
   });
-  ['explorer-watch', 'comet-watch'].forEach((id) => {
+  WATCHES().forEach((id) => {
     const a = ART[id];
     a.ex = () => G(OUT(a.w(false) + fxm(BYID[id].tier, [[-9, -8], [9, 7]], 0.8), 2.2), WATCH_AT);
   });
@@ -1024,15 +1255,39 @@
     return (goldMemo[k] = mix(GOLD_RAMP[i], GOLD_RAMP[i + 1], f - i));
   }
   const goldify = (m) => m.replace(/#[0-9a-fA-F]{6}\b/g, goldC);
-  function goldOf(v) {
-    if (typeof v === 'function') return (...a) => { const r = v(...a); return typeof r === 'string' ? goldify(r) : r; };
-    if (typeof v === 'string') return /^#[0-9a-fA-F]{6}$/.test(v) ? goldC(v) : v;
-    if (Array.isArray(v)) return v.map(goldOf);
-    if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = goldOf(v[k]); return o; }
+  // recolor an item's art description (colors in strings, functions that draw, nested objects) with f(color)
+  function recolorOf(v, f) {
+    if (typeof v === 'function') return (...a) => { const r = v(...a); return typeof r === 'string' ? r.replace(/#[0-9a-fA-F]{6}\b/g, (c) => f(c.toLowerCase())) : r; };
+    if (typeof v === 'string') return /^#[0-9a-fA-F]{6}$/.test(v) ? f(v.toLowerCase()) : v;
+    if (Array.isArray(v)) return v.map((x) => recolorOf(x, f));
+    if (v && typeof v === 'object') { const o = {}; for (const k in v) o[k] = recolorOf(v[k], f); return o; }
     return v;
+  }
+  const goldOf = (v) => recolorOf(v, goldC);
+  // turn a color's hue by deg (greys, whites and the ink outline stay as they are)
+  function hueTurn(c, deg) {
+    const [r, g, b] = rgb(c).map((x) => x / 255),
+      mx = Math.max(r, g, b),
+      mn = Math.min(r, g, b),
+      d = mx - mn,
+      l = (mx + mn) / 2;
+    if (d < 0.12 || c === INK) return c;
+    const sat = d / (1 - Math.abs(2 * l - 1));
+    let h = mx === r ? ((g - b) / d + 6) % 6 : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h = (h * 60 + deg + 360) % 360;
+    const C2 = (1 - Math.abs(2 * l - 1)) * sat,
+      X = C2 * (1 - Math.abs(((h / 60) % 2) - 1)),
+      m = l - C2 / 2;
+    const q = h < 60 ? [C2, X, 0] : h < 120 ? [X, C2, 0] : h < 180 ? [0, C2, X] : h < 240 ? [0, X, C2] : h < 300 ? [X, 0, C2] : [C2, 0, X];
+    return '#' + q.map((v) => { const k = Math.max(0, Math.min(255, Math.round((v + m) * 255))); return (k < 16 ? '0' : '') + k.toString(16); }).join('');
   }
   // where the golden sparkle twinkles appear on the explorer, by slot
   const GOLD_FX = { hat: [[64, 74], [118, 62]], glasses: [[52, 104], [132, 100]], top: [[72, 176], [112, 206]], pants: [[76, 244], [108, 262]], shoes: [[68, 276], [114, 280]], cape: [[44, 240], [140, 236]], bag: [[58, 172], [126, 176]], stick: [[40, 118], [52, 160]] };
+  // color versions on the star track
+  ITEMS.filter((it) => it.vof).forEach((it) => {
+    ART[it.id] = recolorOf(ART[it.vof], (c) => hueTurn(c, it.deg));
+    if (it.slot === 'pet') PETFX[it.id] = PETFX[it.vof];
+  });
   ITEMS.filter((it) => it.gold).forEach((it) => {
     const a = goldOf(ART[it.base]);
     a.fx = a.fx || GOLD_FX[it.slot];
@@ -1042,7 +1297,7 @@
   function normLook(l) {
     l = l || {};
     const i = (v, m) => (Number.isInteger(+v) && +v >= 0 && +v < m ? +v : 0);
-    return { skin: i(l.skin, 5), hair: LOOKS.hair.indexOf(l.hair) >= 0 ? l.hair : 'short', hairColor: i(l.hairColor, 4), hijabColor: i(l.hijabColor, 6) };
+    return { skin: i(l.skin, 5), hair: LOOKS.hair.indexOf(l.hair) >= 0 ? l.hair : 'short', hairColor: i(l.hairColor, 4), hijabColor: i(l.hijabColor, 6), kid: LOOKS.kid.indexOf(l.kid) >= 0 ? l.kid : '' };
   }
   function normOutfit(o) {
     const out = {};
@@ -1086,13 +1341,13 @@
     const torso = S(TORSO, top.c, TORSO_SH, TORSO_HL) + (back ? top.bk() : top.fr()) + fxOf('top') + (mess ? mess.dust : '');
     const cape = o.cape ? G(ART[o.cape].ex(v) + fxOf('cape'), cls('ex-cape')) : '';
     const bag = o.bag ? ART[o.bag].ex(v) + fxOf('bag') : '';
-    const hat = o.hat ? G(ART[o.hat].ex(v) + fxOf('hat'), hatFit(look.hair)) : '';
+    const hat = o.hat ? G(ART[o.hat].ex(v, look) + fxOf('hat'), hatFit(look.hair)) : '';
     let head;
     if (back) head = (mess ? mess.hair : '') + headBack(look) + hat;
     else head = (mess ? mess.hair : '') + headFront(look, mood) + (o.glasses ? ART[o.glasses].ex('front') + fxOf('glasses') : '') + hat;
     if (sad) head = G(head, ' transform="translate(0 3) rotate(-3 92 150)"'); // a droopy head
     const pet = o.pet ? G(G(OUT(ART[o.pet].pet.d() + fxm(T('pet'), PETFX[o.pet] || [[-30, -50], [30, -36]], 1.4), SW / PET_S), tf(PET_AT[0], PET_AT[1], PET_S)), cls('ex-pet')) : '';
-    const wingsF = !back && (o.bag === 'glider-pack' || o.bag === 'rainbow-wings') ? ART[o.bag].wings() : '';
+    const wingsF = '';
     const stk = !back && outfit && outfit.sticker ? badge(outfit.sticker) : '';
     const body = back
       ? torso + armsEarly + cape + bag + G(head, cls('ex-head')) + armsLate
@@ -1121,7 +1376,7 @@
     const sl = S(SLEEVE, t.sl, SLEEVE_SH) + S(CUFF, t.cf);
     return G(sl, ' transform="rotate(26 66 163)"') + G(G(sl, MIR), ' transform="rotate(-26 118 163)"') + S(TORSO, t.c, TORSO_SH, TORSO_HL) + P('M80 152.6Q92 166 104 152.6Z', dk(t.c, 0.35)) + t.fr();
   }
-  function itemArt(id) {
+  function itemArt(id, look) {
     const a = ART[id],
       it = BYID[id];
     if (a.ic) return a.ic();
@@ -1140,7 +1395,7 @@
       case 'bag':
         return a.ex('back');
       default:
-        return a.ex('front');
+        return a.ex('front', look);
     }
   }
   function fit(box, rot, size) {
@@ -1154,10 +1409,10 @@
       s = Math.min((size || 82) / W, (size || 82) / H);
     return { s, t: ' transform="translate(50 50)' + (rot ? ' rotate(' + rot + ')' : '') + ' scale(' + Math.round(s * 1000) / 1000 + ') translate(' + n(-cx) + ' ' + n(-cy) + ')"' };
   }
-  function iconArt(id) {
+  function iconArt(id, look) {
     const a = ART[id],
       f = fit(a.box, a.rot, a.fs);
-    return G(OUT(itemArt(id), Math.min(5.5, SW / f.s)), f.t);
+    return G(OUT(itemArt(id, look), Math.min(5.5, SW / f.s)), f.t);
   }
   const svg100 = (c, inner, label) => '<svg class="lhq-art ' + c + '" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg"' + (label ? ' role="img" aria-label="' + label + '"' : ' aria-hidden="true"') + ' focusable="false">' + inner + '</svg>';
   function sweep(art) {
@@ -1169,18 +1424,18 @@
     if (t < 3) return '';
     return tw(15, 20, 9.5, 0, t === 4 ? '#fff3a8' : '#fff') + tw(86, 26, 7, 0.9) + tw(82, 84, 8, 1.7, t === 4 ? '#fff3a8' : '#fff') + (t === 4 ? tw(18, 80, 6.5, 0.5) + tw(52, 8, 6, 2.2, '#fff3a8') : '');
   }
-  function item(id) {
+  function item(id, look) {
     const it = BYID[id];
     if (!it) return '';
     const t = it.tier,
-      art = iconArt(id);
+      art = iconArt(id, look);
     const back = t === 4 ? aura(50, 52, 50, 50) : '';
     const front = (t >= 2 ? sweep(art) : '') + (t === 2 ? glint(24, 24, 8, 0.4) : '') + (t >= 3 ? OUT(sparkles(t), 1.2) : '');
-    return svg100('lhq-item lhq-t' + t, back + art + front, it.name.replace(/"/g, ''));
+    return svg100('lhq-item lhq-t' + t, back + art + front, (isGirl(look) && it.girl ? it.girl : it.name).replace(/"/g, ''));
   }
-  function silhouette(id) {
+  function silhouette(id, look) {
     if (!BYID[id]) return '';
-    return svg100('lhq-item lhq-sil', flat(iconArt(id), '#cdc5dc') +
+    return svg100('lhq-item lhq-sil', flat(iconArt(id, look), '#cdc5dc') +
       '<text x="50" y="66" text-anchor="middle" font-family="Baloo 2, ui-rounded, system-ui, sans-serif" font-weight="800" font-size="44" fill="#fff" stroke="#a99fbd" stroke-width="3" paint-order="stroke" stroke-linejoin="round">?</text>');
   }
 
@@ -1806,6 +2061,7 @@
     WALKERS,
     LANDMARKS,
     FEATS,
+    isGirl,
     ambient,
     border,
     BORDER_H,

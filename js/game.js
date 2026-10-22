@@ -35,7 +35,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.2.0';
+  const VERSION = '2.3.0';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const ART = window.LHQ_ART;
@@ -71,7 +71,8 @@
   ITEMS.forEach((it) => {
     if (it.from) (it.gold ? GOLD_ITEM : SURAH_ITEM)[it.from] = it;
   });
-  const starter = (it) => !it.from && !it.feat; // the comfy clothes everyone starts with
+  const starter = (it) => !it.from && !it.feat && !it.track; // the comfy clothes everyone starts with
+  const TRACK = ITEMS.filter((it) => it.track).sort((a, b) => a.track - b.track); // a prize every few stars
   const FEAT_ITEM = Object.create(null); // 'once' | 'three' | 'all' -> the summit reward
   ITEMS.forEach((it) => {
     if (it.feat) FEAT_ITEM[it.feat] = it;
@@ -87,7 +88,7 @@
     shoes: ['👟', 'Shoes'],
     cape: ['🦸', 'Capes'],
     bag: ['🎒', 'Bags'],
-    stick: ['🪄', 'Staffs'],
+    stick: ['🪵', 'Sticks'],
     shield: ['🛡️', 'Shields'],
     watch: ['⌚', 'Watches'],
     pet: ['🐾', 'Buddies'],
@@ -175,7 +176,7 @@
     return {
       id: 'p' + Date.now().toString(36) + Math.floor(Math.random() * 1e6).toString(36),
       name: name || '',
-      look: { skin: 1, hair: 'short', hairColor: 0, hijabColor: 0 },
+      look: { skin: 1, hair: 'short', hairColor: 0, hijabColor: 0, kid: '' },
       outfit: {},
       prog: {},
       items: [],
@@ -221,8 +222,22 @@
     }
     return out;
   }
+  // v2.2's Rainbow wings became the Hafiz crown in v2.3
+  const RENAMED = { 'rainbow-wings': 'hafiz-crown' };
+  function renameOld(o) {
+    const ren = (id) => RENAMED[id] || id;
+    const key = (k) => (typeof k === 'string' && k[0] === 'i' ? 'i:' + ren(k.slice(2)) : k);
+    ['items'].forEach((f) => Array.isArray(o[f]) && (o[f] = o[f].map(ren)));
+    ['got', 'fresh'].forEach((f) => Array.isArray(o[f]) && (o[f] = o[f].map(key)));
+    if (Array.isArray(o.pending)) o.pending = o.pending.map((g) => (g && RENAMED[g.id] ? Object.assign({}, g, { id: RENAMED[g.id] }) : g));
+    if (o.outfit && o.outfit.bag === 'rainbow-wings') {
+      o.outfit = Object.assign({}, o.outfit);
+      delete o.outfit.bag;
+    }
+  }
   function cleanProfile(o) {
     if (!o || typeof o !== 'object') return null;
+    renameOld(o);
     const p = newProfile();
     if (typeof o.id === 'string' && /^[a-z0-9]{2,24}$/.test(o.id)) p.id = o.id;
     if (typeof o.name === 'string') p.name = o.name.slice(0, 16);
@@ -232,6 +247,7 @@
       hair: ART.LOOKS.hair.includes(L.hair) ? L.hair : 'short',
       hairColor: int(L.hairColor, 0, ART.LOOKS.hairColor.length - 1, 0),
       hijabColor: int(L.hijabColor, 0, ART.LOOKS.hijabColor.length - 1, 0),
+      kid: ART.LOOKS.kid.includes(L.kid) ? L.kid : '', // '' = not chosen yet (a ponytail or hijab counts as girl)
     };
     p.prog = cleanProg(o.prog);
     const uniq = (a) => [...new Set(a)];
@@ -398,8 +414,12 @@
       const hadV1 = Object.keys(first.prog).length > 0;
       store = { v: 2, cur: hadV1 ? first.id : '', profiles: hadV1 ? [first] : [], prefs: cleanPrefs(oldPrefs) };
     }
-    // treasures follow the stars: one star wins a sūrah's treasure, every star its golden edition
-    store.profiles.forEach((prof) => S.forEach((s) => giveSurahGift(s, prof)));
+    // treasures follow the stars: one star wins a sūrah's treasure, every star its golden edition, and the
+    // star track gives a prize every few stars
+    store.profiles.forEach((prof) => {
+      S.forEach((s) => giveSurahGift(s, prof));
+      giveTrackPrizes(prof);
+    });
     prefs = store.prefs;
   }
   // The current explorer. With no explorers yet, a blank stand-in (never saved) keeps every screen working.
@@ -450,7 +470,7 @@
   const FEAT_HINT = { once: 'A star in every sūrah', three: '3 stars in every sūrah', all: 'Every star in the Juz' };
   const FEAT_WHY = {
     once: 'For reaching the summit: a star in every sūrah! Every sticker is yours too.',
-    three: 'For three stars in every sūrah. Fly high!',
+    three: 'For three stars in every sūrah. A crown for a true little hafiz!',
     all: 'For every single star in Juz ‘Amma. One of a kind, just like you!',
   };
 
@@ -509,6 +529,9 @@
     if (!prof.fresh.includes(key)) prof.fresh.push(key); // "new" until seen in My Explorer
   }
   const NEWDOT = '<i class="newdot" aria-label="new"></i>';
+  // items drawn and named for this explorer (a girl's crowns are tiaras)
+  const itemPic = (id) => ART.item(id, P().look);
+  const itemName = (id) => (ART.isGirl(P().look) && ITEM[id].girl) || ITEM[id].name;
 
   /* ================= theme ================= */
   const darkMQ = window.matchMedia ? matchMedia('(prefers-color-scheme: dark)') : null;
@@ -1009,9 +1032,9 @@
       const it = ITEM[cand];
       // what the explorer still has with them (anything not owned from the start)
       const left = Object.values(wornOutfit(prof)).filter((id) => !starter(ITEM[id]));
-      body = `<div class="dropscene"><div class="dropex">${explorer({ view: 'front' })}</div><div class="dropit">${ART.item(cand)}</div></div>
-      <h3>Oh no! Your ${it.name} fell off!</h3>
-      <div class="leftrow">${left.length ? `<small>Still with you</small><span>${left.map((id) => `<i title="${ITEM[id].name}">${ART.item(id)}</i>`).join('')}</span>` : '<small>Just your comfy clothes left!</small>'}</div>
+      body = `<div class="dropscene"><div class="dropex">${explorer({ view: 'front' })}</div><div class="dropit">${itemPic(cand)}</div></div>
+      <h3>Oh no! Your ${itemName(cand)} fell off!</h3>
+      <div class="leftrow">${left.length ? `<small>Still with you</small><span>${left.map((id) => `<i title="${itemName(id)}">${itemPic(id)}</i>`).join('')}</span>` : '<small>Just your comfy clothes left!</small>'}</div>
       <p class="saveinfo">It's waiting for you at <b>${s.name}</b> on the map. Finish a review game there to get it back and cheer your explorer up!</p>`;
     } else {
       body = `<div class="dropit">💪</div><h3>Out of hearts!</h3><p class="saveinfo">That's okay, we learn by trying. Let's try again!</p>`;
@@ -1173,7 +1196,7 @@
       three: 'You climbed the whole mountain with three stars in every sūrah. MāshāAllāh!',
       all: 'You collected every star in Juz ‘Amma. That is truly amazing. MāshāAllāh!',
     }[best];
-    const gifts = f.map((k) => `<span class="sgift">${ART.item(FEAT_ITEM[k].id)}<small>${FEAT_ITEM[k].name}</small></span>`).join('');
+    const gifts = f.map((k) => `<span class="sgift">${itemPic(FEAT_ITEM[k].id)}<small>${itemName(FEAT_ITEM[k].id)}</small></span>`).join('');
     return `<div class="splash summit">
     <div class="sp-art">${ART.splash(prof.look, Object.assign(wornOutfit(prof), { sticker: prof.badge }), { night: isNight(), climb: true, still: reduceMotion })}</div>
     <div class="sm-card ${reduceMotion ? 'now' : ''}">
@@ -1212,6 +1235,12 @@
     const hij = L.hair === 'hijab';
     return `<div class="lookbox">
       <label class="lk"><span>Name</span><input id="exname" class="namein" maxlength="16" autocomplete="off" placeholder="Your name" value="${esc(prof.name)}"></label>
+      <div class="lkgroup"><div class="lkh">🧒 Boy or girl</div><div class="kidpick">${[
+        ['boy', '👦 Boy'],
+        ['girl', '👧 Girl'],
+      ]
+        .map(([v, t]) => `<button class="btn small ${(ART.isGirl(L) ? 'girl' : 'boy') === v ? 'on' : ''}" data-act="look" data-k="kid" data-v="${v}" aria-pressed="${(ART.isGirl(L) ? 'girl' : 'boy') === v}">${t}</button>`)
+        .join('')}</div></div>
       <div class="lkgroup"><div class="lkh">🙂 Skin tone</div>${sw('skin', ART.LOOKS.skin, 'skin', 'Skin tone')}</div>
       <div class="lkgroup"><div class="lkh">💇 Hair style</div><div class="hairs">${hairs}</div></div>
       <div class="lkgroup"><div class="lkh">🎨 ${hij ? 'Hijab color' : 'Hair color'}</div>${hij ? sw('hijabColor', ART.LOOKS.hijabColor, 'hijab', 'Hijab color') : sw('hairColor', ART.LOOKS.hairColor, 'hair', 'Hair color')}</div>
@@ -1388,7 +1417,7 @@
     <div class="hero"><div class="hero-icon bob">${s.icon}</div><div class="hero-ar">سُورَةُ ${s.ar}</div>
       <div class="hero-en">${s.meaning} · ${s.ayat.length} āyāt${multi(s) ? ` · ${s.P.length} checkpoints` : ''}</div>
       <div class="hero-st ${done ? 'done' : ''}">${done ? '✓ Memorized! MāshāAllāh' : `⭐ ${surahStars(s)} / ${surahMax(s)} stars`}</div></div>
-    ${lostAt(s.n).length ? `<div class="lostnote">${lostAt(s.n).map((x) => `<span class="lostit">${ART.item(x.id)}</span>`).join('')}<span>Your <b>${lostAt(s.n).map((x) => ITEM[x.id].name).join(', ')}</b> fell off here! Finish a review game to get it back.</span></div>` : ''}
+    ${lostAt(s.n).length ? `<div class="lostnote">${lostAt(s.n).map((x) => `<span class="lostit">${itemPic(x.id)}</span>`).join('')}<span>Your <b>${lostAt(s.n).map((x) => itemName(x.id)).join(', ')}</b> fell off here! Finish a review game to get it back.</span></div>` : ''}
     ${multi(s) ? checkpointTrail(s) : ''}
     <div class="h2">${p === 'all' ? '🏁 The whole sūrah' : multi(s) ? `🧭 Part ${p + 1}: your quest` : '🧭 Your quest'}<small>${nextIdx < 0 ? 'All done here! Play any game again to revise.' : 'Tap the glowing step to start'}</small></div>
     <div class="qsteps">${stepsHTML}</div>
@@ -1644,6 +1673,15 @@
     if (!n) return '';
     return `<button class="icon-btn giftico ${cls || ''}" data-act="opengift" aria-label="${n} gift${n > 1 ? 's' : ''} to open"><span class="rattle">${giftArt(prof.pending[0])}</span><span class="badge">${n}</span></button>`;
   }
+  function nextPrizeNote(prof) {
+    const nx = nextPrize(prof);
+    if (!nx) return '';
+    const left = nx.track - totalStars(prof),
+      prev = TRACK.filter((it) => it.track <= totalStars(prof)).slice(-1)[0],
+      from = prev ? prev.track : 0;
+    const pct = Math.round(((totalStars(prof) - from) / (nx.track - from)) * 100);
+    return `<div class="nextprize"><span class="np-sil">${ART.silhouette(nx.id, prof.look)}</span><span><b>${left} more star${left > 1 ? 's' : ''}</b> to your next prize!<i class="np-bar"><i style="width:${pct}%"></i></i></span></div>`;
+  }
   function giftTier(g) {
     if (!g) return 1;
     return g.k === 'i' ? Math.max(1, ITEM[g.id].tier || 1) : 1;
@@ -1654,7 +1692,7 @@
     const stars = plain ? `<span class="tstar">★</span>`.repeat(st.stars || 1) : '<span>⭐</span>'.repeat(st.stars || 1);
     const prof = P();
     const found = st.found && st.found.length
-      ? `<div class="found shine"><span class="shineex">${explorer({ view: 'front', mood: prof.lost.length ? 'sad' : 'shine' })}</span><span>${st.found.map((id) => `<span class="fit">${ART.item(id)}</span>`).join('')}<span>You got your <b>${st.found.map((id) => ITEM[id].name).join(' and ')}</b> back!${prof.lost.length ? '' : ' Your explorer is shining again!'}</span></span></div>`
+      ? `<div class="found shine"><span class="shineex">${explorer({ view: 'front', mood: prof.lost.length ? 'sad' : 'shine' })}</span><span>${st.found.map((id) => `<span class="fit">${itemPic(id)}</span>`).join('')}<span>You got your <b>${st.found.map((id) => itemName(id)).join(' and ')}</b> back!${prof.lost.length ? '' : ' Your explorer is shining again!'}</span></span></div>`
       : '';
     const world = st.world
       ? `<div class="worlddone"><b>🌍 World ${st.world.wi + 1} complete!</b><span>${esc(WORLDS[st.world.wi].name)}: a star in every sūrah.</span>${st.world.heart ? `<span class="hup">${ART.heart(true)} +1 heart! You now have ${st.world.hearts} hearts in review games.</span>` : ''}</div>`
@@ -1670,6 +1708,8 @@
     ${found}
     ${world}
     ${st.cpGift ? `<div class="memo">🚩 Checkpoint crossed! A little gift for you.</div>` : ''}
+    ${st.prizes ? `<div class="memo">⭐ ${totalStars()} stars! ${st.prizes > 1 ? st.prizes + ' prizes' : 'A prize'} for you.</div>` : ''}
+    ${nextPrizeNote(prof)}
     ${g ? `<button class="giftbtn" data-act="opengift"><span class="rattle">${giftArt(g)}</span>${prof.pending.length > 1 ? `<span class="badge">${prof.pending.length}</span>` : ''}<b>${prof.pending.length > 1 ? prof.pending.length + ' gifts' : 'A gift'} for you!</b><small>Tap to open${prof.pending.length > 1 ? ' one at a time' : ''}</small></button>` : ''}
     <div class="row" style="margin-top:22px">
       ${st.nextAct ? `<button class="btn go wide" data-act="${st.nextAct}" ${st.nextL ? `data-l="${st.nextL}"` : ''} ${st.nextP != null ? `data-p="${st.nextP}"` : ''}>${st.nextLabel}</button>` : ''}
@@ -1687,10 +1727,10 @@
     const lost = prof.lost.find((x) => x.id === it.id);
     const on = worn[it.slot] === it.id || (!worn[it.slot] && starter(it));
     if (lost)
-      return `<button class="icell lost" data-act="goto" data-i="${BYN[lost.n].idx}"><span class="iart">${ART.item(it.id)}</span><span class="lostbadge">${ART.lostMarker()}</span><small>Lost at ${BYN[lost.n].name}!</small></button>`;
+      return `<button class="icell lost" data-act="goto" data-i="${BYN[lost.n].idx}"><span class="iart">${itemPic(it.id)}</span><span class="lostbadge">${ART.lostMarker()}</span><small>Lost at ${BYN[lost.n].name}!</small></button>`;
     if (owned)
-      return `<button class="icell t${it.tier || 0} ${it.gold ? 'gold' : ''} ${on ? 'on' : ''}" data-act="equip" data-id="${it.id}" aria-pressed="${on}"><span class="iart">${ART.item(it.id)}</span><small>${it.name}</small>${prof.fresh.includes('i:' + it.id) ? NEWDOT : ''}</button>`;
-    return `<div class="icell locked ${it.gold ? 'goldlock' : ''}"><span class="iart">${ART.silhouette(it.id)}</span><small>${it.feat ? FEAT_HINT[it.feat] : it.gold ? `Every star in ${BYN[it.from].name}` : `A star in ${BYN[it.from].name}`}</small></div>`;
+      return `<button class="icell t${it.tier || 0} ${it.gold ? 'gold' : ''} ${on ? 'on' : ''}" data-act="equip" data-id="${it.id}" aria-pressed="${on}"><span class="iart">${itemPic(it.id)}</span><small>${itemName(it.id)}</small>${prof.fresh.includes('i:' + it.id) ? NEWDOT : ''}</button>`;
+    return `<div class="icell locked ${it.gold ? 'goldlock' : ''}"><span class="iart">${ART.silhouette(it.id, P().look)}</span><small>${it.feat ? FEAT_HINT[it.feat] : it.track ? `At ${it.track} ⭐` : it.gold ? `Every star in ${BYN[it.from].name}` : `A star in ${BYN[it.from].name}`}</small></div>`;
   }
   function stickerCell(id, prof) {
     const on = prof.badge === id;
@@ -1722,8 +1762,9 @@
       // won things newest first, then the starting clothes, then the ones still to find
       const list = ITEMS.filter((it) => it.slot === tab && (!it.gold || prof.items.includes(it.id) || prof.items.includes(it.base)));
       const won = list.filter((it) => !starter(it) && prof.items.includes(it.id)).sort((a, b) => gotAt(prof, 'i:' + b.id) - gotAt(prof, 'i:' + a.id));
-      const rest = list.filter((it) => !won.includes(it)).sort((a, b) => (starter(a) ? 0 : 1) - (starter(b) ? 0 : 1));
-      body = `<div class="wrow">${[...won, ...rest].map((it) => itemCell(it, prof, worn)).join('')}</div><p class="wnote2">${SLOT_INFO[tab][1]} · tap to wear, tap again to take off</p>`;
+      const rank = (it) => (starter(it) ? 0 : it.track ? 2000 + it.track : 1000);
+      const rest = list.filter((it) => !won.includes(it)).sort((a, b) => rank(a) - rank(b));
+      body = `<div class="wrow">${[...won, ...rest].map((it) => itemCell(it, prof, worn)).join('')}</div><p class="wnote2">${SLOT_INFO[tab][1]} · tap to wear, tap again to take off${nextPrize(prof) ? ` · next prize at ${nextPrize(prof).track} ⭐` : ''}</p>`;
     }
     const fancy = Object.values(worn).some((id) => !starter(ITEM[id])) || prof.badge;
     const comfy = prof.stash
@@ -1816,8 +1857,8 @@
       <ol class="tips">
         <li><b>Follow the glowing step.</b> In each sūrah: 1 Look &amp; Repeat, 2 Word Steps, 3 Stepping Stones (levels 1 → 3), then the review games.</li>
         <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Then do the 🏁 whole sūrah.</li>
-        <li><b>One star wins a sūrah's treasure</b> and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift. Memorized = Stepping Stones Level 3.</li>
-        <li><b>The summit.</b> A star in every sūrah: the explorer climbs the mountain, and every treasure, every sticker and the Summit cloak are theirs. Three stars in every sūrah: Rainbow wings. Every single star: the one-of-a-kind Golden hoopoe.</li>
+        <li><b>One star wins a sūrah's treasure</b> and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, and every few stars wins a prize from the star track (73 of them: an astronaut set, a kufi, new hats, buddies and more). Memorized = Stepping Stones Level 3.</li>
+        <li><b>The summit.</b> A star in every sūrah: the explorer climbs the mountain, and every treasure, every sticker and the Summit cloak are theirs. Three stars in every sūrah: the Hafiz crown. Every single star: the one-of-a-kind Golden hoopoe.</li>
         <li><b>Revise any sūrah any time:</b> tap it on the map. In review games, tap “Not quite” when a mistake is made.</li>
         <li><b>5–10 minutes a day is plenty.</b> Stop while it's still fun; recite again at bedtime or in ṣalāh.</li>
       </ol>
@@ -2027,6 +2068,7 @@
     // crossing a checkpoint's stepping stones for the first time: a small gift (a sticker)
     if (st.view === 'path' && multi(s) && st.p !== 'all' && giveCheckpointGift(s, st.p)) extra.cpGift = true;
     giveDailyGift();
+    extra.prizes = giveTrackPrizes(prof);
     // the summit milestones for the whole Juz
     const feats = Object.keys(FEAT_TEST).filter((f) => !prof.feats.includes(f) && FEAT_TEST[f](prof));
     feats.forEach((f) => {
@@ -2062,6 +2104,18 @@
     else bigParty();
     go('done', done);
   }
+  /* prizes on the star track: everything up to the explorer's star count goes into the gift box */
+  function giveTrackPrizes(prof) {
+    const t = totalStars(prof);
+    let n = 0;
+    TRACK.forEach((it) => {
+      if (it.track > t || prof.items.includes(it.id) || prof.pending.some((g) => g.id === it.id)) return;
+      prof.pending.push({ k: 'i', id: it.id });
+      n++;
+    });
+    return n;
+  }
+  const nextPrize = (prof) => TRACK.find((it) => it.track > totalStars(prof)) || null;
   function giveCheckpointGift(s, p) {
     const prof = P(),
       key = s.n + ':' + p;
@@ -2125,9 +2179,9 @@
       const it = ITEM[g.id];
       if (!prof.items.includes(g.id)) prof.items.push(g.id);
       gotIt(prof, 'i:' + g.id);
-      art = ART.item(g.id);
-      name = it.name;
-      sub = it.feat ? FEAT_WHY[it.feat] : TIER_LABEL[it.tier || 1] + ` From ${BYN[it.from].name}.`;
+      art = itemPic(g.id);
+      name = itemName(g.id);
+      sub = it.feat ? FEAT_WHY[it.feat] : it.track ? `A prize for collecting ${it.track} stars!` : TIER_LABEL[it.tier || 1] + ` From ${BYN[it.from].name}.`;
       wear = true;
     } else {
       if (!prof.stickers.includes(g.id)) prof.stickers.push(g.id);
@@ -2279,7 +2333,7 @@
         sfx.tap();
         const L = P().look,
           k = b.dataset.k;
-        L[k] = k === 'hair' ? b.dataset.v : +b.dataset.v;
+        L[k] = k === 'hair' || k === 'kid' ? b.dataset.v : +b.dataset.v;
         save();
         const y = scrollY;
         render();

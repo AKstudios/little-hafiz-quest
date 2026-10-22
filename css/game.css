@@ -4805,3 +4805,89 @@ body {
     font-size: 12px;
   }
 }
+
+/* ---------- v2.2.1: My Explorer items fill the space under the categories ----------
+ * Only the category row scrolls sideways. A category's things wrap into a grid that uses the rest of
+ * the screen and scrolls up and down by itself, so the explorer above never moves. */
+.bagscr .wd-stage {
+  flex: 0 0 auto;
+  height: clamp(170px, 36vh, 440px);
+  max-height: none;
+  min-height: 0;
+}
+.bagscr .wbody {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+.wrow {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(96px, 1fr));
+  gap: 10px;
+  overflow: visible;
+  scroll-snap-type: none;
+  padding: 6px var(--gutr) 8px var(--gutl);
+}
+.wrow > * {
+  width: auto;
+}
+.wscroll-v {
+  max-height: none;
+  overflow: visible;
+}
+@media (orientation: landscape) and (max-height: 520px) {
+  .bagscr .wd-stage {
+    height: auto;
+  }
+  .bagscr .wbody {
+    max-height: calc(100vh - 150px);
+    max-height: calc(100dvh - 150px);
+  }
+}
+.kidpick {
+  display: flex;
+  gap: 8px;
+}
+.kidpick .btn.on {
+  outline: 4px solid var(--gold2);
+  background: var(--chip);
+}
+
+/* ---------- v2.3: the star track ---------- */
+.nextprize {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 12px auto 0;
+  max-width: 420px;
+  background: var(--card);
+  border-radius: 18px;
+  padding: 6px 14px 8px 8px;
+  box-shadow: 0 4px 0 var(--shd);
+  text-align: left;
+  font-weight: 700;
+}
+.np-sil svg {
+  width: 48px;
+  height: 48px;
+  display: block;
+}
+.nextprize > span:last-child {
+  flex: 1;
+}
+.np-bar {
+  display: block;
+  height: 10px;
+  border-radius: 99px;
+  background: var(--line);
+  margin-top: 4px;
+  overflow: hidden;
+}
+.np-bar > i {
+  display: block;
+  height: 100%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--gold), var(--gold2));
+}

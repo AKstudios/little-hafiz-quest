@@ -524,3 +524,13 @@ svg.lhq-art {
   transform-origin: 47px 211px;
   transform: rotate(-112deg);
 }
+/* jet pack and rocket flames */
+.pr-flame {
+  transform-box: fill-box;
+  transform-origin: 50% 0%;
+  animation: lhq-flame 0.32s ease-in-out infinite alternate;
+}
+@keyframes lhq-flame {
+  from { transform: scaleY(0.8); opacity: 0.85; }
+  to { transform: scaleY(1.15); opacity: 1; }
+}
