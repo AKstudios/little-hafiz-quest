@@ -501,3 +501,26 @@ svg.lhq-art {
   0%, 100% { transform: scale(1); opacity: 0.6; }
   50% { transform: scale(1.12); opacity: 1; }
 }
+
+/* ---------- the win pose: both arms up, hopping for joy (class "ex-win" on the explorer) ---------- */
+.ex.ex-win .ex-arm-r {
+  transform: rotate(116deg);
+}
+.ex.ex-win .ex-arm-l {
+  transform: rotate(-116deg);
+}
+.ex.ex-win .ex-all,
+.ex.ex-win .ex-pet {
+  transform-box: view-box;
+  transform-origin: 92px 290px;
+  animation: lhq-joy 0.9s ease-in-out infinite;
+}
+@keyframes lhq-joy {
+  0%, 100% { transform: translateY(0) scale(1.03, 0.97); }
+  45% { transform: translateY(-22px) scale(0.98, 1.03); }
+}
+/* the staff stays upright in the raised hand */
+.ex.ex-win .ex-stick {
+  transform-origin: 47px 211px;
+  transform: rotate(-112deg);
+}

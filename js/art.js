@@ -422,7 +422,14 @@
     ['eagle-buddy', 'pet', 'Mountain eagle', 4, 79],
     ['summit-crown', 'hat', 'Summit crown', 4, 78],
   ];
+  // The three summit rewards (not from one sūrah): feat = what the whole quest needs
+  const FEATS = [
+    ['summit-cloak', 'cape', 'Summit cloak', 'once'], // a star in every sūrah
+    ['rainbow-wings', 'bag', 'Rainbow wings', 'three'], // three stars in every sūrah
+    ['golden-hoopoe', 'pet', 'Golden hoopoe', 'all'], // every star of the whole Juz: one of a kind
+  ];
   const ITEMS = CATALOG.map((r) => ({ id: r[0], slot: r[1], name: r[2], tier: r[3], from: r[4] }));
+  FEATS.forEach((r) => ITEMS.push({ id: r[0], slot: r[1], name: r[2], tier: 4, from: null, feat: r[3] }));
   // Golden editions: the special reward for every star in a sūrah (id 'gold-<item>', drawn by goldEdition below).
   CATALOG.filter((r) => r[4]).forEach((r) => {
     ITEMS.push({ id: 'gold-' + r[0], slot: r[1], name: (/^golden/i.test(r[2]) ? 'Shining ' + r[2].toLowerCase() : 'Golden ' + r[2].charAt(0).toLowerCase() + r[2].slice(1)), tier: 4, from: r[4], gold: true, base: r[0] });
@@ -760,6 +767,39 @@
   };
 
   /* ---------- sticks: upright at x=46, held by the character's right hand (viewer's left) ---------- */
+  /* ---------- the summit rewards ---------- */
+  ART['summit-cloak'] = {
+    box: [30, 146, 154, 280],
+    fx: [[52, 220], [132, 228], [92, 250], [70, 180]],
+    aura: [92, 214, 70, 70],
+    ex(v) {
+      const c = '#1f4fa8',
+        lining = '#ffcf3f',
+        peak = (x, y, k) => S('M' + n(x - 16 * k) + ' ' + n(y + 12 * k) + 'L' + x + ' ' + n(y - 12 * k) + 'L' + n(x + 16 * k) + ' ' + n(y + 12 * k) + 'Z', '#ffffff', null, null) + F('M' + n(x - 5 * k) + ' ' + n(y - 4.5 * k) + 'L' + x + ' ' + n(y - 12 * k) + 'L' + n(x + 5 * k) + ' ' + n(y - 4.5 * k) + 'Z', '#bfe6ff') + L('M' + x + ' ' + n(y - 12 * k) + 'L' + x + ' ' + n(y - 22 * k), INK, 1.6) + P('M' + x + ' ' + n(y - 22 * k) + 'L' + n(x + 9 * k) + ' ' + n(y - 19 * k) + 'L' + x + ' ' + n(y - 16 * k) + 'Z', '#ff5d6c', sw(1.4));
+      const trim = (d) => L(d, lining, 3.4);
+      if (v === 'back')
+        return S(CAPE_B, c, CAPE_B_SH, 'M66 170Q62 200 58 236Q56 200 62 166Z') + CAPE_FOLDS(dk(c, 0.35)) + trim('M43 262Q53 270 63 264Q73 272 83 266Q92 273 101 266Q111 272 121 264Q131 270 141 262') +
+          peak(92, 214, 1.3) + [[66, 186], [118, 190], [72, 244], [114, 248]].map((p) => F(star4(p[0], p[1], 3.6), '#fff3b0')).join('');
+      return S(CAPE_F, lining, null, null) + trim('M70 156L114 156') + [[44, 246], [140, 246]].map((p) => F(star4(p[0], p[1], 4), '#ffffff')).join('');
+    },
+  };
+  ART['rainbow-wings'] = {
+    box: [10, 140, 174, 236],
+    fx: [[22, 152], [162, 152], [40, 196], [144, 196]],
+    aura: [92, 180, 86, 50],
+    wings: () => rainbowWings(),
+    ex(v) {
+      if (v !== 'back') return DL('M74 155L76 196', '#ff8fc8', 4) + DL('M110 155L108 196', '#ff8fc8', 4);
+      return rainbowWings() + S(rr(80, 170, 24, 30, 10), '#ffffff', null, null) + P(star5(92, 185, 6), GOLD, sw(1.8));
+    },
+  };
+  function rainbowWings() {
+    const RB = ['#ff6b6b', '#ffb43d', '#ffe066', '#5fd27a', '#5fb2ff', '#a884ff'];
+    const one = RB.map((c, i) => {
+      return S('M70 ' + (176 + i * 2) + 'C' + n(58 - 6 * i) + ' ' + n(162 - i) + ' ' + n(40 - 4 * i) + ' ' + n(150 + i * 6) + ' ' + n(20 + i * 6) + ' ' + n(152 + i * 8) + 'C' + n(18 + i * 6) + ' ' + n(162 + i * 8) + ' ' + n(30 + i * 4) + ' ' + n(176 + i * 6) + ' 70 ' + n(190 + i * 1.5) + 'Z', c);
+    }).join(''); // the biggest (red) feather first, each smaller colour on top
+    return G(G(G(one, cls('lhq-wing-l')) + G(G(one, cls('lhq-wing-l')), MIR)), ' transform="translate(0 -4)"');
+  }
   ART['twig'] = {
     box: [26, 140, 60, 292],
     rot: 42,
@@ -934,6 +974,21 @@
         S('M-5.4 -47Q0 -50.4 5.4 -47Q6 -41 0 -37Q-6 -41 -5.4 -47Z', '#ffc23d') + ball(0, -35.5, 3.6, 3.6, g, { sh: false });
     },
   };
+  // the golden hoopoe (hud-hud): a crest of golden feathers, striped wings, a long thin beak
+  PET['golden-hoopoe'] = {
+    box: [-46, -96, 46, 3],
+    aura: [0, -40, 50, 50],
+    d() {
+      const b = '#ffb347',
+        g = GOLD,
+        wing = S('M-12 -40C-28 -44 -40 -30 -38 -12C-30 -14 -22 -16 -12 -22Z', '#3a2f45', null, null) + L('M-34 -18L-16 -28M-36 -26L-16 -34M-30 -36L-14 -40', '#ffffff', 2.6),
+        crest = [-24, -12, 0, 12, 24].map((a) => G(S('M-3 0Q-5 -16 0 -22Q5 -16 3 0Z', a % 24 ? g : '#ff8a3d') + CF(0, -19, 2.2, INK), ' transform="translate(0 -60) rotate(' + a + ')"')).join('');
+      return G(G(wing, cls('lhq-wing-l')) + G(G(wing, cls('lhq-wing-l')), ' transform="scale(-1 1)"')) +
+        L('M-6 -2L-8 -12M6 -2L8 -12', '#5a4a7a', 2.6) + crest + ball(0, -26, 16, 19, b) + EF(0, -21, 10, 11, '#ffe2b0') +
+        ball(0, -48, 14, 13, b) + G(cuteEyes(-5.6, -50, 5.6, -50, 3.2), cls('lhq-blink')) + cheeks(-10, -43, 10, -43, 3) +
+        P('M-2 -43Q0 -46 2 -43L1 -30Q0 -28 -1 -30Z', '#5a4a7a', sw(1.6)) + tw(-30, -70, 6, 0) + tw(30, -64, 5, 0.9);
+    },
+  };
   const PET_S = 0.76;
   Object.keys(PET).forEach((id) => (ART[id] = { pet: PET[id], box: PET[id].box, aura: PET[id].aura }));
 
@@ -1023,7 +1078,7 @@
     const legs = back ? G(leg, cls('ex-leg-l')) + G(G(leg, MIR), cls('ex-leg-r')) : G(leg, cls('ex-leg-r')) + G(G(leg, MIR), cls('ex-leg-l'));
     const sleeve = S(SLEEVE, top.sl, SLEEVE_SH) + S(CUFF, top.cf);
     const hand = ball(HAND[0], HAND[1], HAND[2], HAND[2], sk, { hl: false, dx: 0.2, dy: 0.25 });
-    const stickHand = (o.stick ? G(ART[o.stick].ex() + fxOf('stick'), STICK_TILT) : '') + hand + L('M41.6 207.6Q46 205.4 50.6 207', dk(sk, 0.35), 1.6) + (o.watch ? ART[o.watch].ex() : '');
+    const stickHand = (o.stick ? G(G(ART[o.stick].ex() + fxOf('stick'), STICK_TILT), cls('ex-stick')) : '') + hand + L('M41.6 207.6Q46 205.4 50.6 207', dk(sk, 0.35), 1.6) + (o.watch ? ART[o.watch].ex() : '');
     const otherHand = G(hand, MIR) + (o.shield ? ART[o.shield].ex() : ''); // the free hand, on the other side from the staff
     const mirIf = (m, yes) => (yes ? G(m, MIR) : m);
     const armsEarly = G(mirIf(sleeve, back), cls('ex-arm-r')) + G(mirIf(sleeve, !back), cls('ex-arm-l'));
@@ -1037,7 +1092,7 @@
     else head = (mess ? mess.hair : '') + headFront(look, mood) + (o.glasses ? ART[o.glasses].ex('front') + fxOf('glasses') : '') + hat;
     if (sad) head = G(head, ' transform="translate(0 3) rotate(-3 92 150)"'); // a droopy head
     const pet = o.pet ? G(G(OUT(ART[o.pet].pet.d() + fxm(T('pet'), PETFX[o.pet] || [[-30, -50], [30, -36]], 1.4), SW / PET_S), tf(PET_AT[0], PET_AT[1], PET_S)), cls('ex-pet')) : '';
-    const wingsF = !back && o.bag === 'glider-pack' ? ART['glider-pack'].wings() : '';
+    const wingsF = !back && (o.bag === 'glider-pack' || o.bag === 'rainbow-wings') ? ART[o.bag].wings() : '';
     const stk = !back && outfit && outfit.sticker ? badge(outfit.sticker) : '';
     const body = back
       ? torso + armsEarly + cape + bag + G(head, cls('ex-head')) + armsLate
@@ -1613,6 +1668,8 @@
   function pennant(x, y, s, c) {
     return G(OUT(EF(0, 0, 9, 2.6, INK, 0.18) + S(rr(-1.8, -40, 3.6, 40, 1.8), '#f3efe6') + G(S('M1.8 -39Q12 -42 20 -36L14 -31L20 -25Q12 -21 1.8 -24Z', c), cls('lhq-wave')) + ball(0, -41, 2.8, 2.8, GOLD, { sh: false, hl: false }), 2.4 / s), tf(x, y, s));
   }
+  // the switchback trail up the mountain face on the start screen (and the summit celebration)
+  const CLIMB = [[905, 512], [902, 462], [900, 420], [960, 398], [1000, 380], [930, 358], [790, 340], [860, 318], [960, 300], [900, 280], [842, 262], [880, 246], [912, 232], [892, 214], [888, 198]];
   function splash(look, outfit, opts) {
     opts = opts || {};
     const night = !!opts.night,
@@ -1627,7 +1684,7 @@
     } else s += EF(1230, 300, 200, 190, 'url(#lhq-g-sun)') + CF(1230, 300, 54, '#fff4c2', 0.95);
     // big friendly clouds (drifting)
     [[230, 262, 360, 96, 90], [1280, 214, 400, 110, 110], [660, 318, 230, 64, 80], [1500, 340, 250, 70, 100], [20, 380, 200, 56, 70]].forEach((c, i) => {
-      s += '<g class="sp-cloud" style="animation-duration:' + c[4] + 's;animation-delay:-' + (i * 17) + 's">' + NF(cloudD(c[0], c[1] + 8, c[2] * 0.96, c[3] * 0.5, 5), '#e2d6ff', night ? 0.2 : 0.8) + NF(cloudD(c[0], c[1], c[2], c[3], 6), '#ffffff', night ? 0.22 : 0.95) + '</g>';
+      s += '<g class="sp-poke" data-act="poke" data-k="cloud"><g class="sp-cloud" style="animation-duration:' + c[4] + 's;animation-delay:-' + (i * 17) + 's">' + NF(cloudD(c[0], c[1] + 8, c[2] * 0.96, c[3] * 0.5, 5), '#e2d6ff', night ? 0.2 : 0.8) + NF(cloudD(c[0], c[1], c[2], c[3], 6), '#ffffff', night ? 0.22 : 0.95) + '</g></g>';
     });
     // birds
     if (!night) s += [[240, 30, 0], [300, 38, -14], [270, 46, -30]].map((b) => '<g class="sp-bird" style="animation-duration:' + b[1] + 's;animation-delay:' + b[2] + 's"><g transform="translate(-60 ' + b[0] + ')">' + G(L('M-14 -2Q-7 -10 0 0Q7 -10 14 -2', '#4a4170', 3.2), cls('pr-flap')) + '</g></g>').join('');
@@ -1641,7 +1698,7 @@
     // rocky crags and a few hardy pines on the slopes, then the switchback trail up the mountain face
     s += L('M700 520Q716 488 742 470M1120 520Q1100 470 1060 440M820 300Q806 330 812 360M980 290Q996 320 990 350', N('#8f90d2'), 4, ' opacity=".7"');
     [[668, 560, 0.42], [700, 548, 0.36], [1130, 540, 0.4], [1166, 566, 0.46], [744, 512, 0.3]].forEach((t) => { s += G(OUT(PINE(0, 0, 1, N('#4f8f7a')), 3 / t[2]), tf(t[0], t[1], t[2])); });
-    s += trail([[905, 512], [902, 462], [900, 420], [960, 398], [1000, 380], [930, 358], [790, 340], [860, 318], [960, 300], [900, 280], [842, 262], [880, 246], [912, 232], [892, 214], [888, 198]], 17, 4, { N, fill: '#f6e6c4', edge: '#9f86b8', mid: '#fffaf0', steps: true });
+    s += trail(CLIMB, 17, 4, { N, fill: '#f6e6c4', edge: '#9f86b8', mid: '#fffaf0', steps: true });
     // summit beacon + flag
     s += '<g class="sp-beacon">' + EF(888, 176, 110, 100, 'url(#lhq-g-aura)') + '</g>' + OUT(S(rr(885, 128, 6, 56, 3), N('#e6ebf5')) + G(S('M891 132Q910 124 922 134Q934 142 948 136L942 152L948 168Q934 174 922 166Q910 158 891 166Z', N('#ff5d6c')) + P(star5(918, 150, 6.4), '#fff', sw(2)), cls('lhq-wave')) + ball(888, 127, 6, 6, '#ffe066', { sh: false }), 3) +
       '<path class="lhq-tw" d="' + star4(888, 126, 20) + '" fill="#fffbe0" style="animation-duration:2.2s"/>';
@@ -1698,14 +1755,24 @@
     const LEDGE = 'M-20 1010L-20 772Q120 742 300 750Q470 726 560 726Q660 712 780 724Q860 732 920 760Q980 788 1060 790Q1260 776 1620 800L1620 1010Z';
     s += OUT(S(LEDGE, N('#b79c8a'), 'M-20 1010L-20 880Q500 846 1000 866Q1300 872 1620 890L1620 1010Z') + NF('M-20 780Q120 750 300 758Q470 734 560 734Q660 720 780 732Q860 740 920 768Q980 796 1060 798Q1260 784 1620 808L1620 790Q1260 768 1060 782Q980 780 920 752Q860 724 780 716Q660 704 560 718Q470 718 300 742Q120 734 -20 764Z', '#6cc65a') +
       L('M300 820Q340 830 380 822M1180 850Q1220 860 1260 852M620 800Q650 808 680 800', N('#8c7262'), 3, ' opacity=".6"'), 4);
-    [[430, 734, 0], [800, 734, 1], [1010, 790, 2], [210, 758, 0.5], [1380, 792, 1.5]].forEach((t) => { s += '<g class="sp-grass" style="animation-delay:-' + t[2] + 's"><g transform="translate(' + t[0] + ' ' + t[1] + ')">' + OUT(S('M-14 4Q-16 -14 -10 -26Q-6 -10 -4 4Z', N('#6cc65a')) + S('M-6 4Q-4 -24 6 -36Q4 -14 6 4Z', N('#7ad366')) + S('M4 4Q10 -16 22 -22Q14 -8 14 4Z', N('#5fba52')), 3) + '</g></g>'; });
+    [[430, 734, 0], [800, 734, 1], [1010, 790, 2], [210, 758, 0.5], [1380, 792, 1.5]].forEach((t) => { s += '<g class="sp-poke" data-act="poke" data-k="grass"><g class="sp-grass" style="animation-delay:-' + t[2] + 's"><g transform="translate(' + t[0] + ' ' + t[1] + ')">' + OUT(S('M-14 4Q-16 -14 -10 -26Q-6 -10 -4 4Z', N('#6cc65a')) + S('M-6 4Q-4 -24 6 -36Q4 -14 6 4Z', N('#7ad366')) + S('M4 4Q10 -16 22 -22Q14 -8 14 4Z', N('#5fba52')), 3) + '</g></g></g>'; });
     s += G(OUT(flower('#ff8fcf').replace('class="pr-sway"', 'class="sp-grass"'), 3), ' transform="translate(300 668) scale(.8)"') + G(OUT(flower('#ffd23f', '#ff8a3d').replace('class="pr-sway"', 'class="sp-grass"'), 3), ' transform="translate(1100 712) scale(.8)"');
     // the explorer, seen from behind
     // The explorer is never still: they hop with excitement, raise the staff at the summit, look around, and
     // now and then turn round to wave at us (css/art.css .sp-ex*). Both views are drawn; the animation swaps them.
     const mood = opts.mood === 'sad' ? 'sad' : '';
     const exv = (back) => '<svg x="560" y="374" width="240" height="360" viewBox="0 0 200 300" class="ex ex-' + (back ? 'back' : 'front') + (mood ? ' ex-sad' : '') + ' lhq-art" overflow="visible">' + explorerInner(look, outfit, back, mood) + '</svg>';
-    s += '<g class="sp-ex"><g class="sp-exb">' + exv(true) + '</g><g class="sp-exf">' + exv(false) + '</g></g>';
+    if (opts.climb) {
+      // the summit celebration: the explorer walks the whole trail (getting smaller far away), then stands
+      // on the top with both arms in the air
+      const T = opts.still ? 0.01 : 8;
+      const route = smooth(lowA.concat(lowB, CLIMB), 8).map((p, i) => (i ? 'L' : 'M') + n(p.x) + ' ' + n(p.y)).join('');
+      s += '<g><animateMotion dur="' + T + 's" fill="freeze" path="' + route + '"/><g><animateTransform attributeName="transform" type="scale" from="1" to="0.32" dur="' + T + 's" fill="freeze"/>' +
+        '<svg x="-46" y="-145" width="100" height="150" viewBox="0 0 200 300" class="ex ex-back walk lhq-art" overflow="visible">' + explorerInner(look, outfit, true) + '</svg></g>' +
+        '<set attributeName="opacity" to="0" begin="' + T + 's" fill="freeze"/></g>' +
+        '<g opacity="0"><set attributeName="opacity" to="1" begin="' + T + 's" fill="freeze"/>' +
+        '<svg x="806" y="76" width="80" height="120" viewBox="0 0 200 300" class="ex ex-front ex-win lhq-art" overflow="visible">' + explorerInner(look, outfit, false) + '</svg></g>';
+    } else s += '<g class="sp-poke" data-act="poke" data-k="explorer"><g class="sp-ex"><g class="sp-exb">' + exv(true) + '</g><g class="sp-exf">' + exv(false) + '</g></g></g>';
     if (night) {
       s += '<rect width="1600" height="1000" fill="#141a4a" opacity=".22"/>' + '<g class="sp-beacon">' + EF(888, 176, 90, 80, 'url(#lhq-g-glow)') + '</g>';
       for (let i = 0; i < 9; i++) s += '<g class="amb-drift" style="animation-duration:' + rp(8, 13) + 's;animation-delay:-' + rp(0, 8) + 's">' + EF(rp(120, 1480), rp(690, 790), 9, 9, 'url(#lhq-g-fly)') + '</g>';
@@ -1738,6 +1805,7 @@
     PROPS_BY_WORLD,
     WALKERS,
     LANDMARKS,
+    FEATS,
     ambient,
     border,
     BORDER_H,

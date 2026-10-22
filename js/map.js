@@ -208,7 +208,7 @@
         const hgt = Math.round(tall ? size * 1.5 : size);
         // walkers stroll to and fro on the spot (css .mwalk)
         const inner = walkers.has(name) ? `<div class="mwalk" style="animation-duration:${(7 + rnd() * 6).toFixed(1)}s;animation-delay:-${(rnd() * 8).toFixed(1)}s">${svg}</div>` : svg;
-        return `<div class="mprop${walkers.has(name) ? ' walker' : ''}" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" style="left:${(x - size / 2).toFixed(1)}px;top:${(y - hgt).toFixed(1)}px;width:${size}px;height:${hgt}px">${inner}</div>`;
+        return `<div class="mprop${walkers.has(name) ? ' walker' : ''}" data-act="poke" data-k="${name}" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" style="left:${(x - size / 2).toFixed(1)}px;top:${(y - hgt).toFixed(1)}px;width:${size}px;height:${hgt}px">${inner}</div>`;
       };
       // world signs go beside each world's first stop; props keep clear of them
       const signs = L.bands.map((b) => {
@@ -256,11 +256,8 @@
       L.bands.forEach((b) => {
         const w = cfg.worlds[b.wi],
           { x, y } = signs[b.wi];
-        // a gentle hint that the climb gets harder higher up: ★☆☆ → ★★★
-        const lv = Math.min(3, 1 + Math.floor(b.wi / 2.5)),
-          diff = '★'.repeat(lv) + '☆'.repeat(3 - lv);
         html.push(
-          `<div class="msign" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" style="left:${(x - 70).toFixed(1)}px;top:${(y - 62).toFixed(1)}px"><b>World ${b.wi + 1}</b><span>${w.name}</span><small>${diff}</small></div>`,
+          `<div class="msign" data-x="${x.toFixed(1)}" data-y="${y.toFixed(1)}" style="left:${(x - 70).toFixed(1)}px;top:${(y - 50).toFixed(1)}px"><b>World ${b.wi + 1}</b><span>${w.name}</span></div>`,
         );
       });
       // start and summit
@@ -298,7 +295,7 @@
       // the explorer
       const p0 = exPos();
       html.push(
-        `<div class="mex appear" data-x="${p0.x.toFixed(1)}" data-y="${p0.y.toFixed(1)}" style="left:${(p0.x - EX_FOOT).toFixed(1)}px;top:${(p0.y - 108).toFixed(1)}px">${cfg.explorerSVG()}</div>`,
+        `<div class="mex appear" data-act="poke" data-k="explorer" data-x="${p0.x.toFixed(1)}" data-y="${p0.y.toFixed(1)}" style="left:${(p0.x - EX_FOOT).toFixed(1)}px;top:${(p0.y - 108).toFixed(1)}px">${cfg.explorerSVG()}</div>`,
       );
       html.push('</div>');
       root.style.height = L.H + 'px';

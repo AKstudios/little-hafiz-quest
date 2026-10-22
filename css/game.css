@@ -4295,3 +4295,513 @@ body.v-map::after {
     width: 194px;
   }
 }
+
+/* =====================================================================
+ * v2.2: less scrolling, calmer redraws
+ * ===================================================================== */
+/* past the end of the page a phone shows the page's own background: make it the world's ground, no bounce */
+html {
+  background: var(--pagebg, #69c25a);
+  overscroll-behavior-y: none;
+}
+body {
+  overscroll-behavior-y: none;
+}
+/* smaller "Do it" box */
+.gest {
+  font-size: 15px;
+  padding: 3px 12px 4px;
+  border-radius: 12px;
+}
+.gest small {
+  font-size: 10.5px;
+}
+/* checkpoints: one row that scrolls sideways, with faded edges and a bouncing arrow while there's more */
+.cpwrap {
+  position: relative;
+  margin: 0 calc(-1 * var(--gutr)) 4px calc(-1 * var(--gutl));
+}
+.cptrail {
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 8px var(--gutr) 10px var(--gutl);
+  scrollbar-width: none;
+}
+.cptrail::-webkit-scrollbar {
+  display: none;
+}
+.cpf {
+  flex: none;
+  scroll-snap-align: center;
+}
+.cpwrap::before,
+.cpwrap::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 34px;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+  z-index: 1;
+}
+.cpwrap::before {
+  left: 0;
+  background: linear-gradient(90deg, var(--bgmid), rgba(255, 255, 255, 0));
+}
+.cpwrap::after {
+  right: 0;
+  background: linear-gradient(270deg, var(--bgmid), rgba(255, 255, 255, 0));
+}
+.cpwrap.more-l::before,
+.cpwrap.more-r::after {
+  opacity: 1;
+}
+.cpmore {
+  position: absolute;
+  right: 6px;
+  top: 50%;
+  margin-top: -18px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--gold);
+  color: #2b2340;
+  font-weight: 900;
+  font-size: 24px;
+  line-height: 28px;
+  text-align: center;
+  box-shadow: 0 3px 0 #c98f00;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 0.2s;
+}
+.cpwrap.more-r .cpmore {
+  opacity: 1;
+  animation: nudgeR 1.2s ease-in-out infinite;
+}
+@keyframes nudgeR {
+  50% {
+    transform: translateX(5px);
+  }
+}
+/* stepping stones: the buttons sit right under the stones */
+.levels-gap {
+  margin-top: 18px;
+}
+.pathbtns {
+  margin: 0 0 10px;
+}
+.pathbtns + .parent {
+  margin: -4px 0 10px;
+}
+/* puzzle: a placed picture can be tapped to hear it */
+.slot.filled {
+  position: relative;
+  cursor: pointer;
+}
+.slothear {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  font-size: 13px;
+  opacity: 0.75;
+}
+/* splash: a little room between the big button and the explorer chip */
+.sp-bottom .pchip {
+  margin-top: 8px;
+}
+/* the waiting gifts: a small gift box that rattles now and then, with a count */
+.giftico {
+  position: relative;
+  padding: 2px;
+}
+.giftico .rattle,
+.giftico .rattle svg {
+  display: block;
+  width: 40px;
+  height: 40px;
+}
+.giftico .badge {
+  top: -6px;
+  right: -6px;
+}
+.rattle {
+  display: inline-block;
+  transform-origin: 50% 90%;
+  animation: rattle 2.4s ease-in-out infinite;
+}
+@keyframes rattle {
+  0%, 62%, 100% { transform: rotate(0) translateY(0); }
+  66% { transform: rotate(-12deg) translateY(-3px); }
+  70% { transform: rotate(10deg) translateY(-1px); }
+  74% { transform: rotate(-8deg) translateY(-3px); }
+  78% { transform: rotate(6deg); }
+  82% { transform: rotate(-3deg); }
+}
+.giftbtn {
+  position: relative;
+}
+.giftbtn .rattle {
+  animation-duration: 1.4s;
+}
+.giftbtn > .badge {
+  top: 6px;
+  right: 10px;
+  min-width: 30px;
+  height: 30px;
+  font-size: 16px;
+}
+.gbox .rattle {
+  animation-duration: 1.6s;
+}
+.gbox.mini svg {
+  width: 120px;
+  height: 120px;
+}
+.gtap small {
+  display: block;
+  font-size: 15px;
+}
+/* the disclaimer looks different from the settings around it */
+.notice {
+  margin-top: 12px;
+  border-left: 5px solid var(--gold2);
+  background: var(--pat);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  line-height: 1.35;
+  color: var(--soft);
+}
+.notice b {
+  color: var(--ink);
+}
+.notice p + p {
+  margin-top: 6px;
+}
+/* My Explorer: the explorer stays in view; only the bottom part scrolls (sideways for things) */
+.v-bag #app {
+  height: 100vh;
+  height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+}
+.bagscr {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.bagscr .bar {
+  flex: none;
+  margin-bottom: 4px;
+}
+.bagscr .wd-stage {
+  flex: 1 1 auto;
+  min-height: 150px;
+  max-height: 300px;
+  height: auto;
+  margin: 0 0 6px;
+}
+.bagscr .wd-stage > svg.ex {
+  height: 100%;
+  width: auto;
+  aspect-ratio: 2 / 3;
+  max-width: 60%;
+}
+.wd-side {
+  position: absolute;
+  bottom: 14px;
+  width: 54px;
+  height: 54px;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--shd);
+  font-size: 22px;
+  line-height: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.wd-side small {
+  font-size: 10px;
+  font-weight: 800;
+  margin-top: 2px;
+}
+.wd-side.wd-turn {
+  right: 8%;
+}
+.wd-comfy {
+  left: 8%;
+}
+.wd-comfy.on {
+  background: var(--gold);
+  color: #2b2340;
+}
+.wd-comfy[disabled] {
+  opacity: 0.4;
+}
+.bagscr .wtabs {
+  flex: none;
+  display: flex;
+  overflow-x: auto;
+  gap: 6px;
+  margin: 0 calc(-1 * var(--gutr)) 8px calc(-1 * var(--gutl));
+  padding: 4px var(--gutr) 6px var(--gutl);
+  scrollbar-width: none;
+}
+.bagscr .wtabs::-webkit-scrollbar {
+  display: none;
+}
+.bagscr .wtab {
+  flex: none;
+  width: 62px;
+}
+.wtab.hasnew:not(.on) {
+  box-shadow:
+    0 0 0 3px #ff3b6b,
+    0 3px 0 var(--shd);
+}
+.bagscr .wbody {
+  flex: none;
+  padding: 10px 0 6px;
+  margin: 0 calc(-1 * var(--gutr)) 0 calc(-1 * var(--gutl));
+  border-radius: 24px 24px 0 0;
+}
+.wrow {
+  display: flex;
+  gap: 10px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  padding: 6px var(--gutr) 8px var(--gutl);
+}
+.wrow > * {
+  flex: none;
+  width: 104px;
+  scroll-snap-align: start;
+}
+.wrow .scell {
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--shd);
+}
+.wrow .scell.locked {
+  background: var(--slot);
+  box-shadow: none;
+}
+.wnote2 {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--soft);
+  padding: 0 var(--gutl);
+}
+.wscroll-v {
+  max-height: 46vh;
+  overflow-y: auto;
+  padding: 0 var(--gutr) 4px var(--gutl);
+}
+.bagscr .lookbox {
+  box-shadow: none;
+}
+/* tall phones and tablets get a bigger explorer */
+@media (min-height: 800px) {
+  .bagscr .wd-stage {
+    max-height: 62vh;
+  }
+}
+/* phone landscape: explorer on the left, choices on the right */
+@media (orientation: landscape) and (max-height: 520px) {
+  .bagscr {
+    display: grid;
+    grid-template-columns: 38% 1fr;
+    grid-template-rows: auto auto 1fr;
+  }
+  .bagscr .bar {
+    grid-column: 1 / -1;
+  }
+  .bagscr .wd-stage {
+    grid-row: 2 / 4;
+    max-height: none;
+  }
+  .bagscr .wtabs {
+    margin: 0 0 6px;
+  }
+  .bagscr .wbody {
+    margin: 0;
+    border-radius: 24px;
+    overflow: hidden;
+  }
+  .wscroll-v {
+    max-height: 60vh;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .rattle,
+  .cpwrap.more-r .cpmore {
+    animation: none;
+  }
+}
+
+/* ---------- the summit celebration ---------- */
+.v-summit #app {
+  max-width: none;
+  padding: 0;
+}
+.summit .sp-art {
+  bottom: 0;
+}
+.sm-card {
+  position: absolute;
+  left: 50%;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  transform: translateX(-50%);
+  width: min(92%, 460px);
+  background: var(--card);
+  border-radius: 28px;
+  padding: 14px 16px 16px;
+  text-align: center;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+  animation: smIn 0.7s 8.2s cubic-bezier(0.2, 1.4, 0.4, 1) both;
+}
+.sm-card.now {
+  animation: none;
+}
+@keyframes smIn {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 60px) scale(0.9);
+  }
+}
+.sm-card h2 {
+  font-size: 24px;
+  line-height: 1.15;
+}
+.sm-card p {
+  color: var(--soft);
+  font-weight: 700;
+  margin: 4px 0 8px;
+}
+.sgifts {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+.sgift {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 86px;
+}
+.sgift svg {
+  width: 62px;
+  height: 62px;
+}
+.sgift small {
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1.1;
+}
+
+/* ---------- tapping the world ---------- */
+.mprop,
+.mex {
+  pointer-events: auto;
+  cursor: pointer;
+}
+.mprop .lhq-prop,
+.mex > svg {
+  transform-origin: 50% 100%;
+}
+.sp-poke {
+  cursor: pointer;
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+}
+.poke-hop .lhq-prop,
+.sp-poke.poke-hop {
+  animation: pokeHop 0.7s ease-out;
+}
+.poke-joy > svg,
+.sp-poke.poke-joy {
+  animation: pokeJoy 0.8s ease-out;
+}
+.poke-shake .lhq-prop,
+.sp-poke.poke-shake {
+  animation: pokeShake 0.7s ease-in-out;
+}
+.poke-bounce .lhq-prop {
+  animation: pokeBounce 0.6s ease-out;
+}
+.sp-poke.poke-puff {
+  animation: pokePuff 0.8s ease-out;
+}
+@keyframes pokeHop {
+  0% { transform: scale(1.1, 0.9); }
+  35% { transform: translateY(-28px) scale(0.95, 1.08); }
+  65% { transform: translateY(0) scale(1.08, 0.92); }
+  100% { transform: none; }
+}
+@keyframes pokeJoy {
+  0% { transform: scale(1.08, 0.92); }
+  30% { transform: translateY(-34px) rotate(-8deg); }
+  55% { transform: translateY(-34px) rotate(8deg); }
+  80% { transform: translateY(0) scale(1.06, 0.94); }
+  100% { transform: none; }
+}
+@keyframes pokeShake {
+  20% { transform: rotate(-9deg); }
+  40% { transform: rotate(8deg); }
+  60% { transform: rotate(-5deg); }
+  80% { transform: rotate(3deg); }
+}
+@keyframes pokeBounce {
+  30% { transform: scale(1.12, 0.88); }
+  60% { transform: scale(0.94, 1.08) translateY(-6px); }
+}
+@keyframes pokePuff {
+  40% { transform: scale(1.12); opacity: 0.7; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .poke-hop .lhq-prop,
+  .poke-joy > svg,
+  .poke-shake .lhq-prop,
+  .poke-bounce .lhq-prop,
+  .sp-poke {
+    animation: none !important;
+  }
+}
+/* a more compact sūrah header, so the games start higher up */
+.hero-icon {
+  font-size: 58px;
+}
+.hero-ar {
+  font-size: 32px;
+}
+.hud-stars {
+  white-space: nowrap;
+  min-width: 0;
+}
+.hud .giftico + .hud-bag,
+.hud .giftico {
+  flex: none;
+}
+@media (max-width: 400px) {
+  .hud {
+    gap: 6px;
+  }
+  .hud-stars {
+    font-size: 17px;
+    padding: 4px 10px;
+  }
+  .hud-stars small {
+    font-size: 12px;
+  }
+}
