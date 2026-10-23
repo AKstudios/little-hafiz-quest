@@ -35,12 +35,13 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.3.1';
+  const VERSION = '2.3.2';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const ART = window.LHQ_ART;
   const MAP = window.LHQ_MAP;
-  if (!ART || !MAP) throw new Error('Little Hafiz Quest: js/art.js or js/map.js did not load.');
+  const SND = window.LHQ_SOUNDS;
+  if (!ART || !MAP || !SND) throw new Error('Little Hafiz Quest: js/art.js, js/map.js or js/sounds.js did not load.');
   const S = DATA.surahs; // learning order: An-Nās (114) → An-Naba’ (78)
   const BYN = Object.create(null); // sūrah number -> sūrah (no inherited keys)
   S.forEach((s, i) => {
@@ -546,69 +547,10 @@
     document.documentElement.setAttribute('data-mode', prefs.theme);
   }
 
-  /* ================= sound effects (synth) ================= */
-  let ac;
-  function tone(freqs, dur = 0.12, type = 'sine', vol = 0.15, gap) {
-    if (!prefs.sfx) return;
-    try {
-      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-      if (ac.state === 'suspended') ac.resume();
-      const t0 = ac.currentTime;
-      freqs.forEach((f, i) => {
-        const o = ac.createOscillator(),
-          g = ac.createGain(),
-          t = t0 + i * (gap || dur);
-        o.type = type;
-        o.frequency.setValueAtTime(f, t);
-        g.gain.setValueAtTime(0.0001, t);
-        g.gain.exponentialRampToValueAtTime(vol, t + 0.012);
-        g.gain.exponentialRampToValueAtTime(0.0001, t + dur * 1.7);
-        o.connect(g).connect(ac.destination);
-        o.start(t);
-        o.stop(t + dur * 1.9);
-      });
-    } catch (e) {}
-  }
-  function noise(dur, vol, hp) {
-    if (!prefs.sfx) return;
-    try {
-      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
-      if (ac.state === 'suspended') ac.resume();
-      const len = Math.floor(ac.sampleRate * dur),
-        buf = ac.createBuffer(1, len, ac.sampleRate),
-        d = buf.getChannelData(0);
-      for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 3);
-      const src = ac.createBufferSource(),
-        f = ac.createBiquadFilter(),
-        g = ac.createGain();
-      src.buffer = buf;
-      f.type = 'highpass';
-      f.frequency.value = hp || 800;
-      g.gain.value = vol;
-      src.connect(f).connect(g).connect(ac.destination);
-      src.start();
-    } catch (e) {}
-  }
-  const sfx = {
-    pop: () => tone([620, 1240], 0.05, 'sine', 0.22),
-    tap: () => tone([880], 0.05, 'triangle', 0.1),
-    chime: () => tone([523, 659, 784, 1047], 0.09, 'triangle', 0.16),
-    boop: () => tone([260, 200], 0.11, 'sine', 0.14),
-    win: () => tone([523, 659, 784, 1047, 784, 1047, 1319], 0.1, 'triangle', 0.16),
-    open: () => tone([392, 523, 659, 784, 988, 1175], 0.07, 'square', 0.06),
-    hop: () => tone([330, 440, 660], 0.06, 'sine', 0.18),
-    splash: () => tone([900, 700, 500], 0.05, 'triangle', 0.1),
-    heart: () => tone([440, 330, 220], 0.12, 'triangle', 0.14),
-    // toys for the grown-up tips
-    bell: () => tone([1568, 2093], 0.5, 'sine', 0.12, 0.02),
-    clap: () => {
-      noise(0.09, 0.5, 1200);
-      setTimeout(() => noise(0.07, 0.35, 1400), 30);
-    },
-    drum: () => tone([110, 80], 0.14, 'sine', 0.35, 0.03),
-    whoosh: () => noise(0.35, 0.25, 400),
-    hum: () => tone([392, 494], 0.3, 'sine', 0.12, 0.25),
-  };
+  /* ================= sounds: soft nature sounds (js/sounds.js), quieter while the reciter plays ================= */
+  const sfx = {};
+  SND.names.forEach((n) => (sfx[n] = () => SND.play(n)));
+  SND.setup({ on: () => prefs.sfx, quiet: () => !player.paused });
 
   /* ================= reciters & recitation player ================= */
   const FALLBACK_RECITERS = [{ id: 'alafasy', name: 'Mishary Rashid Alafasy', note: 'Clear and melodic', mb: 0 }];
@@ -1883,7 +1825,7 @@
       ${tg('actions', 'Show the actions', 'The “Do it” movement for each āyah. Switch off for more room on screen')}
     </div>
     <div class="sheet">
-      <h3>🔊 Recitation</h3>
+      <h3>🔊 Sounds</h3>
       ${tg('audio', 'Listen button', 'The orange button at the top plays the reciter')}
       <div class="setrow col"><span>Reciter<small>Tap ▶ to hear a sample</small></span><div class="recs">${recs}</div></div>
       <div class="setrow"><span>Repeat each āyah<small>Hear it again and again</small></span>${seg('repeat', [
@@ -1892,7 +1834,7 @@
         [3, '3×'],
       ])}</div>
       ${tg('slow', 'Slower recitation', 'Plays at 80% speed')}
-      ${tg('sfx', 'Game sounds', 'Pops, chimes and cheers')}
+      ${tg('sfx', 'Nature sounds', 'Soft water drops, birdsong and a breeze as you play. Quieter while the reciter plays')}
     </div>
     <div class="sheet">
       <h3>❤️ Game</h3>
@@ -3001,11 +2943,11 @@
 
   /* The explorer's moves in My Explorer: tap them (or wait 15 seconds) and they do one of these. */
   const MOVES = {
-    giggle: () => tone([660, 880, 700, 940, 760], 0.06, 'triangle', 0.12),
-    twirl: () => noise(0.35, 0.22, 500),
+    giggle: () => sfx.giggle(),
+    twirl: () => sfx.whoosh(),
     jump: () => sfx.hop(),
     wave: () => sfx.chime(),
-    dance: () => tone([523, 659, 523, 784], 0.12, 'triangle', 0.13),
+    dance: () => sfx.dance(),
     pethop: () => sfx.pop(),
     spin: () => sfx.whoosh(),
   };
@@ -3059,7 +3001,7 @@
     el._pk = setTimeout(() => el.classList.remove('poke-' + kind), kind === 'flag' ? 1600 : 1100);
     const set = { joy: ['⭐', '✨', '💛'], spin: ['✨', '⭐'], dance: ['🎵', '✨'], hops: ['⭐', '✨'], flag: ['🎉', '⭐', '✨'], puff: ['☁️', '✨'], hop: ['💕', '✨'], shake: ['🍃', '🌸'], bounce: ['✨', '⭐'] }[kind];
     burstAt(el, kind === 'joy' || kind === 'flag' ? 10 : 5, set);
-    ({ joy: sfx.hop, spin: sfx.whoosh, dance: MOVES.dance, hops: sfx.hop, flag: sfx.win, puff: sfx.whoosh, hop: sfx.pop, shake: () => noise(0.18, 0.12, 2200), bounce: sfx.tap })[kind]();
+    ({ joy: sfx.hop, spin: sfx.whoosh, dance: MOVES.dance, hops: sfx.hop, flag: sfx.win, puff: sfx.whoosh, hop: sfx.pop, shake: sfx.rustle, bounce: sfx.tap })[kind]();
   }
 
   /* frog hop: animate from the current stone to the next one, then advance */

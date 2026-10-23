@@ -1,0 +1,108 @@
+<!doctype html>
+<!--
+  Little Hafiz Quest: sound board (developer page, not part of the game)
+  Plays every sound js/sounds.js can make, to hear them side by side. Open it at
+  http://localhost:8000/tools/sound-board.html (start the preview server from the project folder
+  with: python3 tools/serve.py). "Measure" records each sound and lists how long and how loud it is.
+-->
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LHQ sound board</title>
+  <style>
+    @font-face { font-family: 'Baloo 2'; font-weight: 400 800; src: url(../fonts/baloo-2-latin.woff2) format('woff2'); }
+    body { font-family: 'Baloo 2', system-ui, sans-serif; background: #fff6e6; color: #2b2340; margin: 0; padding: 16px; max-width: 760px; }
+    h1 { margin: 0 0 4px; }
+    h2 { margin: 24px 0 8px; padding-top: 6px; border-top: 2px dashed rgba(43,35,64,.15); font-size: 18px; }
+    .grid { display: flex; flex-wrap: wrap; gap: 10px; }
+    button { font: inherit; border: 0; border-radius: 14px; background: #fff; box-shadow: 0 2px 6px rgba(43,35,64,.12); padding: 8px 12px; cursor: pointer; text-align: left; color: inherit; }
+    button b { display: block; font-size: 16px; }
+    button small { display: block; font-size: 12px; opacity: .7; max-width: 200px; }
+    button:active { transform: scale(.97); }
+    label { display: inline-flex; gap: 6px; align-items: center; margin-right: 14px; }
+    table { border-collapse: collapse; margin-top: 10px; font-size: 14px; }
+    td, th { padding: 2px 10px; text-align: right; }
+    td:first-child, th:first-child { text-align: left; }
+  </style>
+</head>
+<body>
+  <h1>Sound board</h1>
+  <p>Every sound in the game, from <code>js/sounds.js</code>. Each one varies a little every time, like the real thing.</p>
+  <p><label><input type="checkbox" id="quiet"> As heard while the reciter plays</label><button id="measure"><b>Measure</b><small>Length and loudness of each sound</small></button></p>
+  <div id="groups"></div>
+  <div id="levels"></div>
+
+  <script src="../js/sounds.js"></script>
+  <script>
+    (function () {
+      'use strict';
+      var SND = window.LHQ_SOUNDS;
+      var GROUPS = [
+        ['While playing', [
+          ['tap', 'Tap', 'Any button: one tiny drip'],
+          ['pop', 'Pop', 'A bubble popped in Look & Repeat: a water drop'],
+          ['chime', 'Chime', 'Something done right: a little bird'],
+          ['boop', 'Boop', 'Not quite: a soft knock on wood'],
+          ['heart', 'Heart', 'A heart lost: a breeze sighs past'],
+          ['win', 'Win', 'A game finished, a world crossed: birdsong over a breeze'],
+          ['open', 'Open', 'A gift opens: leaves rustle, then a bird'],
+          ['hop', 'Hop', 'The frog or the explorer hops through the grass'],
+          ['splash', 'Splash', 'The frog reaches the water'],
+        ]],
+        ["The explorer's moves", [
+          ['whoosh', 'Whoosh', 'A spin, a twirl, a puff of cloud'],
+          ['rustle', 'Rustle', 'A shake of the leaves'],
+          ['giggle', 'Giggle', 'A quick trill'],
+          ['dance', 'Dance', 'Two birds call to each other'],
+        ]],
+        ['Toys in the grown-up tips', [
+          ['bell', 'Bell 🔔', 'A soft bell'],
+          ['clap', 'Clap 👏', 'A soft clap'],
+          ['drum', 'Drum 🥁', 'A thump on the earth, like a hoof'],
+          ['hum', 'Hum 🎵', 'Two hummed notes'],
+        ]],
+      ];
+      var quiet = document.getElementById('quiet');
+      SND.setup({ quiet: function () { return quiet.checked; } });
+      document.getElementById('groups').innerHTML = GROUPS.map(function (g) {
+        return '<h2>' + g[0] + '</h2><div class="grid">' + g[1].map(function (s) {
+          return '<button data-s="' + s[0] + '"><b>' + s[1] + '</b><small>' + s[2] + '</small></button>';
+        }).join('') + '</div>';
+      }).join('');
+      var listed = [].concat.apply([], GROUPS.map(function (g) { return g[1].map(function (s) { return s[0]; }); }));
+      var missing = SND.names.filter(function (n) { return listed.indexOf(n) < 0; });
+      if (missing.length) document.getElementById('groups').insertAdjacentHTML('beforeend', '<p>Not on this page yet: ' + missing.join(', ') + '</p>');
+      document.addEventListener('click', function (e) {
+        var b = e.target.closest('[data-s]');
+        if (b) SND.play(b.dataset.s);
+      });
+
+      // record each sound offline: how long it lasts (above -50 dB) and how loud it gets
+      var db = function (x) { return x > 0 ? (20 * Math.log10(x)).toFixed(1) : '-inf'; };
+      function measure() {
+        return Promise.all(SND.names.map(function (n) {
+          return SND.render(n).then(function (buf) {
+            var d = buf.getChannelData(0), peak = 0, sum = 0, last = 0;
+            for (var i = 0; i < d.length; i++) {
+              var a = Math.abs(d[i]);
+              if (a > peak) peak = a;
+              sum += d[i] * d[i];
+              if (a > 0.003) last = i;
+            }
+            var len = last / buf.sampleRate;
+            return [n, len.toFixed(2) + ' s', db(peak) + ' dB', db(Math.sqrt(sum / Math.max(1, last))) + ' dB'];
+          });
+        })).then(function (rows) {
+          var html = '<table><tr><th>sound</th><th>length</th><th>peak</th><th>average</th></tr>' +
+            rows.map(function (r) { return '<tr><td>' + r.join('</td><td>') + '</td></tr>'; }).join('') + '</table>';
+          document.getElementById('levels').innerHTML = html;
+          document.title = 'measured';
+        });
+      }
+      document.getElementById('measure').addEventListener('click', measure);
+      if (/[?&]measure\b/.test(location.search)) measure();
+    })();
+  </script>
+</body>
+</html>

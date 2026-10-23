@@ -61,7 +61,7 @@ Longer sūrahs are split into checkpoints of a few āyāt; finish the checkpoint
 
 Five to ten minutes a day is plenty. Stop while it's still fun.
 
-The orange **Listen** button at the top plays the recitation of what's on screen. In the Grown-up Corner (⚙️) you can choose the reciter (Mishary Alafasy, Al-Husary's slow teaching recitation, Al-Minshawi or Abdul Basit), hearts, the “Do it” actions, fullscreen (hides the browser's address bar where the browser allows it; on iPhone, use Add to Home Screen instead), a dim night theme, simple meanings or transliteration, repeat or slow down the recitation, and manage explorers and stars.
+The orange **Listen** button at the top plays the recitation of what's on screen. In the Grown-up Corner (⚙️) you can choose the reciter (Mishary Alafasy, Al-Husary's slow teaching recitation, Al-Minshawi or Abdul Basit), turn the nature sounds on or off (soft water drops, birdsong and a breeze as you play, quieter while the reciter plays), hearts, the “Do it” actions, fullscreen (hides the browser's address bar where the browser allows it; on iPhone, use Add to Home Screen instead), a dim night theme, simple meanings or transliteration, repeat or slow down the recitation, and manage explorers and stars.
 
 ## Versions
 
@@ -108,6 +108,7 @@ js/boot.js                 opens the version a family chose (runs first)
 js/data.js                 all content: Arabic text, memory cues and tips, checkpoints
 js/art.js                  every drawing, as SVG: explorer, outfits, gifts, stickers, worlds, splash
 js/map.js                  the quest map: winding path, worlds, curved-world scrolling, walking
+js/sounds.js               soft nature sounds for taps and play, made with Web Audio (no sound files)
 js/game.js                 game logic: screens, explorers, gifts, hearts, recitation player
 sw.js                      service worker: offline support
 manifest.webmanifest       Home Screen app details
@@ -120,6 +121,7 @@ icons/                     app icons
 tools/serve.py             local preview server
 tools/build_audio.py       rebuilds the recitation files and timings (see below)
 tools/art-gallery.html     every drawing on one page, for checking art changes
+tools/sound-board.html     every sound on one page, to hear them side by side
 .github/workflows/         publishing to GitHub Pages
 screenshots/               README pictures (not used by the game)
 ```
