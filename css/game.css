@@ -2705,21 +2705,64 @@ body.v-map::after {
   width: 52px;
   height: 52px;
 }
+/* v2.4.3: a floating world-map button under the settings button; tap it to show the worlds */
 .wrail {
   position: fixed;
-  right: max(6px, env(safe-area-inset-right, 0px));
-  top: 50%;
-  transform: translateY(-50%);
+  right: max(10px, env(safe-area-inset-right, 0px));
+  top: calc(max(10px, env(safe-area-inset-top, 0px)) + 66px);
   z-index: 11;
   display: flex;
   flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+.wr-toggle {
+  position: relative;
+  width: 52px;
+  height: 52px;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--shd);
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  line-height: 1;
+}
+.wr-toggle:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--shd);
+}
+.wr-cur {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  min-width: 20px;
+  height: 20px;
+  border-radius: 99px;
+  background: var(--ink);
+  color: var(--card);
+  font-size: 12px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+}
+.wrail.open .wr-toggle {
+  background: var(--gold);
+}
+.wr-list {
+  display: none;
+  flex-direction: column;
   gap: 9px;
-  background: rgba(255, 255, 255, 0.55);
+  background: var(--glass);
   -webkit-backdrop-filter: blur(6px);
   backdrop-filter: blur(6px);
-  padding: 8px 5px;
+  padding: 9px 6px;
   border-radius: 99px;
-  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+}
+.wrail.open .wr-list {
+  display: flex;
+  animation: popin 0.25s cubic-bezier(0.2, 1.4, 0.4, 1);
 }
 .wr {
   width: 40px;
@@ -4351,11 +4394,10 @@ body.v-map::after {
   .pchip {
     font-size: 15px;
   }
-  /* a compact world rail that stays clear of the top bar */
-  .wrail {
+  /* a compact list of worlds */
+  .wr-list {
     gap: 4px;
-    padding: 4px;
-    top: calc(50% + 34px);
+    padding: 5px 4px;
   }
   .wr {
     width: 30px;
@@ -6051,11 +6093,15 @@ body {
   height: 40px;
   background: var(--card2);
 }
+.hud-me {
+  padding: 0; /* no default button padding: it pushed the face off-center */
+}
 .hud-me .phead > svg {
+  /* head (92, 112 of 200×300) in the middle of the circle */
   width: 62px;
-  height: 94px;
-  left: -9px;
-  top: -10px;
+  height: 93px;
+  left: calc(50% - 28.5px);
+  top: calc(50% - 35px);
 }
 
 /* ---------- v2.4.1: "My look" in My Explorer's top bar ---------- */
@@ -6279,4 +6325,31 @@ body {
   border-radius: 18px;
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
   -webkit-touch-callout: default;
+}
+
+/* ---------- v2.4.3 ---------- */
+/* Stepping Stones: "Not quite" and "Said it!" side by side; the hint is a small bulb under the āyah */
+.hintbtn {
+  display: grid;
+  place-items: center;
+  width: 46px;
+  height: 46px;
+  margin: 10px auto 0;
+  border-radius: 50%;
+  background: #fff3c4;
+  box-shadow: 0 3px 0 #e0b84a;
+  font-size: 24px;
+  line-height: 1;
+}
+.hintbtn:active {
+  transform: translateY(2px);
+  box-shadow: 0 1px 0 #e0b84a;
+}
+/* My Explorer: the side buttons a little further from the explorer */
+.wd-comfy,
+.wd-side.wd-turn {
+  left: 3%;
+}
+.wd-side.wd-show {
+  right: 3%;
 }

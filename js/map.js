@@ -384,20 +384,24 @@
       root.querySelectorAll('.mamb').forEach((el) => io.observe(el));
     }
 
-    /* world rail: a vertical list of worlds on the side; the one on screen is highlighted */
+    /* world rail: a floating world-map button (under the settings button) that opens the list of worlds;
+       the world on screen is highlighted, and picking one jumps there */
     const railEl = document.createElement('nav');
     railEl.className = 'wrail';
     railEl.setAttribute('aria-label', 'Worlds');
     function drawRail() {
-      railEl.innerHTML = cfg.worlds
-        .map((w, wi) => {
-          const pr = cfg.worldProgress(wi);
-          const names = ART.PROPS_BY_WORLD[wi] || [];
-          const ic = ART.props[cfg.worldIcon ? cfg.worldIcon(wi) : names[0]] || '';
-          return `<button class="wr ${pr.done ? 'done' : ''}" data-act="world" data-w="${wi}" style="--wc:${pal(wi).accent};--p:${Math.round(pr.frac * 100)}" aria-label="World ${wi + 1}: ${w.name}"><span class="wr-ic">${ic}</span><span class="wr-n">${wi + 1}</span></button>`;
-        })
-        .reverse()
-        .join('');
+      railEl.innerHTML =
+        `<button class="wr-toggle" data-act="worlds" aria-expanded="false" aria-label="Jump to a world"><span class="wr-map">🗺️</span><span class="wr-cur">${Math.max(1, railW + 1)}</span></button><div class="wr-list">` +
+        cfg.worlds
+          .map((w, wi) => {
+            const pr = cfg.worldProgress(wi);
+            const names = ART.PROPS_BY_WORLD[wi] || [];
+            const ic = ART.props[cfg.worldIcon ? cfg.worldIcon(wi) : names[0]] || '';
+            return `<button class="wr ${pr.done ? 'done' : ''}" data-act="world" data-w="${wi}" style="--wc:${pal(wi).accent};--p:${Math.round(pr.frac * 100)}" aria-label="World ${wi + 1}: ${w.name}"><span class="wr-ic">${ic}</span><span class="wr-n">${wi + 1}</span></button>`;
+          })
+          .reverse()
+          .join('') +
+        '</div>';
       document.body.appendChild(railEl);
     }
     let railW = -1;
@@ -409,6 +413,8 @@
       if (b.wi === railW) return;
       railW = b.wi;
       railEl.querySelectorAll('.wr').forEach((el) => el.classList.toggle('on', +el.dataset.w === b.wi));
+      const cur = railEl.querySelector('.wr-cur');
+      if (cur) cur.textContent = b.wi + 1;
       if (cfg.onWorld) cfg.onWorld(b.wi);
     }
 

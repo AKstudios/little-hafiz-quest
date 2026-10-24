@@ -671,10 +671,12 @@
       TRACK.push([c + '-' + base, (ITEMS.find((i) => i.id === base) || { slot: (TRACK_NEW.find((x) => x[0] === base) || [])[1] }).slot, colorName(c, base), base, deg]);
     }
   });
-  // stars needed for each prize: small steps at first (4, 10, 18, …), larger later, the last one at 900
+  // stars needed for each prize: small steps at first, larger later, the last one at TRACK_TOP (just below
+  // the 505 stars of the whole Juz since v2.4.3: 4 stars a checkpoint, 1 for each whole long sūrah)
+  const TRACK_TOP = 495;
   let prevT = 0;
   TRACK.forEach((r, k) => {
-    const t = Math.max(prevT + 2, Math.round(900 * Math.pow((k + 1) / TRACK.length, 1.25)));
+    const t = Math.max(prevT + 2, Math.round(TRACK_TOP * Math.pow((k + 1) / TRACK.length, 1.25)));
     prevT = t;
     const tier = t < 300 ? 1 : t < 650 ? 2 : 3;
     if (r[0] === 'pair') r.slice(1).forEach((q) => ITEMS.push({ id: q[0], slot: q[1], name: q[2], tier, from: null, track: t, for: q[3] }));
@@ -849,7 +851,17 @@
         S('M45 88Q92 80 139 88L139 100Q92 92 45 100Z', dk(c, 0.15)) + L('M58 86L58 97M72 84L72 95M86 83L86 94M100 83L100 94M114 84L114 95M128 86L128 97', dk(c, 0.35), 1.4) + ball(92, 44, 9, 9, '#ffffff', { shc: '#e3e6f0' });
     },
   };
-  ART['everyday-glasses'] = { box: [44, 102, 140, 134], ex: (v) => (v === 'back' ? '' : glassesBase('#3d3a5c', '#e8f6ff', 0.22, 'sq')) };
+  // everyday glasses: a thin, plain frame (no thick outline), like a child's own glasses
+  const thinGlasses = (c) => {
+    const lens = (x) => rr(x - 12.5, 109, 25, 18, 7);
+    return (
+      F(lens(75), '#e8f6ff', 0.18) + F(lens(109), '#e8f6ff', 0.18) +
+      P(lens(75), 'none', ' stroke="' + c + '" stroke-width="2.6"') + P(lens(109), 'none', ' stroke="' + c + '" stroke-width="2.6"') +
+      L('M87.5 116Q92 112.5 96.5 116', c, 2.4) + L('M62.5 114L51 111', c, 2.4) + L('M121.5 114L133 111', c, 2.4) +
+      L('M67 114Q68.5 111.5 71.5 110.8', '#fff', 1.8, ' opacity=".8"') + L('M101 114Q102.5 111.5 105.5 110.8', '#fff', 1.8, ' opacity=".8"')
+    );
+  };
+  ART['everyday-glasses'] = { box: [44, 102, 140, 134], ex: (v) => (v === 'back' ? '' : thinGlasses('#3d3a5c')) };
   ART['round-specs'] = { box: [44, 102, 140, 134], ex: (v) => (v === 'back' ? '' : glassesBase('#c99a3a', '#e8f6ff', 0.25)) };
   ART['goggles'] = {
     box: [42, 100, 142, 136],
@@ -1697,7 +1709,7 @@
   ];
   const STICKERS = STK.map((s) => ({ id: s[0], name: s[1] }));
   /* Star badges: one for every 100 stars, each its own color. Earned, never given at random. */
-  const BADGE_C = ['#d9905a', '#b9c6d8', '#ffc83d', '#5fd27a', '#5fb2ff', '#b48cff', '#ff7aa8', '#ff9f1c', '#ffd23f'];
+  const BADGE_C = ['#d9905a', '#b9c6d8', '#ffc83d', '#5fd27a', '#5fb2ff']; // 100 … 500 (the Juz has 505 stars)
   const badgeArt = (m, c) =>
     P('M36 56L26 94L37 88L45 97L52 60Z', '#ff5d6c') + P('M64 56L74 94L63 88L55 97L48 60Z', '#5fb2ff') +
     ball(50, 44, 36, 36, c) + C(50, 44, 27, lt(c, 0.45), sw(2)) +

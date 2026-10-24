@@ -18,13 +18,13 @@
  *
  * The quest
  *   - Splash → Begin → the map (An-Nās at the bottom, An-Naba’ on the mountain top).
- *   - Inside a sūrah: 1 Look & Repeat → 2 Word Steps → 3 Stepping Stones (3 levels) → review games
- *     (a jigsaw Picture Puzzle, What Comes Next). A long sūrah's whole-sūrah step adds the Big Puzzle.
- *     The 📖 Read button opens the whole sūrah as a muṣḥaf page.
- *   - A sūrah is "memorized" when its Stepping Stones Level 3 is done (whole sūrah for long ones).
+ *   - Inside a sūrah: the quest (1 Look & Repeat, 2 Word Steps), then the review games (Stepping Stones
+ *     from the pictures, and a jigsaw Picture Puzzle). A long sūrah's whole-sūrah step has Stepping Stones
+ *     and the Big Puzzle. The 📖 Read button opens the whole sūrah as a muṣḥaf page.
+ *   - A sūrah is "memorized" when its Stepping Stones is done (the whole sūrah, for long ones).
  *     Gifts: a sūrah's first star gives its treasure, and every level finished for the first time
  *     brings a gift (see finish and giveLevelGift).
- *   - Review games (Stepping Stones, Picture Puzzle, What Comes Next) use 3 hearts once a part has been
+ *   - Review games (Stepping Stones, Picture Puzzle) use 3 hearts once a part has been
  *     learned. Losing all 3 drops the newest item at that sūrah; finishing a game there brings it back.
  *     Grown-ups can switch hearts off.
  *
@@ -37,7 +37,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.4.2';
+  const VERSION = '2.4.3';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const ART = window.LHQ_ART;
@@ -468,17 +468,20 @@
     const r = rec(n);
     return r.parts[p] || (r.parts[p] = blank());
   }
-  const partStars = (x) =>
-    x ? (x.learn ? 1 : 0) + (x.path || 0) + (x.order ? 1 : 0) + (x.next ? 1 : 0) + (x.words ? 1 : 0) : 0;
+  /* Since v2.4.3 each checkpoint has 4 stars (Look & Repeat, Word Steps, Stepping Stones, Picture Puzzle) and
+     a long sūrah one more for its whole-sūrah Stepping Stones. Saves from before keep counting: Stepping
+     Stones at any of the old levels is done, and the old What Comes Next no longer counts. */
+  const partStars = (x) => (x ? (x.learn ? 1 : 0) + (x.words ? 1 : 0) + (x.path ? 1 : 0) + (x.order ? 1 : 0) : 0);
   function surahStars(s, prof) {
     const r = (prof || P()).prog[s.n];
-    return r ? r.parts.reduce((t, x) => t + partStars(x), 0) + (r.all || 0) : 0;
+    return r ? r.parts.reduce((t, x) => t + partStars(x), 0) + (r.all ? 1 : 0) : 0;
   }
-  const surahMax = (s) => s.P.length * 7 + (s.P.length > 1 ? 3 : 0);
+  const surahMax = (s) => s.P.length * 4 + (s.P.length > 1 ? 1 : 0);
+  // memorized: the sūrah's Stepping Stones done (the whole sūrah, for one with checkpoints)
   function surahDone(s, prof) {
     const r = (prof || P()).prog[s.n];
     if (!r) return false;
-    return s.P.length > 1 ? (r.all || 0) >= 3 : !!(r.parts[0] && r.parts[0].path >= 3);
+    return s.P.length > 1 ? !!r.all : !!(r.parts[0] && r.parts[0].path);
   }
   function starRow(k, max) {
     let o = '';
@@ -636,9 +639,9 @@
     const id = opts.reciter || reciter().id;
     playRec = id;
     queue = [];
-    if (opts.loop > 1) {
+    if (opts.loop) {
       for (let r = 0; r < opts.loop; r++) queue.push(...items);
-      loopRun = { total: opts.loop, per: items.length, played: 0 };
+      loopRun = { total: opts.loop, per: items.length, played: 0, items };
     } else {
       loopRun = null;
       items.forEach((it) => {
@@ -913,7 +916,7 @@
   function fabTarget() {
     const v = st.view,
       s = S[st.i];
-    if (!s || !['surah', 'learn', 'path', 'order', 'next', 'words', 'mushaf'].includes(v)) return null;
+    if (!s || !['surah', 'learn', 'path', 'order', 'words', 'mushaf'].includes(v)) return null;
     const one = (k) => ({ key: `${s.n}:${k}`, label: `Āyah ${k + 1}`, items: [[s.n, k + 1]] });
     const many = (ks, label) => ({ key: `${s.n}:${ks.join(',')}`, label, items: ks.map((k) => [s.n, k + 1]) });
     const c = ctx();
@@ -925,10 +928,6 @@
       if (st.say == null) return many(all, st.p === 'all' ? 'Whole sūrah' : 'In order');
       const ks = puzzleItems()[st.say].say;
       return ks.length > 1 ? many(ks, `Āyāt ${ks[0] + 1}–${ks[ks.length - 1] + 1}`) : one(ks[0]);
-    }
-    if (v === 'next') {
-      const cur = st.rounds[st.r];
-      return one(st.picked ? cur + 1 : cur);
     }
     if (v === 'words') return one(st.a);
     if (v === 'mushaf') return Object.assign(st.sel != null ? one(st.sel) : many(range({ from: 0, to: s.ayat.length - 1 }), 'Whole sūrah'), { loop: true });
@@ -1040,7 +1039,6 @@
     }
     return a;
   };
-  const sceneKey = (a) => a.scene.join('');
   const toArNum = (n) => String(n).replace(/\d/g, (d) => '٠١٢٣٤٥٦٧٨٩'[d]);
   const AR_LETTER = /[ء-يٮ-ۓۺ-ۼ]/;
   function wordsOf(ar) {
@@ -1157,7 +1155,7 @@
     if (st.p === 'all') return r.parts.every((x) => x && x.learn);
     return !!(r.parts[pnum(st.p)] && r.parts[pnum(st.p)].learn);
   }
-  const heartsOn = () => prefs.hearts && ['path', 'order', 'next'].includes(st.view) && st.hearts != null && learned();
+  const heartsOn = () => prefs.hearts && ['path', 'order'].includes(st.view) && st.hearts != null && learned();
   function heartsBar() {
     if (!heartsOn()) return '';
     const all = st.maxH || 3;
@@ -1210,9 +1208,8 @@
   function restartActivity(r) {
     st.i = r.i;
     st.p = r.p;
-    if (r.view === 'path') startPath(r.L);
+    if (r.view === 'path') startPath();
     else if (r.view === 'order') startOrder();
-    else if (r.view === 'next') startNext();
   }
 
   /* ================= state, scenes & render ================= */
@@ -1230,7 +1227,7 @@
     if (GAMES.includes(view)) st.starsBefore = totalStars(); // a first finish (a new star) always brings a gift
     render(true);
   }
-  const GAMES = ['learn', 'words', 'path', 'order', 'next'];
+  const GAMES = ['learn', 'words', 'path', 'order'];
   let sceneKeyNow = '';
   /* the living background behind lessons: the world's sky, a strip of ground with props, gentle motion */
   function setScene(wi) {
@@ -1550,7 +1547,7 @@
     bismSaid = null;
     let p = 0;
     if (multi(s)) {
-      const sug = s.P.findIndex((_, q) => !(r && r.parts[q] && r.parts[q].path >= 3));
+      const sug = s.P.findIndex((_, q) => !(r && r.parts[q] && r.parts[q].path));
       p = sug < 0 ? 'all' : sug;
     }
     go('surah', { i, p, enter: true });
@@ -1563,7 +1560,7 @@
       const got = (r && r.all) || 0;
       const ready = bigReady(s);
       return [
-        { key: 'pathpick', ico: '🐸', t: 'Stepping Stones · whole sūrah', d: 'Every part in one go, with fewer and fewer clues', done: got >= 3, stars: [got, 3] },
+        { key: 'pathpick', ico: '🐸', t: 'Stepping Stones · whole sūrah', d: 'Every part in one go, from the pictures', done: !!got, stars: [got ? 1 : 0, 1], review: true },
         {
           key: ready ? 'order' : 'biglocked',
           ico: '🧩',
@@ -1583,24 +1580,23 @@
     return [
       { key: 'learn', ico: '👀', t: 'Look & Repeat', d: 'See the picture, hear the āyah, say it 3 times', done: !!x.learn, stars: [x.learn, 1] },
       { key: 'words', ico: beads, t: 'Word Steps', d: 'Build each āyah word by word', done: !!x.words, stars: [x.words, 1] },
-      { key: 'pathpick', ico: '🐸', t: 'Stepping Stones', d: 'Say it with fewer and fewer clues: 3 levels', done: x.path >= 3, stars: [x.path, 3] },
-      { key: 'order', ico: '🧩', t: 'Picture Puzzle', d: 'Put the pictures in order', done: !!x.order, stars: [x.order, 1], review: true },
-      { key: 'next', ico: '🔮', t: 'What Comes Next?', d: 'Pick the next picture, then say it', done: !!x.next, stars: [x.next, 1], review: true },
+      { key: 'pathpick', ico: '🐸', t: 'Stepping Stones', d: 'Say each āyah from its picture; hints help', done: !!x.path, stars: [x.path ? 1 : 0, 1], review: true },
+      { key: 'order', ico: '🧩', t: 'Picture Puzzle', d: 'Fit the pieces together in order', done: !!x.order, stars: [x.order, 1], review: true },
     ];
   }
   function checkpointTrail(s) {
     const r = P().prog[s.n];
     const cps = s.P.map((P, p) => {
       const x = r && r.parts[p];
-      const done = !!(x && x.path >= 3),
+      const done = !!(x && x.path),
         got = partStars(x);
       return `<button class="cpf ${st.p === p ? 'sel' : ''} ${done ? 'done' : ''}" data-act="part" data-p="${p}">
         <span class="cpflag">${ART.flag(done ? '#2fbf71' : st.p === p ? '#ff9f1c' : '#b9b1dc')}</span>
-        <b>${p + 1}</b><small>āyāt ${P.from + 1}–${P.to + 1}</small><span class="cpst">⭐ ${got}/7</span></button>`;
+        <b>${p + 1}</b><small>āyāt ${P.from + 1}–${P.to + 1}</small><span class="cpst">⭐ ${got}/4</span></button>`;
     });
     const allGot = (r && r.all) || 0;
-    cps.push(`<button class="cpf summit ${st.p === 'all' ? 'sel' : ''} ${allGot >= 3 ? 'done' : ''}" data-act="part" data-p="all">
-      <span class="cpflag">🏁</span><b>All</b><small>whole sūrah</small><span class="cpst">${starRow(allGot, 3)}</span></button>`);
+    cps.push(`<button class="cpf summit ${st.p === 'all' ? 'sel' : ''} ${allGot ? 'done' : ''}" data-act="part" data-p="all">
+      <span class="cpflag">🏁</span><b>All</b><small>whole sūrah</small><span class="cpst">${starRow(allGot ? 1 : 0, 1)}</span></button>`);
     // one row that scrolls sideways; faded edges and a bouncing arrow show there is more
     return `<div class="h2">🚩 Checkpoints <small>One part at a time, then the whole sūrah · swipe for more</small></div><div class="cpwrap"><div class="cptrail" id="cptrail">${cps.join('<i class="cpline"></i>')}</div><button class="cpmore cpless" data-act="cpscroll" data-d="-1" aria-label="Earlier checkpoints">‹</button><button class="cpmore" data-act="cpscroll" data-d="1" aria-label="More checkpoints">›</button></div>`;
   }
@@ -1825,26 +1821,8 @@
   };
 
   /* ---------- STEPPING STONES ---------- */
-  V.pathpick = () => {
-    const s = S[st.i],
-      c = ctx();
-    const got = c.all ? (P().prog[s.n] || {}).all || 0 : ((P().prog[s.n] && P().prog[s.n].parts[st.p]) || blank()).path;
-    const lv = (L, ico, t, d) =>
-      `<button class="level ${got >= L ? 'done' : got + 1 === L ? 'next' : ''}" data-act="path" data-l="${L}"><span class="lv">${ico}</span><span><b>${t}</b><span>${d}</span></span><span class="ok">${got >= L ? '⭐' : '☆'}</span></button>`;
-    return `<div class="screen" style="${cv(s.color)}">
-    ${bar('Stepping Stones', c.all ? `${s.name} · whole sūrah` : `${s.name}${multi(s) ? ' · ' + partLabel(s, st.p) : ''}`, 'surah')}
-    ${coach('Say each āyah, then <b>tap the frog</b> to hop to the next stone! Each level has <b>fewer clues</b>. Stuck? Tap <b>Hint</b> for a little more.', `<span class="frogico">${ART.frog()}</span>`)}
-    <div class="levels levels-gap">
-      ${lv(1, '🖼️', 'Level 1 · Picture + first word', 'The first word starts you off')}
-      ${lv(2, '🎨', 'Level 2 · Picture only', prefs.actions ? 'Just the picture and the action' : 'Just the picture')}
-      ${lv(3, '🧠', 'Level 3 · Super Brain', 'No pictures! Only the āyah number')}
-    </div>
-    ${prefs.hearts && learned() ? `<p class="saveinfo center">${ART.heart(true)} You have ${maxHearts(P())} hearts. A grown-up taps “Not quite” for a mistake.${maxHearts(P()) < 5 ? ' Finish a world for an extra heart!' : ''}</p>` : ''}
-  </div>`;
-  };
-  /* Clues for Stepping Stones. One Hint button reveals a little more each tap until the whole āyah shows:
-     Level 1 starts with the picture and the first word, Level 2 with the picture, Level 3 with nothing.
-     The next hints show the picture (Level 3), then one more word at a time, then the full āyah to hear. */
+  /* Clues for Stepping Stones. It starts with the picture (L 2; the old levels 1 and 3 are gone since v2.4.3),
+     and the 💡 hint shows one more word at a time, then the full āyah to hear. */
   function pathClues(s, k, L, h) {
     const W = wordsOf(s.ayat[k].ar);
     const picAt = L === 3 ? 1 : 0; // hint number that shows the picture
@@ -1949,19 +1927,19 @@
         ? `<div class="first-word" lang="ar">${cl.W.slice(0, cl.words).join(' ')} …</div>`
         : '';
     return `<div class="screen" style="${cv(s.color)}">
-    ${bar('Stepping Stones', `${s.name} · Level ${L}${c.all ? ' · whole sūrah' : ''}`, 'pathpick')}
+    ${bar('Stepping Stones', `${s.name}${c.all ? ' · whole sūrah' : multi(s) ? ' · ' + partLabel(s, st.p) : ''}`, 'surah')}
     ${heartsBar()}
     <div class="stream w${wi}">${streamBack(wi)}${stonesHTML(idx, wi)}</div>
     <div class="row pathbtns">
-      <button class="btn wide" data-act="hint" ${cl.full ? 'disabled' : ''}>💡 Hint</button>
+      ${heartsOn() ? '<button class="btn wide" data-act="oops">🙈 Not quite</button>' : ''}
       <button class="btn go wide" data-act="hop">✅ Said it!</button>
     </div>
-    ${heartsOn() ? '<div class="parent"><button class="btn small" data-act="oops">🙈 Not quite</button></div>' : ''}
     <div class="card">
       ${cl.pic ? tag(s, k) : `<span class="ayah-tag"><span class="num">${k + 1}</span>Āyah ${k + 1}</span>`}
       ${cl.pic ? sceneHTML(a) : `<div class="mystery-q">?</div>`}
       ${cl.pic ? gest(a) : ''}
       ${shown}
+      ${cl.full ? '' : '<button class="hintbtn" data-act="hint" aria-label="A hint: one more word">💡</button>'}
     </div>
     ${coach(prev ? `What comes after ${pics(prev)}? Say <b>āyah ${k + 1}</b>, then tap the frog!` : `Say <b>āyah ${k + 1}</b>, then tap the frog to hop!`, `<span class="frogico">${ART.frog()}</span>`)}
   </div>`;
@@ -2086,53 +2064,6 @@
   </div>`;
   };
 
-  /* ---------- WHAT COMES NEXT ---------- */
-  function makeOpts(s, cur, c) {
-    const right = cur + 1,
-      rk = sceneKey(s.ayat[right]),
-      seen = new Set([rk]),
-      others = [];
-    const near = shuffle(range(c)),
-      far = shuffle(s.ayat.map((_, j) => j).filter((j) => j < c.from || j > c.to));
-    [...near, ...far].forEach((j) => {
-      const key = sceneKey(s.ayat[j]);
-      if (!seen.has(key)) {
-        seen.add(key);
-        others.push(j);
-      }
-    });
-    return shuffle([right, ...others.slice(0, 2)]);
-  }
-  V.next = () => {
-    const s = S[st.i],
-      cur = st.rounds[st.r],
-      a = s.ayat[cur],
-      nx = s.ayat[cur + 1];
-    return `<div class="screen" style="${cv(s.color)}">
-    ${bar('What Comes Next?', `${s.name} · round ${st.r + 1} of ${st.rounds.length}`, 'surah')}
-    ${heartsBar()}
-    <div class="card">
-      ${tag(s, cur)}
-      ${sceneHTML(a, 'sm')}
-      ${arHTML(s, a, cur, { label: '📖 Grown-up reads this one', sm: true })}
-    </div>
-    ${
-      st.picked
-        ? `
-      <div class="card" style="margin-top:14px;border-color:var(--go)">
-        <span class="ayah-tag"><span class="num">${cur + 2}</span>Yes! Now say it 🗣️</span>
-        ${sceneHTML(nx, 'sm')}
-        ${gest(nx)}
-        <div class="row"><button class="btn small hear" data-act="say" data-n="${s.n}" data-k="${cur + 1}">🔊 Hear āyah ${cur + 2}</button></div>
-        <details class="adult"><summary>👁️ Grown-up check</summary><div class="ar sm" lang="ar">${nx.ar}</div></details>
-      </div>
-      <div class="row"><button class="btn go wide" data-act="nextround">${st.r + 1 < st.rounds.length ? 'Next round ➡️' : 'Finish 🎉'}</button></div>`
-        : `<div class="qhead">🔮 Which picture comes <b>next</b>?</div>
-       <div class="opts">${st.opts.map((j) => `<button class="opt" data-act="guess" data-k="${j}">${pics(s.ayat[j])}</button>`).join('')}</div>`
-    }
-  </div>`;
-  };
-
   /* ---------- DONE ---------- */
   /* the waiting gifts: a small gift box that rattles, with how many are waiting */
   const giftArt = (g, open) => ART.gift({ tier: giftTier(g), open: !!open, kind: g.k === 'i' ? 'item' : 'sticker' });
@@ -2192,7 +2123,7 @@
     ${nextPrizeNote(prof)}
     ${g ? `<button class="giftbtn" data-act="opengift"><span class="rattle">${giftArt(g)}</span>${prof.pending.length > 1 ? `<span class="badge">${prof.pending.length}</span>` : ''}<b>${prof.pending.length > 1 ? prof.pending.length + ' gifts' : 'A gift'} for you!</b><small>Tap to open${prof.pending.length > 1 ? ' one at a time' : ''}</small></button>` : ''}
     <div class="row" style="margin-top:22px">
-      ${st.nextAct ? `<button class="btn go wide" data-act="${st.nextAct}" ${st.nextL ? `data-l="${st.nextL}"` : ''} ${st.nextP != null ? `data-p="${st.nextP}"` : ''}>${st.nextLabel}</button>` : ''}
+      ${st.nextAct ? `<button class="btn go wide" data-act="${st.nextAct}" ${st.nextP != null ? `data-p="${st.nextP}"` : ''}>${st.nextLabel}</button>` : ''}
       <button class="btn wide" data-act="back" data-to="surah">🧭 Back to ${s.name}</button>
     </div>
     <div class="row"><button class="btn small" data-act="back" data-to="map">🗺️ Map</button>${g ? '<button class="btn small" data-act="savefile">💾 Save progress</button>' : ''}</div>
@@ -2486,9 +2417,9 @@
     <div class="sheet">
       <h3>📖 How to use it</h3>
       <ol class="tips">
-        <li><b>Follow the glowing step.</b> In each sūrah: 1 Look &amp; Repeat, 2 Word Steps, 3 Stepping Stones (levels 1 → 3), then the review games.</li>
+        <li><b>Pick a step.</b> In each sūrah: the quest (Look &amp; Repeat, then Word Steps), then the review games (Stepping Stones, then the Picture Puzzle).</li>
         <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Then do the 🏁 whole sūrah.</li>
-        <li><b>Every level finished for the first time wins a gift.</b> One star wins a sūrah's treasure and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, and every few stars wins a prize from the star track (an astronaut set, kufis for boys, hijabs for girls, new hats, buddies and more). Memorized = Stepping Stones Level 3.</li>
+        <li><b>Every level finished for the first time wins a gift.</b> One star wins a sūrah's treasure and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, and every few stars wins a prize from the star track (an astronaut set, kufis for boys, hijabs for girls, new hats, buddies and more). Memorized = Stepping Stones done.</li>
         <li><b>The summit.</b> A star in every sūrah: the explorer climbs the mountain, and every treasure, every sticker and the Summit cloak are theirs. Three stars in every sūrah: the Hafiz crown. Every single star: the one-of-a-kind Golden hoopoe.</li>
         <li><b>Revise any sūrah any time:</b> tap it on the map, or tap the 📖 / ⭐ counters at the top of the map to see every sūrah and jump straight in. In review games, tap “Not quite” when a mistake is made; a 💔 on the map shows where the hearts ran out.</li>
         <li><b>5–10 minutes a day is plenty.</b> Stop while it's still fun; recite again at bedtime or in ṣalāh.</li>
@@ -2680,7 +2611,7 @@
     const giftsBefore = prof.pending.length,
       newStar = st.starsBefore != null && totalStars(prof) > st.starsBefore;
     // lost items at this sūrah come back after finishing a review game here
-    if (['path', 'order', 'next'].includes(st.view)) {
+    if (['path', 'order'].includes(st.view)) {
       prof.fix = prof.fix.filter((n) => n !== s.n);
       const back = prof.lost.filter((x) => x.n === s.n).map((x) => x.id);
       if (back.length) {
@@ -2689,7 +2620,7 @@
       }
     }
     // memorized = Stepping Stones level 3 (the whole sūrah, for one with checkpoints)
-    if (st.view === 'path' && st.L === 3 && (!multi(s) || st.p === 'all') && surahDone(s)) extra.memorized = true;
+    if (st.view === 'path' && (!multi(s) || st.p === 'all') && surahDone(s)) extra.memorized = true;
     const given = giveSurahGift(s);
     if (given === 'gold' || given === 'both') extra.allStars = true;
     // a world with a star in every sūrah: celebrate once, and it brings an extra heart (up to 5)
@@ -2731,7 +2662,6 @@
     if (feats.length) prof.pending = prof.pending.filter((g) => g.k !== 's' || !prof.stickers.includes(g.id));
     // a checkpoint of a long sūrah: on to the next checkpoint (or the whole sūrah), not the next game
     if (multi(s) && st.p !== 'all' && GAMES.includes(st.view)) {
-      delete extra.nextL;
       Object.assign(extra, nextSuggestion(s, st.p));
     }
     save();
@@ -2879,9 +2809,9 @@
     if (multi(s)) return { nextAct: 'part', nextP: 'all', nextLabel: '🏁 The whole sūrah' };
     return {};
   }
-  function startPath(L) {
+  function startPath() {
     sfx.tap();
-    go('path', { i: st.i, p: st.p != null ? st.p : 0, L, k: 0, hint: 0, hints: 0, hearts: maxHearts(P()), maxH: maxHearts(P()) });
+    go('path', { i: st.i, p: st.p != null ? st.p : 0, L: 2, k: 0, hint: 0, hints: 0, hearts: maxHearts(P()), maxH: maxHearts(P()) });
   }
   function startOrder() {
     sfx.tap();
@@ -2896,18 +2826,6 @@
   }
   /* the Big Puzzle opens once every checkpoint's Picture Puzzle is done */
   const bigReady = (s) => multi(s) && s.P.every((_, p) => P().prog[s.n] && P().prog[s.n].parts[p] && P().prog[s.n].parts[p].order);
-  function startNext() {
-    sfx.tap();
-    const s = S[st.i];
-    const p = pnum(st.p);
-    st.p = p;
-    const c = ctx();
-    let rounds = range(c).slice(0, -1);
-    if (p > 0) rounds.unshift(c.from - 1); // link from the previous part
-    if (!rounds.length) rounds = [c.from]; // a one-āyah part still gets one round (into the next part)
-    rounds = shuffle(rounds.filter((k) => k + 1 < s.ayat.length));
-    go('next', { i: st.i, p, rounds, r: 0, picked: false, opts: makeOpts(s, rounds[0], c), hearts: maxHearts(P()), maxH: maxHearts(P()) });
-  }
   function toSurah() {
     go('surah', { i: st.i, p: st.p == null ? 0 : st.p });
   }
@@ -2975,7 +2893,7 @@
      playing): a 5-second check, nothing running in the background, saved now and then and when the page
      is hidden. Kept per explorer, and per sūrah while inside one. */
   const TIME_IDLE = 180000,
-    TIME_VIEWS = ['surah', 'learn', 'words', 'pathpick', 'path', 'order', 'next', 'mushaf', 'done'];
+    TIME_VIEWS = ['surah', 'learn', 'words', 'path', 'order', 'mushaf', 'done'];
   let lastTouch = Date.now(),
     lastTick = Date.now(),
     unsavedTime = 0;
@@ -3151,9 +3069,21 @@
         save();
         go('map');
         break;
-      case 'world':
+      case 'world': {
         if (mapCtl) mapCtl.scrollToWorld(+b.dataset.w);
+        const rl = document.querySelector('.wrail');
+        if (rl) rl.classList.remove('open');
         break;
+      }
+      case 'worlds': {
+        // the world-map button opens (or closes) the list of worlds
+        sfx.tap();
+        const rl = b.closest('.wrail'),
+          open = !rl.classList.contains('open');
+        rl.classList.toggle('open', open);
+        b.setAttribute('aria-expanded', open);
+        break;
+      }
       case 'bag':
         sfx.tap();
         go('bag', { tab: 'hat' });
@@ -3355,7 +3285,6 @@
         const to = b.dataset.to;
         if (to === 'map') go('map');
         else if (to === 'splash') go('splash');
-        else if (to === 'pathpick') go('pathpick', { i: st.i, p: st.p });
         else if (to === 'bag') go('bag', { tab: 'hat' });
         else toSurah();
         break;
@@ -3474,7 +3403,15 @@
       case 'loop':
         sfx.tap();
         loopN = LOOPS[(LOOPS.indexOf(loopN) + 1) % LOOPS.length];
-        if (playing) stopAudio();
+        if (playing && loopRun) {
+          // keep playing: the count starts again at the new number, the āyah playing now being the first
+          // (between two āyāt nothing is playing: the rest of this pass starts with the next one)
+          const at = loopRun.played % loopRun.per;
+          queue = loopRun.items.slice(at + (curSeg ? 1 : 0));
+          for (let r = 1; r < loopN; r++) queue.push(...loopRun.items);
+          loopRun.total = loopN;
+          loopRun.played = at;
+        } else if (playing) stopAudio();
         drawLoops();
         break;
       case 'dlyes':
@@ -3664,14 +3601,9 @@
 
       /* stepping stones */
       case 'pathpick':
-        sfx.tap();
-        go('pathpick', {
-          i: st.i,
-          p: b.dataset.p === 'all' ? 'all' : b.dataset.p != null ? +b.dataset.p : st.p != null ? st.p : 0,
-        });
-        break;
-      case 'path':
-        startPath(+b.dataset.l);
+        // Stepping Stones starts straight away (from the pictures)
+        st.p = b.dataset.p === 'all' ? 'all' : b.dataset.p != null ? +b.dataset.p : st.p != null ? st.p : 0;
+        startPath();
         break;
       case 'hint':
         sfx.tap();
@@ -3720,42 +3652,6 @@
         break;
       }
 
-      /* what comes next */
-      case 'next':
-        startNext();
-        break;
-      case 'guess': {
-        const j = +b.dataset.k,
-          cur = st.rounds[st.r];
-        if (sceneKey(s.ayat[j]) === sceneKey(s.ayat[cur + 1])) {
-          sfx.chime();
-          b.classList.add('right');
-          burstAt(b, 18);
-          setTimeout(() => {
-            st.picked = true;
-            render();
-          }, 600);
-        } else {
-          sfx.boop();
-          wobble(b);
-          loseHeart();
-        }
-        break;
-      }
-      case 'nextround': {
-        sfx.tap();
-        if (st.r + 1 < st.rounds.length) {
-          st.r++;
-          st.picked = false;
-          st.opts = makeOpts(s, st.rounds[st.r], ctx());
-          render(true);
-        } else {
-          partRec(s.n, st.p).next = 1;
-          save();
-          finish({ big: '🔮', msg: `You know what comes next in ${s.name}!`, stars: 1, ...nextSuggestion(s, st.p) });
-        }
-        break;
-      }
     }
   });
 
@@ -3937,28 +3833,15 @@
       if (st.k + 1 >= idx.length) {
         sfx.splash();
         const all = st.p === 'all';
-        if (all) {
-          const r = rec(s.n);
-          r.all = Math.max(r.all || 0, st.L);
-        } else {
-          const r = partRec(s.n, st.p);
-          r.path = Math.max(r.path || 0, st.L);
-        }
+        if (all) rec(s.n).all = 3; // stored as 3 so saves from older versions read the same
+        else partRec(s.n, st.p).path = 3;
         save();
         const where = all ? `the whole of ${s.name}` : multi(s) ? `${partLabel(s, st.p).toLowerCase()} of ${s.name}` : s.name;
-        const msgs = [
-          `You hopped across ${where} with pictures and first words!`,
-          `You hopped across ${where} with only pictures!`,
-          `Super Brain! You said ${where} with no pictures!`,
-        ];
-        let nx = {};
-        if (st.L < 3) nx = { nextAct: 'path', nextL: st.L + 1, nextLabel: `Try Level ${st.L + 1} ➡️` };
-        else if (!all) nx = { nextAct: 'order', nextLabel: 'Picture Puzzle 🧩' };
         finish({
-          big: st.L === 3 ? '🧠' : '🐸',
-          msg: msgs[st.L - 1] + (st.hints ? ` (${st.hints} little help${st.hints > 1 ? 's' : ''})` : ' No help needed!'),
-          stars: st.L,
-          ...nx,
+          big: '🐸',
+          msg: `You hopped across ${where}, from the pictures!` + (st.hints ? ` (${st.hints} little help${st.hints > 1 ? 's' : ''})` : ' No help needed!'),
+          stars: 1,
+          ...(all ? {} : { nextAct: 'order', nextLabel: 'Picture Puzzle 🧩' }),
         });
       } else {
         st.k++;
@@ -4046,8 +3929,6 @@
                     big: '🧩',
                     msg: `You put ${multi(s) ? partLabel(s, st.p).toLowerCase() + ' of ' : 'all of '}${s.name} in order!`,
                     stars: 1,
-                    nextAct: 'next',
-                    nextLabel: 'What Comes Next? 🔮',
                   },
             );
         }, 1500);
