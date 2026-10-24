@@ -2739,8 +2739,9 @@ body.v-map::after {
   min-width: 20px;
   height: 20px;
   border-radius: 99px;
-  background: var(--ink);
-  color: var(--card);
+  /* gold, so a world's number never looks like a sūrah's number (dark pills on the map) */
+  background: var(--gold2);
+  color: #2b2340;
   font-size: 12px;
   font-weight: 800;
   display: grid;
@@ -6154,15 +6155,6 @@ body {
   width: auto;
   aspect-ratio: 2 / 3;
 }
-.show-name {
-  margin-top: -6px;
-  padding: 2px 18px;
-  border-radius: 99px;
-  background: var(--card);
-  box-shadow: 0 3px 0 var(--shd);
-  font-weight: 800;
-  font-size: 20px;
-}
 .achgrid {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -6352,4 +6344,41 @@ body {
 }
 .wd-side.wd-show {
   right: 3%;
+}
+
+/* ---------- v2.4.4 ---------- */
+.hintbtn {
+  width: fit-content;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 99px;
+  font-size: 16px;
+  font-weight: 800;
+  color: #6b4d00;
+  gap: 4px;
+  display: flex;
+  align-items: center;
+}
+/* the worlds' numbers in the list are gold too (a finished world's stays green) */
+.wr-n {
+  background: var(--gold2);
+  color: #2b2340;
+}
+/* How to use it: a scrolling card */
+.helpcard {
+  text-align: left;
+  max-height: calc(100vh - 40px);
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+.helpcard a {
+  color: #3d7be0;
+  font-weight: 800;
+}
+.helpbtn {
+  font-size: 24px;
+}
+.helpcard h3 {
+  text-align: center;
 }

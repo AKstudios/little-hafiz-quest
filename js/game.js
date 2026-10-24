@@ -37,7 +37,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.4.3';
+  const VERSION = '2.4.4';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const ART = window.LHQ_ART;
@@ -187,7 +187,7 @@
     slow: false,
     reciter: 'alafasy',
     hearts: true,
-    actions: true,
+    actions: false, // the "Do it" actions start off (v2.4.4); grown-ups can switch them on
     fullscreen: false,
     pzrtl: false, // Picture Puzzle from right to left
   };
@@ -959,10 +959,11 @@
   }
   function loopRing() {
     // an almost full circle with a gap at the top; while looping, it empties one step per play
-    const left = loopRun ? Math.max(0, 1 - Math.floor(loopRun.played / loopRun.per) / loopRun.total) : 1;
+    const counting = loopRun && loopRun.total > 1; // a single play doesn't count down
+    const left = counting ? Math.max(0, 1 - Math.floor(loopRun.played / loopRun.per) / loopRun.total) : 1;
     const arc = (cls, len) => `<circle class="${cls}" cx="24" cy="24" r="18" pathLength="360" stroke-dasharray="${len} 400" transform="rotate(-60 24 24)"/>`;
-    const n = loopRun ? Math.max(1, loopRun.total - Math.floor(loopRun.played / loopRun.per)) : loopN; // plays left, counting down
-    return `<svg viewBox="0 0 48 48" aria-hidden="true">${arc('lr-track', 300)}${arc('lr-arc', (300 * left).toFixed(1))}${loopRun ? '' : '<path class="lr-tip" d="M14.8 12.1L17.8 6.9L11.8 6.8"/>'}<text x="24" y="28.6" text-anchor="middle">${n}×</text></svg>`;
+    const n = counting ? Math.max(1, loopRun.total - Math.floor(loopRun.played / loopRun.per)) : loopN; // plays left, counting down
+    return `<svg viewBox="0 0 48 48" aria-hidden="true">${arc('lr-track', 300)}${arc('lr-arc', (300 * left).toFixed(1))}${counting ? '' : '<path class="lr-tip" d="M14.8 12.1L17.8 6.9L11.8 6.8"/>'}<text x="24" y="28.6" text-anchor="middle">${n}×</text></svg>`;
   }
   function drawLoops() {
     document.querySelectorAll('.loopbtn').forEach((b) => {
@@ -1939,7 +1940,7 @@
       ${cl.pic ? sceneHTML(a) : `<div class="mystery-q">?</div>`}
       ${cl.pic ? gest(a) : ''}
       ${shown}
-      ${cl.full ? '' : '<button class="hintbtn" data-act="hint" aria-label="A hint: one more word">💡</button>'}
+      ${cl.full ? '' : '<button class="hintbtn" data-act="hint" aria-label="A hint: one more word">💡 Hint</button>'}
     </div>
     ${coach(prev ? `What comes after ${pics(prev)}? Say <b>āyah ${k + 1}</b>, then tap the frog!` : `Say <b>āyah ${k + 1}</b>, then tap the frog to hop!`, `<span class="frogico">${ART.frog()}</span>`)}
   </div>`;
@@ -2040,6 +2041,7 @@
     const outlines = J.cells
       .map((cl, j) => (st.placed[j] ? '' : `<g data-j="${j}" transform="translate(${cl.c * 100} ${cl.r * 100})"><path class="pz-hole" d="${cl.path}"/><text x="50" y="62" text-anchor="middle">${big ? j + 1 : range(ctx())[j] + 1}</text></g>`))
       .join('');
+    const saying = st.say != null ? items[st.say] : null;
     const slots = J.cells
       .map((cl, j) =>
         st.placed[j]
@@ -2049,16 +2051,25 @@
       .join('');
     const left = st.deck.filter((j) => !st.placed[j]);
     const full = !left.length;
-    const saying = st.say != null ? items[st.say] : null;
     return `<div class="screen" style="${cv(s.color)}">
     ${bar(big ? 'Big Puzzle' : 'Picture Puzzle', `${s.name}${big ? ' · whole sūrah' : multi(s) ? ' · ' + partLabel(s, st.p) : ''}`, 'surah')}
     ${heartsBar()}
-    ${coach(full ? 'All in place! 🎉' : st.sel != null ? 'Now tap the place where it fits!' : big ? 'Each checkpoint is a big piece. <b>Drag</b> them together in order!' : '<b>Drag</b> each piece to where it fits, and say that āyah! Each piece fits in only one place.', '🧩')}
+    ${coach(
+      full
+        ? 'All in place! 🎉'
+        : st.sel != null
+          ? 'Now tap the place where it fits!'
+          : saying
+            ? `🗣️ <b>Say ${saying.label}!</b>${!big && prefs.actions ? ` ${s.ayat[saying.say[0]].gesture}` : ''} Then the next piece.`
+            : big
+              ? 'Each checkpoint is a big piece. <b>Drag</b> them together in order!'
+              : '<b>Drag</b> each piece to where it fits, and say that āyah! Each piece fits in only one place.',
+      '🧩',
+    )}
     <div class="pzboard ${full ? 'full' : ''}" style="aspect-ratio:${J.W}/${J.H}">
       <svg class="pz-holes" viewBox="${-PZ_M} ${-PZ_M} ${J.W} ${J.H}" aria-hidden="true">${outlines}</svg>
       ${slots}
     </div>
-    ${saying ? `<div class="say">🗣️ Say ${saying.label}! ${!big && prefs.actions ? `&nbsp;<span style="font-weight:600">${s.ayat[saying.say[0]].gesture}</span>` : ''}</div>` : ''}
     <div class="deck pzdeck">${left.map((j) => `<div class="pcard pzt ${st.sel === j ? 'sel' : ''}" data-k="${j}" role="button" aria-label="Puzzle piece">${pieceSVG(J.cells[j].path, PZ_FILL[j % PZ_FILL.length])}<span class="pzbody">${items[j].html}</span></div>`).join('')}</div>
     ${saying && !big ? `<details class="adult"><summary>👁️ Grown-up check · ${saying.label}</summary><div class="ar sm" lang="ar">${s.ayat[saying.say[0]].ar}</div></details>` : ''}
   </div>`;
@@ -2233,8 +2244,7 @@
       a = achievements(prof);
     return `<div class="screen showscr">
     ${bar('My Achievements', prof.name ? esc(prof.name) : 'Explorer', 'bag')}
-    <div class="show-stage"><button class="wd-ex" data-act="exmove" aria-label="Tap your explorer">${explorer({ view: 'front' })}</button>
-      <div class="show-name">${prof.name ? esc(prof.name) : 'Explorer'}</div></div>
+    <div class="show-stage"><button class="wd-ex" data-act="exmove" aria-label="Tap your explorer">${explorer({ view: 'front' })}</button></div>
     <div class="achgrid">${ACH_ROWS(a)
       .map(([ic, big, sub]) => `<div class="ach"><span class="ach-ic">${ic}</span><b>${big}</b><small>${sub}</small></div>`)
       .join('')}</div>
@@ -2358,7 +2368,7 @@
         `<div class="recrow ${r.id === prefs.reciter ? 'on' : ''}"><button class="recpick" data-act="reciter" data-id="${r.id}"><span class="rdot"></span><span>${esc(r.name)}<small>${esc(r.note)}${r.mb ? ` · ${r.mb} MB` : ''}</small></span></button><button class="icon-btn sm" data-act="sample" data-id="${r.id}" aria-label="Hear a sample">${ICON.play}</button></div>`,
     ).join('');
     return `<div class="screen">
-    ${bar('Grown-up Corner', `Settings · v${VERSION}`, st.back || 'splash')}
+    ${bar('Grown-up Corner', `Settings · v${VERSION}`, st.back || 'splash', '<button class="icon-btn helpbtn" data-act="help" aria-label="How to use it, and the disclaimer">❓</button>')}
     <div class="sheet">
       <h3>🧒 Explorers</h3>
       ${store.profiles
@@ -2413,19 +2423,6 @@
     <div class="sheet">
       <h3>🧭 Version</h3>
       <div class="setrow"><span>Little Hafiz Quest v${VERSION}<small>You can switch to the classic version any time</small></span><button class="btn small" data-act="versions">Change</button></div>
-    </div>
-    <div class="sheet">
-      <h3>📖 How to use it</h3>
-      <ol class="tips">
-        <li><b>Pick a step.</b> In each sūrah: the quest (Look &amp; Repeat, then Word Steps), then the review games (Stepping Stones, then the Picture Puzzle).</li>
-        <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Then do the 🏁 whole sūrah.</li>
-        <li><b>Every level finished for the first time wins a gift.</b> One star wins a sūrah's treasure and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, and every few stars wins a prize from the star track (an astronaut set, kufis for boys, hijabs for girls, new hats, buddies and more). Memorized = Stepping Stones done.</li>
-        <li><b>The summit.</b> A star in every sūrah: the explorer climbs the mountain, and every treasure, every sticker and the Summit cloak are theirs. Three stars in every sūrah: the Hafiz crown. Every single star: the one-of-a-kind Golden hoopoe.</li>
-        <li><b>Revise any sūrah any time:</b> tap it on the map, or tap the 📖 / ⭐ counters at the top of the map to see every sūrah and jump straight in. In review games, tap “Not quite” when a mistake is made; a 💔 on the map shows where the hearts ran out.</li>
-        <li><b>5–10 minutes a day is plenty.</b> Stop while it's still fun; recite again at bedtime or in ṣalāh.</li>
-      </ol>
-      <div class="notice" role="note"><p>ℹ️ The pictures are memory hooks only, not literal images of the meaning. The simple meanings are written for young children; check a full tafsīr for detail.</p>
-      <p><b>Please check the Qur'an text and recitation</b> against a trusted muṣḥaf or teacher. They come from public sources and are not guaranteed to be free of mistakes.</p></div>
     </div>
   </div>`;
   };
@@ -2732,6 +2729,26 @@
     <p class="saveinfo" style="text-align:center">This can't be undone.</p>
     <div class="row"><button class="btn wide" data-act="cno">Cancel</button><button class="btn wide danger" data-act="cyes">${yesLabel}</button></div></div>`;
     m.classList.add('show');
+  }
+  /* How to use it: the tips, the disclaimer, and where to report a problem */
+  const REPO = 'https://github.com/akramali/little-hafiz-quest';
+  function showHelp() {
+    const m = document.getElementById('modal');
+    m.innerHTML = `<div class="card helpcard"><h3>📖 How to use it</h3>
+      <ol class="tips">
+        <li><b>Pick a step.</b> In each sūrah: the quest (Look &amp; Repeat, then Word Steps), then the review games (Stepping Stones, then the Picture Puzzle).</li>
+        <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Then do the 🏁 whole sūrah.</li>
+        <li><b>Every level finished for the first time wins a gift.</b> One star wins a sūrah's treasure and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, every few stars wins a prize from the star track, and every 100 stars a star badge. Memorized = Stepping Stones done.</li>
+        <li><b>The summit.</b> A star in every sūrah: the explorer climbs the mountain, and every treasure, every sticker and the Summit cloak are theirs. Three stars in every sūrah: the Hafiz crown. Every single star: the one-of-a-kind Golden hoopoe.</li>
+        <li><b>Revise any sūrah any time:</b> tap it on the map, or tap the 📖 / ⭐ counters at the top of the map to see every sūrah and jump straight in. In review games, tap “Not quite” when a mistake is made; a 💔 on the map shows where the hearts ran out.</li>
+        <li><b>5–10 minutes a day is plenty.</b> Stop while it's still fun; recite again at bedtime or in ṣalāh.</li>
+      </ol>
+      <div class="notice" role="note"><p>ℹ️ The pictures are memory hooks only, not literal images of the meaning. The simple meanings are written for young children; check a full tafsīr for detail.</p>
+      <p><b>Please check the Qur'an text and recitation</b> against a trusted muṣḥaf or teacher. They come from public sources and are not guaranteed to be free of mistakes.</p></div>
+      <p class="saveinfo">Little Hafiz Quest is free and open source. Found a mistake or a bug, or have an idea? Please tell us in the project's <a href="${REPO}/issues" target="_blank" rel="noopener">Issues on GitHub</a>. The code: <a href="${REPO}" target="_blank" rel="noopener">github.com/akramali/little-hafiz-quest</a>.</p>
+      <div class="row"><button class="btn wide" data-act="cno">Close</button></div></div>`;
+    m.classList.add('show');
+    m.querySelector('.helpcard').scrollTop = 0;
   }
   function showBism() {
     const m = document.getElementById('modal');
@@ -3294,6 +3311,10 @@
         if (s) bismSaid = s.n;
         b.classList.remove('breathe');
         showBism();
+        break;
+      case 'help':
+        sfx.tap();
+        showHelp();
         break;
       case 'bismplay':
         playList([[1, 1]], { once: true });
