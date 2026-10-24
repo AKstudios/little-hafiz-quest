@@ -384,20 +384,30 @@
       root.querySelectorAll('.mamb').forEach((el) => io.observe(el));
     }
 
-    /* world rail: a floating world-map button (under the settings button) that opens the list of worlds;
-       the world on screen is highlighted, and picking one jumps there */
+    /* world rail: a floating world-map button (under the settings button) saying which world is on screen;
+       it opens a card of every world (each icon on its own sky and ground), and picking one jumps there */
     const railEl = document.createElement('nav');
     railEl.className = 'wrail';
     railEl.setAttribute('aria-label', 'Worlds');
+    const MAP_ICON =
+      '<svg class="wr-mapic" viewBox="0 0 48 40" aria-hidden="true"><g stroke="#2b2340" stroke-width="2.4" stroke-linejoin="round">' +
+      '<path d="M3 8L16 4L32 8L45 4V32L32 36L16 32L3 36Z" fill="#fff3cf"/><path d="M16 4V32M32 8V36" fill="none"/>' +
+      '<path d="M16 4L32 8V36L16 32Z" fill="#ffe3a3"/></g>' +
+      '<path d="M8 28Q12 20 19 22T29 16Q34 13 38 15" fill="none" stroke="#e8543a" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="1 4.2"/>' +
+      '<path d="M38 7C34.7 7 32.5 9.5 32.5 12.5C32.5 16.5 38 22 38 22S43.5 16.5 43.5 12.5C43.5 9.5 41.3 7 38 7Z" fill="#ff5d6c" stroke="#2b2340" stroke-width="2"/><circle cx="38" cy="12.5" r="2.2" fill="#fff"/>' +
+      '<path d="M6 12L10 10M6 16L9 15" stroke="#5fb2ff" stroke-width="2" stroke-linecap="round"/></svg>';
     function drawRail() {
+      const cur = Math.max(0, railW);
       railEl.innerHTML =
-        `<button class="wr-toggle" data-act="worlds" aria-expanded="false" aria-label="Jump to a world"><span class="wr-map">🗺️</span><span class="wr-cur">${Math.max(1, railW + 1)}</span></button><div class="wr-list">` +
+        `<button class="wr-toggle" data-act="worlds" aria-expanded="false" aria-label="Worlds: jump to another world">${MAP_ICON}<span class="wr-cur">World ${cur + 1}</span></button><div class="wr-list">` +
         cfg.worlds
           .map((w, wi) => {
-            const pr = cfg.worldProgress(wi);
+            const pr = cfg.worldProgress(wi),
+              pl = pal(wi);
             const names = ART.PROPS_BY_WORLD[wi] || [];
             const ic = ART.props[cfg.worldIcon ? cfg.worldIcon(wi) : names[0]] || '';
-            return `<button class="wr ${pr.done ? 'done' : ''}" data-act="world" data-w="${wi}" style="--wc:${pal(wi).accent};--p:${Math.round(pr.frac * 100)}" aria-label="World ${wi + 1}: ${w.name}"><span class="wr-ic">${ic}</span><span class="wr-n">${wi + 1}</span></button>`;
+            const land = `background:linear-gradient(180deg,${pl.sky[0]},${pl.sky[1]} 58%,${pl.ground[0]} 58%,${pl.ground[1]})`;
+            return `<button class="wr ${pr.done ? 'done' : ''} ${wi === cur ? 'on' : ''}" data-act="world" data-w="${wi}" style="--wc:${pl.accent};--p:${Math.round(pr.frac * 100)}" aria-label="World ${wi + 1}: ${w.name}"><span class="wr-dot"><span class="wr-ic" style="${land}">${ic}</span></span><span class="wr-tx"><b>World ${wi + 1}${pr.done ? ' ✓' : ''}</b><small>${w.name}</small></span></button>`;
           })
           .reverse()
           .join('') +
@@ -414,7 +424,7 @@
       railW = b.wi;
       railEl.querySelectorAll('.wr').forEach((el) => el.classList.toggle('on', +el.dataset.w === b.wi));
       const cur = railEl.querySelector('.wr-cur');
-      if (cur) cur.textContent = b.wi + 1;
+      if (cur) cur.textContent = 'World ' + (b.wi + 1);
       if (cfg.onWorld) cfg.onWorld(b.wi);
     }
 

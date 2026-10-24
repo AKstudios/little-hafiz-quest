@@ -1,7 +1,7 @@
 {
   "latest": "v2",
   "versions": [
-    { "id": "v2", "label": "v2.4.4 · latest", "note": "The quest map, your own explorer, over 150 things to win, hearts and progress" },
+    { "id": "v2", "label": "v2.4.5 · latest", "note": "The quest map, your own explorer, over 150 things to win, hearts and progress" },
     { "id": "v1", "label": "v1.3.0 · classic", "note": "The original island list, simple and calm" }
   ]
 }

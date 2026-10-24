@@ -37,7 +37,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.4.4';
+  const VERSION = '2.4.5';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const ART = window.LHQ_ART;
@@ -1229,7 +1229,28 @@
     render(true);
   }
   const GAMES = ['learn', 'words', 'path', 'order'];
-  let sceneKeyNow = '';
+  let sceneKeyNow = '',
+    sceneSky = '#bfe6ff'; // the top of the world's sky behind the screen
+  /* The phone's own bars blend in: the status bar takes the color at the top of each screen (theme-color),
+     and the page paints behind both bars in the screen's own colors (see body::before and --pagebg). */
+  const themeMeta = document.querySelector('meta[name="theme-color"]');
+  function setTopColor(c) {
+    if (themeMeta && themeMeta.getAttribute('content') !== c) themeMeta.setAttribute('content', c);
+  }
+  const SPLASH_SKY = ['#7fc8ff', '#0d0f33'], // the start screen's sky (art.js lhq-g-sky / lhq-g-skyn), day / night
+    SPLASH_GROUND = ['#967d80', '#584e69']; // and the shaded ledge at its bottom
+  function blendBars() {
+    const night = isNight(),
+      hasBar = !!$app.querySelector('.bar');
+    document.body.classList.toggle('hasbar', hasBar);
+    if (st.view === 'splash' || st.view === 'summit') {
+      setTopColor(SPLASH_SKY[+night]);
+      document.documentElement.style.setProperty('--pagebg', SPLASH_GROUND[+night]);
+    } else if (st.view === 'map') {
+      const g = ART.WORLDS[0]; // the map's bottom is the first world's meadow
+      document.documentElement.style.setProperty('--pagebg', night && g.dim ? g.dim.ground[1] : g.ground[1]);
+    } else setTopColor(hasBar ? mixHex(sceneSky, night ? '#0e0f2d' : '#cdebff', 0.86) : sceneSky); // the top bar (--barbg) over the sky
+  }
   /* the living background behind lessons: the world's sky, a strip of ground with props, gentle motion */
   function setScene(wi) {
     const night = isNight();
@@ -1239,6 +1260,7 @@
     const key = wi == null ? 'none' : wi + (night ? 'n' : 'd');
     if (key === sceneKeyNow) return;
     sceneKeyNow = key;
+    if (sky) sceneSky = sky[0];
     // what shows past the end of the page on a phone: the ground of this world
     const gw = ART.WORLDS[wi == null ? 0 : wi];
     document.documentElement.style.setProperty('--pagebg', night && gw.dim ? gw.dim.ground[1] : gw.ground[1]);
@@ -1313,6 +1335,7 @@
     else if (scroll) window.scrollTo({ top: 0, behavior: 'auto' });
     if (st.view === 'surah') showSelectedCheckpoint();
     if (st.view === 'path') showStoneSet(false);
+    blendBars();
     if (st.view === 'bag') {
       // keep the chosen category in view in its sideways row
       const tabs = document.getElementById('wtabs'),
@@ -1469,6 +1492,10 @@
       status: surahStatus,
       explorerSVG: () => explorer({ view: 'front' }),
       worldIcon: (wi) => WORLD_ICON[wi],
+      onWorld: (wi) => {
+        const w = ART.WORLDS[wi];
+        setTopColor(isNight() && w.dim ? w.dim.sky[0] : w.sky[0]); // the status bar follows the world in view
+      },
       worldProgress: (wi) => {
         const list = S.filter((s) => worldOf(s) === wi);
         const done = list.filter((s) => surahDone(s)).length;
