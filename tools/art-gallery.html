@@ -39,6 +39,17 @@
     .splash .safe2 { position: absolute; left: 0; right: 0; top: 0; height: 12%; border-bottom: 2px dashed rgba(255,255,255,.7); }
     .mapdemo { position: relative; width: 360px; height: 220px; border-radius: 12px; overflow: hidden; }
     .mapdemo svg.ex { position: absolute; width: 60px; height: 90px; }
+    /* the game's two small head crops: the hair picker (.hairpick) and the round profile head (.phead) */
+    .hp { width: 54px; height: 64px; border-radius: 16px; overflow: hidden; position: relative; background: #f3e6cf; margin: 0 auto; }
+    .hp > svg { position: absolute; width: 108px; height: 162px; left: -27px; top: -4px; }
+    .ph { width: 48px; height: 48px; border-radius: 50%; overflow: hidden; position: relative; background: #f3e6cf; margin: 4px auto 0; }
+    .ph > svg { position: absolute; width: 70px; height: 106px; left: -9px; top: -10px; }
+    .cell.mini { width: 70px; }
+    .cell.big { width: 166px; overflow: hidden; } .cell.big svg { width: 160px; height: 190px; }
+    .cell.hat { width: 100px; overflow: hidden; padding: 4px 2px; } .cell.hat svg { width: 96px; height: 114px; }
+    .grid.kidrow { gap: 6px; }
+    .cell.big svg, .cell.hat svg { overflow: hidden; }
+    .kidrow { background: rgba(255,255,255,.45); border-radius: 12px; padding: 8px; margin-bottom: 8px; }
   </style>
   <script>window.__errs = []; window.onerror = function (m, s, l, c) { window.__errs.push(m + ' @' + l + ':' + c); };</script>
   <script src="../js/art.js"></script>
@@ -47,7 +58,7 @@
   <h1>Little Hafiz Quest: art gallery</h1>
   <nav>
     <a href="#items">items</a><a href="#stickers">stickers</a><a href="#gifts">gifts &amp; pieces</a><a href="#props">props</a><a href="#ambient">ambient</a>
-    <a href="#ex-hair">explorer looks</a><a href="#ex-items">explorer items</a><a href="#ex-worlds">decked</a><a href="#ex-walk">walk</a><a href="#splash">splash</a><a href="#worlds">worlds</a>
+    <a href="#ex-styles">hair styles</a><a href="#ex-hair">explorer looks</a><a href="#ex-items">explorer items</a><a href="#ex-worlds">decked</a><a href="#ex-walk">walk</a><a href="#splash">splash</a><a href="#worlds">worlds</a>
   </nav>
   <main id="out"></main>
   <script>
@@ -91,6 +102,56 @@
         let h = '';
         A.WORLDS.forEach((W, i) => { h += '<div class="amb" style="background:linear-gradient(' + W.sky[0] + ',' + W.sky[1] + ' 65%,' + W.ground[0] + ' 65%,' + W.ground[1] + ')"><b>' + W.key + '</b>' + tryf(() => A.ambient(i)) + '</div>'; });
         sec('ambient', 'Ambient layers', h);
+      }
+
+      // hair styles by kid: front and back in two hair colors, small head crops, all colors, hats, moods
+      if (A.LOOKS.hairFor) {
+        const HF = A.LOOKS.hairFor, HATS = ['explorer-cap', 'ranger-hat', 'sun-hat', 'bucket-hat', 'beanie', 'kufi', 'star-helmet', 'summit-crown', 'hafiz-crown'];
+        let hs = '';
+        ['boy', 'girl'].forEach((kid, ki) => {
+          hs += '<div id="styles-' + kid + '"><h3>' + kid + ' (default: ' + HF[kid][0] + ')</h3><div class="grid kidrow">';
+          HF[kid].forEach((hair, i) => [i % 4, (i + 2) % 4].forEach((hc, j) => {
+            const l = { kid, hair, skin: (i + j * 2 + ki) % 5, hairColor: hc, hijabColor: i % 6 };
+            hs += cell(tryf(() => A.explorer(l, {})), hair + ' · color ' + hc, 'ex') + cell(tryf(() => A.explorer(l, {}, { view: 'back' })), 'back', 'ex');
+          }));
+          hs += '</div></div>';
+        });
+        // close-ups: head and shoulders, big
+        const close = (svg) => svg.replace('viewBox="0 0 200 300"', 'viewBox="14 20 160 190" style="width:160px;height:190px"');
+        hs += '<div id="styles-close"><h3>Close-ups (front, back)</h3><div class="grid kidrow">';
+        A.LOOKS.hair.forEach((hair, i) => {
+          const l = { kid: HF.girl.indexOf(hair) >= 0 ? 'girl' : 'boy', hair, skin: (i * 2) % 5, hairColor: (i + 1) % 4, hijabColor: i % 6 };
+          hs += cell(tryf(() => close(A.explorer(l, {}))), hair, 'big') + cell(tryf(() => close(A.explorer(l, {}, { view: 'back' }))), 'back', 'big');
+        });
+        hs += '</div></div>';
+        hs += '<div id="styles-mini"><h3>Small heads (hair picker crop, profile head): boy row, then girl row</h3>';
+        ['boy', 'girl'].forEach((kid) => {
+          hs += '<div class="grid kidrow">' + A.LOOKS.hair.map((hair, i) => {
+            const l = { kid, hair, skin: i % 5, hairColor: i % 4, hijabColor: i % 6 };
+            return '<div class="cell mini"><div class="hp">' + tryf(() => A.explorer(l, {}, { cls: 'mini' })) + '</div><div class="ph">' + tryf(() => A.explorer(l, {}, { cls: 'mini' })) + '</div><div>' + hair + '</div></div>';
+          }).join('') + '</div>';
+        });
+        hs += '</div><div id="styles-face"><h3>Same hair, boy face vs girl face (normal, sad, shine; then a hijab and a hijab item)</h3><div class="grid kidrow">';
+        [['short', 1], ['ponytail', 3], ['curly', 4]].forEach(([hair, skin]) => ['boy', 'girl'].forEach((kid) => ['', 'sad', 'shine'].forEach((mood) => {
+          hs += cell(tryf(() => A.explorer({ kid, hair, skin, hairColor: 1 }, {}, { mood }).replace('viewBox="0 0 200 300"', 'viewBox="14 0 160 190" style="width:96px;height:114px"')), hair + ' · ' + kid + (mood ? ' · ' + mood : ''), 'hat');
+        })));
+        const cu = (svg) => svg.replace('viewBox="0 0 200 300"', 'viewBox="14 0 160 190" style="width:96px;height:114px"');
+        hs += cell(tryf(() => cu(A.explorer({ kid: 'girl', hair: 'hijab', skin: 2, hijabColor: 3 }, {}))), 'hijab', 'hat') + cell(tryf(() => cu(A.explorer({ kid: 'girl', hair: 'long', skin: 0 }, { hijab: 'hijab-dots' }))), 'long + hijab item', 'hat') +
+          cell(tryf(() => cu(A.explorer({ kid: 'girl', hair: 'bun', skin: 3 }, { hijab: 'hijab-gold', hat: 'summit-crown' }, { mood: 'sad' }))), 'hijab item + tiara, sad', 'hat') +
+          cell(tryf(() => cu(A.explorer({ kid: 'girl', hair: 'braid', skin: 1, hairColor: 2 }, { glasses: 'moon-glasses' }, { mood: 'shine' }))), 'braid + glasses, shine', 'hat') + '</div></div>';
+        hs += '<div id="styles-colors"><h3>Every hair color</h3><div class="grid kidrow">';
+        A.LOOKS.hair.filter((h) => h !== 'hijab').forEach((hair, i) => A.LOOKS.hairColor.forEach((c, k) => {
+          hs += cell(tryf(() => A.explorer({ kid: A.isGirl({ hair }) ? 'girl' : 'boy', hair, skin: (i + k) % 5, hairColor: k }, {}, { cls: 'mini' })), hair + ' ' + k, 'ex tiny');
+        }));
+        hs += '</div></div><div id="styles-hats"><h3>Hats and glasses on every style</h3>';
+        A.LOOKS.hair.filter((h) => h !== 'hijab').forEach((hair, i) => {
+          const kid = HF.girl.indexOf(hair) >= 0 ? 'girl' : 'boy', l = { kid, hair, skin: i % 5, hairColor: i % 4 };
+          const hc = (o, v) => tryf(() => A.explorer(l, o, { view: v }).replace('viewBox="0 0 200 300"', 'viewBox="14 0 160 190" style="width:96px;height:114px"'));
+          hs += '<div class="grid kidrow" id="hats-' + hair + '">' + HATS.map((hat, k) => cell(hc({ hat, glasses: k === 0 ? 'sunrise-shades' : k === 3 ? 'goggles' : k === 4 ? 'round-specs' : null }), hair + ' · ' + hat.replace(/-hat$/, ''), 'hat')).join('') +
+            cell(hc({ hat: 'ranger-hat' }, 'back'), 'back · ranger', 'hat') + cell(hc({ hat: 'beanie' }, 'back'), 'back · beanie', 'hat') +
+            cell(hc({ hat: 'summit-crown' }, 'back'), 'back · crown', 'hat') + '</div>';
+        });
+        sec('ex-styles', 'Hair styles by kid', hs + '</div>');
       }
 
       // explorer looks
@@ -145,6 +206,13 @@
       if (A.WORLDS) {
         sec('worlds', 'Worlds (meadow at the bottom → peak at the top): sky / ground / path, light then dim',
           '<div style="display:flex;gap:16px">' + ['', 'dim'].map((mode) => '<div class="strip">' + A.WORLDS.map((W) => { const c = mode ? W.dim : W; return '<div><span style="background:linear-gradient(' + c.sky[0] + ',' + c.sky[1] + ')">' + W.key + ' ' + W.name + '</span><span style="background:linear-gradient(' + c.ground[0] + ',' + c.ground[1] + ')">ground</span><span style="background:' + c.path[0] + ';border:4px solid ' + c.path[1] + '">path</span><span style="background:' + (W.accent) + '">accent</span></div>'; }).join('') + '</div>').join('') + '</div>');
+      }
+      const only = new URLSearchParams(location.search).get('only');
+      const onlyEl = only && document.getElementById(only);
+      if (onlyEl && onlyEl.tagName !== 'H2') out.replaceChildren(onlyEl);
+      else if (only) {
+        let keep = false;
+        Array.from(out.children).forEach((el) => { if (el.tagName === 'H2') keep = el.id === only; if (!keep) el.remove(); });
       }
       window.__done = true;
     })();

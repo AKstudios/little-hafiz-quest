@@ -281,7 +281,7 @@
             ${st.done ? '<span class="ncheck">✓</span>' : ''}
             ${st.fix ? '<span class="nfix" title="Needs fixing">💔</span>' : ''}
             ${st.gift ? `<span class="ngift">${ART.gift({ tier: st.giftTier || 1, open: false, kind: 'item' })}</span>` : ''}
-            <span class="nlab"><b>${s.name}</b><small>${st.done ? '✓ Memorized' : `⭐ ${st.stars}/${st.max}`}</small></span>
+            <span class="nlab"><b>${s.name}</b><small>${st.done ? `✓ ⭐ ${st.stars}/${st.max}` : `⭐ ${st.stars}/${st.max}`}</small></span>
           </button>`,
         );
         (st.lost || []).forEach((id, j) => {

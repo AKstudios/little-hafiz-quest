@@ -18,10 +18,12 @@
  *
  * The quest
  *   - Splash → Begin → the map (An-Nās at the bottom, An-Naba’ on the mountain top).
- *   - Inside a sūrah: 1 Look & Repeat → 2 Word Steps → 3 Stepping Stones (3 levels) → review games.
+ *   - Inside a sūrah: 1 Look & Repeat → 2 Word Steps → 3 Stepping Stones (3 levels) → review games
+ *     (a jigsaw Picture Puzzle, What Comes Next). A long sūrah's whole-sūrah step adds the Big Puzzle.
+ *     The 📖 Read button opens the whole sūrah as a muṣḥaf page.
  *   - A sūrah is "memorized" when its Stepping Stones Level 3 is done (whole sūrah for long ones).
- *     That gives the sūrah's gift (clothes, gear or a pet for the explorer). The first finished
- *     activity of each day gives a sticker.
+ *     Gifts: a sūrah's first star gives its treasure, and every level finished for the first time
+ *     brings a gift (see finish and giveLevelGift).
  *   - Review games (Stepping Stones, Picture Puzzle, What Comes Next) use 3 hearts once a part has been
  *     learned. Losing all 3 drops the newest item at that sūrah; finishing a game there brings it back.
  *     Grown-ups can switch hearts off.
@@ -35,7 +37,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.3.2';
+  const VERSION = '2.4.0';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const ART = window.LHQ_ART;
@@ -170,6 +172,7 @@
     hearts: true,
     actions: true,
     fullscreen: false,
+    pzrtl: false, // Picture Puzzle from right to left
   };
   let store = null;
   let prefs = Object.assign({}, DEFAULT_PREFS);
@@ -221,6 +224,7 @@
           };
         }),
         all: int(v.all, 0, 3, 0),
+        big: v.big ? 1 : 0, // the whole-sūrah Big Puzzle (no star; a gift the first time)
       };
     }
     return out;
@@ -250,8 +254,9 @@
       hair: ART.LOOKS.hair.includes(L.hair) ? L.hair : 'short',
       hairColor: int(L.hairColor, 0, ART.LOOKS.hairColor.length - 1, 0),
       hijabColor: int(L.hijabColor, 0, ART.LOOKS.hijabColor.length - 1, 0),
-      kid: ART.LOOKS.kid.includes(L.kid) ? L.kid : '', // '' = not chosen yet (a ponytail or hijab counts as girl)
+      kid: ART.LOOKS.kid.includes(L.kid) ? L.kid : '', // '' = not chosen yet (a girl's hair style counts as girl)
     };
+    if (p.look.kid && !ART.LOOKS.hairFor[p.look.kid].includes(p.look.hair)) p.look.hair = ART.LOOKS.hairFor[p.look.kid][0]; // boys and girls have their own styles
     p.prog = cleanProg(o.prog);
     const uniq = (a) => [...new Set(a)];
     p.items = uniq((Array.isArray(o.items) ? o.items : []).filter((id) => ITEM[id] && !starter(ITEM[id])));
@@ -298,7 +303,7 @@
   function cleanPrefs(o) {
     const out = Object.assign({}, DEFAULT_PREFS);
     if (!o || typeof o !== 'object') return out;
-    ['meaning', 'translit', 'sfx', 'audio', 'slow', 'hearts', 'actions', 'fullscreen'].forEach((k) => {
+    ['meaning', 'translit', 'sfx', 'audio', 'slow', 'hearts', 'actions', 'fullscreen', 'pzrtl'].forEach((k) => {
       if (typeof o[k] === 'boolean') out[k] = o[k];
     });
     if (['auto', 'light', 'dim'].includes(o.theme)) out.theme = o.theme;
@@ -592,29 +597,171 @@
     fabKey = '',
     playRec = 'alafasy'; // the reciter of what is playing now
   const pad = (n) => String(n).padStart(3, '0');
-  /* items: [sūrah, āyah (1-based)] or [sūrah, āyah, word index] for a single word */
+  /* The loop button (Look & Repeat, the muṣḥaf): Listen plays 1, 3, 10 or 99 times (until Stop). */
+  const LOOPS = [1, 3, 10, 99];
+  let loopN = 1,
+    loopRun = null; // while looping: { total, per, played } (per = segments in one pass)
+  /* items: [sūrah, āyah (1-based)] or [sūrah, āyah, word index] for a single word.
+     opts: once (ignore the repeat setting), loop (play the whole list that many times), reciter. */
   function playList(items, opts) {
+    opts = opts || {};
     if (!prefs.audio) {
       toast('The reciter is switched off in the Grown-up Corner');
       return;
     }
-    const id = (opts && opts.reciter) || reciter().id;
+    unlockAudio();
+    const id = opts.reciter || reciter().id;
     playRec = id;
     queue = [];
-    items.forEach((it) => {
-      const reps = it.length > 2 || (opts && opts.once) ? 1 : prefs.repeat;
-      for (let r = 0; r < reps; r++) queue.push(it);
-    });
+    if (opts.loop > 1) {
+      for (let r = 0; r < opts.loop; r++) queue.push(...items);
+      loopRun = { total: opts.loop, per: items.length, played: 0 };
+    } else {
+      loopRun = null;
+      items.forEach((it) => {
+        const reps = it.length > 2 || opts.once || opts.loop ? 1 : prefs.repeat;
+        for (let r = 0; r < reps; r++) queue.push(it);
+      });
+    }
     playing = true;
+    const tok = ++playTok;
     updateFab();
     loadTimings(id)
-      .then(() => {
-        if (playing) playNext();
-      })
       .catch(() => {
+        throw new Error(navigator.onLine === false ? 'This reciter is not saved for offline use yet.' : 'The recitation could not load. Try again in a moment.');
+      })
+      .then(() => prepFile(id, items[0][0], tok))
+      .then((url) => {
+        if (!playing || tok !== playTok) return;
+        fileSrc = url;
+        playNext();
+      })
+      .catch((e) => {
+        if (tok !== playTok) return;
         stopAudio();
-        toast(navigator.onLine === false ? 'This reciter is not saved for offline use yet.' : 'The recitation could not load. Try again in a moment.');
+        if (e && e.message !== 'cancel') toast(e.message || 'The recitation could not play. Try again in a moment.');
       });
+  }
+  let playTok = 0;
+
+  /* Recitation files are downloaded whole and kept on the device before they first play, then play from
+     memory. Streaming a long sūrah and jumping deep into it on a slow connection is what failed on some
+     phones; a whole file always plays. Small files come down quietly; a long sūrah asks first. */
+  const BIG_FILE = 700 * 1024;
+  const FETCH_OK = /^https?:$/.test(location.protocol);
+  const audioHref = (id, n) => new URL(`audio/${id}/${pad(n)}.mp3`, location.href).href;
+  let fileKey = '',
+    fileSrc = '',
+    blobUrl = '',
+    dlPct = null; // download progress shown on the Listen button
+  async function storedAudio(href) {
+    if (!OFFLINE_OK) return null;
+    try {
+      const hit = await (await caches.open(AUDIO_CACHE)).match(href);
+      return hit ? await hit.blob() : null;
+    } catch (e) {
+      return null;
+    }
+  }
+  async function prepFile(id, n, tok) {
+    const key = id + '/' + n;
+    if (key === fileKey) return blobUrl;
+    const href = audioHref(id, n);
+    if (!FETCH_OK) return href; // opened from a file: play it straight from there
+    let blob = await storedAudio(href);
+    if (!blob) blob = await downloadAudio(id, n, href, tok);
+    if (blobUrl) URL.revokeObjectURL(blobUrl);
+    blobUrl = URL.createObjectURL(new Blob([blob], { type: 'audio/mpeg' }));
+    fileKey = key;
+    return blobUrl;
+  }
+  async function downloadAudio(id, n, href, tok) {
+    const offlineMsg = 'This recitation is not saved for offline use yet. Connect to the internet once to hear it.';
+    let size = 0;
+    try {
+      const h = await fetch(href, { method: 'HEAD', cache: 'no-cache' });
+      if (!h.ok) throw new Error();
+      size = +h.headers.get('content-length') || 0;
+    } catch (e) {
+      throw new Error(navigator.onLine === false ? offlineMsg : 'The recitation could not load. Try again in a moment.');
+    }
+    const big = size > BIG_FILE;
+    if (big && !(await askDownload(id, n, size))) throw new Error('cancel');
+    if (tok !== playTok) throw new Error('cancel');
+    let res;
+    try {
+      res = await fetch(href, { cache: 'no-cache' });
+      if (!res.ok || res.status !== 200) throw new Error();
+    } catch (e) {
+      throw new Error(navigator.onLine === false ? offlineMsg : 'The recitation could not load. Try again in a moment.');
+    }
+    const total = size || +res.headers.get('content-length') || 0;
+    const chunks = [];
+    let got = 0;
+    const show = (pct) => {
+      dlPct = pct;
+      const bar = document.getElementById('dlbar');
+      if (bar) bar.style.width = pct + '%';
+      updateFab();
+    };
+    show(0);
+    try {
+      if (res.body && res.body.getReader) {
+        const rd = res.body.getReader();
+        for (;;) {
+          const { done, value } = await rd.read();
+          if (done) break;
+          chunks.push(value);
+          got += value.length;
+          if (total) show(Math.min(99, Math.round((got / total) * 100)));
+        }
+      } else chunks.push(await res.arrayBuffer());
+    } catch (e) {
+      throw new Error('The download stopped. Check the internet connection and try again.');
+    } finally {
+      dlPct = null;
+      if (big) closeModal('.dlcard');
+      updateFab();
+    }
+    const blob = new Blob(chunks, { type: 'audio/mpeg' });
+    if (OFFLINE_OK)
+      caches
+        .open(AUDIO_CACHE)
+        .then((c) => c.put(href, new Response(blob, { headers: { 'Content-Type': 'audio/mpeg', 'Content-Length': String(blob.size) } })))
+        .then(() => (offline.saved = null))
+        .catch(() => {});
+    return blob;
+  }
+  /* a long sūrah not saved yet: ask before downloading it (resolves true to download) */
+  let dlAnswer = null;
+  function askDownload(id, n, size) {
+    const s = BYN[n],
+      mb = (size / 1048576).toFixed(1);
+    const m = document.getElementById('modal');
+    m.innerHTML = `<div class="card dlcard"><div class="dlico">⬇️</div><h3>${s ? s.name : 'This sūrah'} needs downloading first</h3>
+      <p class="saveinfo">It's a long sūrah (${mb} MB). It downloads once and is then saved on this device, so it plays even without internet.</p>
+      <div class="dlprog"><i id="dlbar"></i></div>
+      <div class="row"><button class="btn wide" data-act="dlno">Not now</button><button class="btn go wide" data-act="dlyes">Download</button></div></div>`;
+    m.classList.add('show');
+    return new Promise((res) => (dlAnswer = res));
+  }
+  function closeModal(sel) {
+    const m = document.getElementById('modal');
+    if (!sel || m.querySelector(sel)) m.classList.remove('show');
+  }
+  /* Phones only let a page start sound straight after a tap. Playing a moment of silence on the tap keeps
+     the player allowed to start the recitation once its file is ready, even after a download. */
+  let unlocked = false;
+  function unlockAudio() {
+    if (unlocked || !FETCH_OK) return;
+    unlocked = true;
+    try {
+      player.src = 'audio/silence.mp3';
+      const pr = player.play();
+      if (pr && pr.catch) pr.catch((e) => e && e.name === 'NotAllowedError' && (unlocked = false));
+    } catch (e) {
+      unlocked = false;
+    }
   }
   let segTimer = null,
     curSeg = null,
@@ -647,7 +794,8 @@
         seg = { start: Math.max(0, w[0] + (it[2] === 0 ? -0.03 : 0.03)), end: (lastW ? ay[1] : w[1] + 0.05) + 0.06 };
       } else seg = { start: Math.max(0, ay[0] - 0.05), end: ay[1] + 0.15 };
       curSeg = seg;
-      const url = `audio/${id}/${pad(it[0])}.mp3`;
+      markNow(it);
+      const url = fileSrc || `audio/${id}/${pad(it[0])}.mp3`;
       if (player.getAttribute('src') !== url) player.src = url;
       player.defaultPlaybackRate = player.playbackRate = prefs.slow ? 0.8 : 1;
       const seek = () => {
@@ -683,6 +831,10 @@
     clearInterval(segTimer);
     segTimer = null;
     curSeg = null;
+    if (loopRun) {
+      loopRun.played++;
+      drawLoops();
+    }
     const tok = ++advTok;
     setTimeout(() => {
       if (playing && tok === advTok) playNext();
@@ -692,6 +844,12 @@
     playing = false;
     queue = [];
     advTok++;
+    playTok++;
+    loopRun = null;
+    if (dlAnswer) {
+      dlAnswer(false);
+      dlAnswer = null;
+    }
     clearInterval(segTimer);
     segTimer = null;
     curSeg = null;
@@ -700,6 +858,11 @@
       player.muted = false;
     } catch (e) {}
     updateFab();
+    drawLoops();
+    markNow(null);
+  }
+  function markNow(it) {
+    document.querySelectorAll('.mayah').forEach((el) => el.classList.toggle('now', !!it && it.length === 2 && +el.dataset.k === it[1] - 1));
   }
   player.addEventListener('seeked', () => {
     if (curSeg && player.currentTime >= curSeg.start - 0.1) player.muted = false;
@@ -722,19 +885,25 @@
   function fabTarget() {
     const v = st.view,
       s = S[st.i];
-    if (!s || !['surah', 'learn', 'path', 'order', 'next', 'words'].includes(v)) return null;
+    if (!s || !['surah', 'learn', 'path', 'order', 'next', 'words', 'mushaf'].includes(v)) return null;
     const one = (k) => ({ key: `${s.n}:${k}`, label: `Āyah ${k + 1}`, items: [[s.n, k + 1]] });
     const many = (ks, label) => ({ key: `${s.n}:${ks.join(',')}`, label, items: ks.map((k) => [s.n, k + 1]) });
     const c = ctx();
     if (v === 'surah') return multi(s) && st.p !== 'all' ? many(range(c), `Part ${st.p + 1}`) : many(range(c), 'Whole sūrah');
-    if (v === 'learn') return st.phase === 'chain' ? many(chainList(), 'The chain') : one(st.a);
+    if (v === 'learn') return st.phase === 'chain' ? many(chainList(), 'The chain') : Object.assign(one(st.a), { loop: true });
     if (v === 'path') return one(c.from + st.k);
-    if (v === 'order') return st.say != null ? one(st.say) : many(range(c), 'In order');
+    if (v === 'order') {
+      const all = st.p === 'all' ? range({ from: 0, to: s.ayat.length - 1 }) : range(c);
+      if (st.say == null) return many(all, st.p === 'all' ? 'Whole sūrah' : 'In order');
+      const ks = puzzleItems()[st.say].say;
+      return ks.length > 1 ? many(ks, `Āyāt ${ks[0] + 1}–${ks[ks.length - 1] + 1}`) : one(ks[0]);
+    }
     if (v === 'next') {
       const cur = st.rounds[st.r];
       return one(st.picked ? cur + 1 : cur);
     }
     if (v === 'words') return one(st.a);
+    if (v === 'mushaf') return Object.assign(st.sel != null ? one(st.sel) : many(range({ from: 0, to: s.ayat.length - 1 }), 'Whole sūrah'), { loop: true });
     return null;
   }
   function updateFab() {
@@ -743,9 +912,9 @@
       f.classList.toggle('show', !!t && prefs.audio);
       f.classList.toggle('playing', playing);
       f.querySelector('b').textContent = playing ? 'Stop' : 'Listen';
-      if (t) f.querySelector('small').textContent = t.label;
+      if (t) f.querySelector('small').textContent = dlPct != null ? `Downloading ${dlPct}%` : t.label;
       const rep = f.querySelector('.rep');
-      rep.hidden = prefs.repeat < 2;
+      rep.hidden = prefs.repeat < 2 || !t || !!t.loop;
       rep.textContent = '×' + prefs.repeat;
     });
     const key = t ? t.key : '';
@@ -755,6 +924,23 @@
       return;
     }
     fabKey = key;
+  }
+
+  /* the loop button: how many times Listen plays, as a ring that empties as the plays go by */
+  function loopBtn() {
+    return `<button class="loopbtn ${loopN > 1 ? 'on' : ''}" data-act="loop" aria-label="Listen plays ${loopN === 99 ? 'again and again' : loopN === 1 ? 'once' : loopN + ' times'}. Tap to change">${loopRing()}</button>`;
+  }
+  function loopRing() {
+    // an almost full circle with a gap at the top; while looping, it empties one step per play
+    const left = loopRun ? Math.max(0, 1 - Math.floor(loopRun.played / loopRun.per) / loopRun.total) : 1;
+    const arc = (cls, len) => `<circle class="${cls}" cx="24" cy="24" r="18" pathLength="360" stroke-dasharray="${len} 400" transform="rotate(-60 24 24)"/>`;
+    return `<svg viewBox="0 0 48 48" aria-hidden="true">${arc('lr-track', 300)}${arc('lr-arc', (300 * left).toFixed(1))}${loopRun ? '' : '<path class="lr-tip" d="M14.8 12.1L17.8 6.9L11.8 6.8"/>'}<text x="24" y="28.6" text-anchor="middle">${loopN}×</text></svg>`;
+  }
+  function drawLoops() {
+    document.querySelectorAll('.loopbtn').forEach((b) => {
+      b.innerHTML = loopRing();
+      b.classList.toggle('on', loopN > 1);
+    });
   }
 
   /* ================= effects ================= */
@@ -874,7 +1060,6 @@
   function bar(title, sub, to, extra) {
     return `<div class="bar"><button class="icon-btn" data-act="back" data-to="${to}" aria-label="Back">${ICON.back}</button>
     <div class="bar-title">${title}${sub ? `<small>${sub}</small>` : ''}</div>${extra || ''}
-    <button class="icon-btn" data-act="bism" aria-label="Bismillah">${ICON.moon}</button>
     <button class="listen" data-act="fab" aria-label="Listen to the recitation"><span class="ic"><svg viewBox="0 0 24 24"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="#fff"/><path d="M15.5 9a4 4 0 0 1 0 6"/><path d="M18.3 6.5a7.5 7.5 0 0 1 0 11"/></svg><span class="stop"></span></span><span><b>Listen</b><small></small></span><span class="rep" hidden></span></button></div>`;
   }
   function coach(html, icon = '🦉', extra = '') {
@@ -1013,8 +1198,10 @@
       save();
     }
     st = Object.assign({ view }, params);
+    if (GAMES.includes(view)) st.starsBefore = totalStars(); // a first finish (a new star) always brings a gift
     render(true);
   }
+  const GAMES = ['learn', 'words', 'path', 'order', 'next'];
   let sceneKeyNow = '';
   /* the living background behind lessons: the world's sky, a strip of ground with props, gentle motion */
   function setScene(wi) {
@@ -1095,6 +1282,7 @@
     if (st.view === 'map') mountMap();
     else if (scroll) window.scrollTo({ top: 0, behavior: 'auto' });
     if (st.view === 'surah') showSelectedCheckpoint();
+    if (st.view === 'path') showStoneSet(false);
     if (st.view === 'bag') {
       // keep the chosen category in view in its sideways row
       const tabs = document.getElementById('wtabs'),
@@ -1173,8 +1361,7 @@
     const L = prof.look;
     const sw = (k, list, kind, label) =>
       `<div class="swatches">${list.map((c, j) => `<button class="swatch2 ${L[k] === j ? 'on' : ''}" data-act="look" data-k="${k}" data-v="${j}" aria-label="${label} ${j + 1}" aria-pressed="${L[k] === j}">${swatchArt(kind, c)}</button>`).join('')}</div>`;
-    const hairs = ART.LOOKS.hair
-      .filter((h) => h !== 'hijab' || ART.isGirl(L))
+    const hairs = ART.LOOKS.hairFor[ART.isGirl(L) ? 'girl' : 'boy']
       .map(
         (h) =>
           `<button class="hairpick ${L.hair === h ? 'on' : ''}" data-act="look" data-k="hair" data-v="${h}" aria-label="${h}" aria-pressed="${L.hair === h}">${ART.explorer(Object.assign({}, L, { hair: h }), {}, { view: 'front', cls: 'mini' })}</button>`,
@@ -1322,9 +1509,12 @@
       });
     });
   }
+  /* the Bismillah moon on a sūrah's page breathes each time the sūrah is entered, until it is tapped */
+  let bismSaid = null;
   function openSurah(i) {
     const s = S[i],
       r = P().prog[s.n];
+    bismSaid = null;
     let p = 0;
     if (multi(s)) {
       const sug = s.P.findIndex((_, q) => !(r && r.parts[q] && r.parts[q].path >= 3));
@@ -1338,7 +1528,20 @@
     const r = P().prog[s.n];
     if (p === 'all') {
       const got = (r && r.all) || 0;
-      return [{ key: 'pathpick', ico: '🐸', t: 'Stepping Stones · whole sūrah', d: 'Every part in one go, with fewer and fewer clues', done: got >= 3, stars: [got, 3] }];
+      const ready = bigReady(s);
+      return [
+        { key: 'pathpick', ico: '🐸', t: 'Stepping Stones · whole sūrah', d: 'Every part in one go, with fewer and fewer clues', done: got >= 3, stars: [got, 3] },
+        {
+          key: ready ? 'order' : 'biglocked',
+          ico: '🧩',
+          t: 'Big Puzzle · whole sūrah',
+          d: ready ? "Fit every checkpoint's puzzle together" : "Finish the Picture Puzzle in every checkpoint first",
+          done: !!(r && r.big),
+          stars: [0, 0],
+          review: true,
+          locked: !ready,
+        },
+      ];
     }
     const x = (r && r.parts[p]) || blank();
     const beads = `<span class="beads-ico" style="color:${WCOL[5]}">${WCOL.slice(0, 6)
@@ -1400,19 +1603,20 @@
         stepsHTML += `<div class="qsep"><span>Review games</span>${prefs.hearts ? `<small>${ART.heart(true).repeat(maxHearts(P()))} careful, ${maxHearts(P())} hearts!</small>` : ''}</div>`;
       }
       const isNext = j === nextIdx;
-      stepsHTML += `<button class="qstep ${x.done ? 'done' : ''} ${isNext ? 'next' : ''}" data-act="${x.key}" ${p === 'all' ? 'data-p="all"' : ''}>
+      stepsHTML += `<button class="qstep ${x.done ? 'done' : ''} ${isNext && !x.locked ? 'next' : ''} ${x.locked ? 'locked' : ''}" data-act="${x.key}" ${p === 'all' ? 'data-p="all"' : ''}>
         <span class="qn">${x.done ? '✓' : j + 1}</span><span class="qico">${x.ico}</span>
         <span class="qtx"><b>${x.t}</b><small>${x.d}</small><span class="st">${starRow(x.stars[0], x.stars[1])}</span></span>
-        ${isNext ? '<span class="qgo">Start ▶</span>' : ''}</button>`;
+        ${isNext && !x.locked ? '<span class="qgo">Start ▶</span>' : x.locked ? '<span class="qgo lock">🔒</span>' : ''}</button>`;
     });
     return `<div class="screen ${st.enter ? 'zoomin' : ''}" style="${cv(s.color)}">
     ${bar(`${s.n}. ${s.name}`, `World ${wi + 1} · ${WORLDS[wi].name}`, 'map')}
-    <div class="hero"><div class="hero-icon bob">${s.icon}</div><div class="hero-ar">سُورَةُ ${s.ar}</div>
+    <div class="hero"><button class="bookbtn" data-act="mushaf" aria-label="Read the whole sūrah">📖<small>Read</small></button><div class="hero-icon bob">${s.icon}</div><div class="hero-ar">سُورَةُ ${s.ar}</div>
       <div class="hero-en">${s.meaning} · ${s.ayat.length} āyāt${multi(s) ? ` · ${s.P.length} checkpoints` : ''}</div>
       <div class="hero-st ${done ? 'done' : ''}">${done ? '✓ Memorized! MāshāAllāh' : `⭐ ${surahStars(s)} / ${surahMax(s)} stars`}</div></div>
     ${lostAt(s.n).length ? `<div class="lostnote">${lostAt(s.n).map((x) => `<span class="lostit">${itemPic(x.id)}</span>`).join('')}<span>Your <b>${lostAt(s.n).map((x) => itemName(x.id)).join(', ')}</b> fell off here! Finish a review game to get it back.</span></div>` : ''}
     ${multi(s) ? checkpointTrail(s) : ''}
-    <div class="h2">${p === 'all' ? '🏁 The whole sūrah' : multi(s) ? `🧭 Part ${p + 1}: your quest` : '🧭 Your quest'}<small>${nextIdx < 0 ? 'All done here! Play any game again to revise.' : 'Tap the glowing step to start'}</small></div>
+    <div class="h2 qhead2"><span>${p === 'all' ? '🏁 The whole sūrah' : multi(s) ? `🧭 Part ${p + 1}: your quest` : '🧭 Your quest'}<small>${nextIdx < 0 ? 'All done here! Play any game again to revise.' : 'Tap the glowing step to start'}</small></span>
+      <button class="bismbtn ${bismSaid === s.n ? '' : 'breathe'}" data-act="bism" aria-label="Say Bismillah first">${ICON.moon}<small>Bismillah</small></button></div>
     <div class="qsteps">${stepsHTML}</div>
     <div class="tip"><div class="tip-h">💡 Tip for grown-ups</div><div class="tip-b">${s.pattern}</div>${s.toy ? `<div class="tip-toy">${toyBtn(s)}<span>Tap the ${s.toy[0]} together with your child each time you hear it.</span></div>` : ''}</div>
   </div>`;
@@ -1437,7 +1641,8 @@
     } else {
       const blur = st.phase === 'alone' && !st.peek;
       body = `
-      <div class="card">
+      <div class="card lcard">
+        ${loopBtn()}
         ${tag(s, k)}
         ${sceneHTML(a)}
         ${gest(a)}
@@ -1464,12 +1669,81 @@
   </div>`;
   };
 
-  /* ---------- WORD STEPS (no emoji in this mode; tap a word to hear just that word) ---------- */
+  /* ---------- THE MUṢḤAF: the whole sūrah to read, for children who can read Arabic ---------- */
+  /* Hold an āyah to color its words in the same order as Word Steps; tap anywhere else to clear the colors.
+     Listen plays the whole sūrah, or only the chosen āyah; the loop button repeats it. */
+  V.mushaf = () => {
+    const s = S[st.i];
+    const ayat = s.ayat
+      .map((a, k) => {
+        const sel = st.sel === k;
+        const words = wordsOf(a.ar)
+          .map((w, j) => (sel ? `<span class="mw" style="${wv(WCOL[j % WCOL.length])}">${w}</span>` : w))
+          .join(' ');
+        return `<span class="mayah ${sel ? 'sel' : ''}" data-k="${k}">${words} <span class="mnum">﴿${toArNum(k + 1)}﴾</span></span>`;
+      })
+      .join(' ');
+    return `<div class="screen mushafscr" style="${cv(s.color)}" data-act="mclear">
+    ${bar(`📖 ${s.name}`, `${s.ayat.length} āyāt · ${st.sel != null ? `āyah ${st.sel + 1} chosen` : 'the whole sūrah'}`, 'surah')}
+    <div class="mtools"><span>${st.sel != null ? 'Listen plays this āyah. Tap anywhere to clear the colors.' : '<b>Hold an āyah</b> to color its words, like Word Steps.'}</span>${loopBtn()}</div>
+    <div class="card mushaf">
+      <div class="mtitle" lang="ar">سُورَةُ ${s.ar}</div>
+      <div class="mbism" lang="ar">${BISM}</div>
+      <div class="mtext" lang="ar" dir="rtl">${ayat}</div>
+    </div>
+  </div>`;
+  };
+  // hold an āyah (about half a second) to choose it
+  let hold = null;
+  document.addEventListener('pointerdown', (e) => {
+    if (st.view !== 'mushaf') return;
+    const el = e.target.closest('.mayah');
+    if (!el) return;
+    clearTimeout(hold && hold.t);
+    hold = {
+      x: e.clientX,
+      y: e.clientY,
+      fired: false,
+      t: setTimeout(() => {
+        hold.fired = true;
+        st.sel = +el.dataset.k;
+        sfx.pop();
+        render();
+      }, 450),
+    };
+  });
+  document.addEventListener(
+    'pointermove',
+    (e) => {
+      if (hold && !hold.fired && Math.hypot(e.clientX - hold.x, e.clientY - hold.y) > 10) {
+        clearTimeout(hold.t);
+        hold = null;
+      }
+    },
+    { passive: true },
+  );
+  ['pointerup', 'pointercancel'].forEach((ev) =>
+    document.addEventListener(ev, () => {
+      if (hold && !hold.fired) {
+        clearTimeout(hold.t);
+        hold = null;
+      }
+    }),
+  );
+  document.addEventListener('contextmenu', (e) => {
+    if (st.view === 'mushaf' && e.target.closest('.mushaf')) e.preventDefault(); // a long press chooses an āyah
+  });
+
+  /* ---------- WORD STEPS (tap a word to hear just that word) ---------- */
+  /* Every word sits in a box exactly as wide as the word, in practice and from memory alike (a hidden word
+     still takes its room, with its number on top), so each colored box stays in the same place. */
+  const wbox = (w, j, cls, attrs) => `<${attrs ? 'button' : 'span'} class="wbox ${cls}" style="${wv(WCOL[j % WCOL.length])}" ${attrs || ''}><span class="wtx" lang="ar">${w}</span><span class="wnum">${j + 1}</span></${attrs ? 'button' : 'span'}>`;
   V.words = () => {
     const s = S[st.i],
       c = ctx(),
       k = st.a,
-      W = wordsOf(s.ayat[k].ar),
+      a = s.ayat[k],
+      W = wordsOf(a.ar),
       n = W.length;
     const col = (j) => WCOL[j % WCOL.length];
     const track = `<div class="wlabel">Āyah tracker</div><div class="wtrack">${range(c)
@@ -1483,9 +1757,7 @@
     let stage, controls, note;
     if (st.phase === 'build') {
       stage = `<div class="wflow">${W.map((w, j) =>
-        j < st.w
-          ? `<button class="word ${j === st.w - 1 ? 'new' : ''}" style="${wv(col(j))}" data-act="sayw" data-n="${s.n}" data-k="${k}" data-w="${j}" lang="ar">${w}</button>`
-          : `<span class="word ph" style="${wv(col(j))}"></span>`,
+        j < st.w ? wbox(w, j, `word ${j === st.w - 1 ? 'new' : ''}`, `data-act="sayw" data-n="${s.n}" data-k="${k}" data-w="${j}"`) : wbox(w, j, 'word ph'),
       ).join('')}</div>`;
       note =
         st.w === 1
@@ -1497,8 +1769,8 @@
       const all = st.shown.length === n;
       stage = `<div class="wflow">${W.map((w, j) =>
         st.shown.includes(j)
-          ? `<button class="wtile shown" style="${wv(col(j))}" data-act="sayw" data-n="${s.n}" data-k="${k}" data-w="${j}" lang="ar">${w}</button>`
-          : `<button class="wtile" style="${wv(col(j))}" data-act="wshow" data-j="${j}">${j + 1}</button>`,
+          ? wbox(w, j, 'wtile shown', `data-act="sayw" data-n="${s.n}" data-k="${k}" data-w="${j}"`)
+          : wbox(w, j, 'wtile', `data-act="wshow" data-j="${j}" aria-label="Word ${j + 1}"`),
       ).join('')}</div>`;
       note = all ? 'Every word in its place. Well done!' : 'Child says the whole āyah from memory. Grown-up taps each tile as the word is said.';
       const last = nextTodo(c, k, [...st.doneA, k]) < 0;
@@ -1511,7 +1783,7 @@
     ${track}
     <div class="wlabel" style="margin-top:6px">Word order</div>
     ${beads}
-    <div class="wstage">${stage}
+    <div class="wstage"><div class="wpic"><span class="num">${k + 1}</span>${pics(a)}<b>${a.hook}</b></div>${stage}
       <div class="wcount">${st.phase === 'build' ? `Word ${st.w} of ${n}` : `${st.shown.length} of ${n} words`}</div></div>
     <div class="wnote">${note}</div>
     <div class="row">${controls}</div>
@@ -1546,6 +1818,44 @@
     const words = Math.max(0, Math.min(W.length, (L === 1 ? 1 : 0) + h - picAt));
     return { pic, words, W, full: words >= W.length, steps: picAt + W.length - (L === 1 ? 1 : 0) };
   }
+  /* The stones, at most two rows at a time: a long run is split into sets of STONES_PER that swipe sideways
+     (dots below jump between sets). After the last stone of a set, the frog hops on to the next set. */
+  const STONES_PER = 10;
+  function stonesHTML(idx, wi) {
+    const stone = (x, j) =>
+      j === st.k
+        ? `<button class="stone cur" data-j="${j}" data-act="hop" aria-label="Hop to the next stone"><span class="stbg">${ART.stone(wi)}</span><span class="frog">${ART.frog()}</span></button>`
+        : `<span class="stone ${j < st.k ? 'done' : ''}" data-j="${j}"><span class="stbg">${ART.stone(wi)}</span><b>${j < st.k ? '✓' : x + 1}</b></span>`;
+    const set = (from) => {
+      const xs = idx.slice(from, from + STONES_PER);
+      return `<div class="stones" style="--cols:${Math.min(5, xs.length)}">${xs.map((x, q) => stone(x, from + q)).join('')}</div>`;
+    };
+    if (idx.length <= STONES_PER) return set(0);
+    const sets = [];
+    for (let j = 0; j < idx.length; j += STONES_PER) sets.push(j);
+    const cur = Math.floor(st.k / STONES_PER);
+    return `<div class="stsets" id="stsets">${sets.map((j) => `<div class="stset">${set(j)}</div>`).join('')}</div>
+      <div class="stdots">${sets.map((j, q) => `<button class="${q === cur ? 'on' : ''}" data-act="stset" data-q="${q}" aria-label="Āyāt ${idx[j] + 1} to ${idx[Math.min(idx.length, j + STONES_PER) - 1] + 1}"></button>`).join('')}</div>`;
+  }
+  /* keep the frog's set in view (only when it changes, so a child can look around), and the dots in step */
+  function showStoneSet(smooth) {
+    const el = document.getElementById('stsets');
+    if (!el) return;
+    const q = Math.floor(st.k / STONES_PER);
+    if (el._q !== q) {
+      el._q = q;
+      el.scrollTo({ left: q * el.clientWidth, behavior: smooth ? 'smooth' : 'auto' });
+    }
+    const dots = () => {
+      const at = Math.round(el.scrollLeft / Math.max(1, el.clientWidth));
+      el.nextElementSibling.querySelectorAll('button').forEach((b, j) => b.classList.toggle('on', j === at));
+    };
+    dots();
+    if (!el._watch) {
+      el._watch = true;
+      el.addEventListener('scroll', dots, { passive: true });
+    }
+  }
   V.path = () => {
     const s = S[st.i],
       c = ctx(),
@@ -1564,13 +1874,7 @@
     return `<div class="screen" style="${cv(s.color)}">
     ${bar('Stepping Stones', `${s.name} · Level ${L}${c.all ? ' · whole sūrah' : ''}`, 'pathpick')}
     ${heartsBar()}
-    <div class="stream w${wi}"><div class="stones ${idx.length > 12 ? 'many' : ''}">${idx
-      .map((x, j) =>
-        j === st.k
-          ? `<button class="stone cur" data-act="hop" aria-label="Hop to the next stone"><span class="stbg">${ART.stone(wi)}</span><span class="frog">${ART.frog()}</span></button>`
-          : `<span class="stone ${j < st.k ? 'done' : ''}"><span class="stbg">${ART.stone(wi)}</span><b>${j < st.k ? '✓' : x + 1}</b></span>`,
-      )
-      .join('')}</div></div>
+    <div class="stream w${wi}">${stonesHTML(idx, wi)}</div>
     <div class="row pathbtns">
       <button class="btn wide" data-act="hint" ${cl.full ? 'disabled' : ''}>💡 Hint</button>
       <button class="btn go wide" data-act="hop">✅ Said it!</button>
@@ -1586,28 +1890,110 @@
   </div>`;
   };
 
-  /* ---------- PICTURE PUZZLE (drag & drop) ---------- */
+  /* ---------- PICTURE PUZZLE: a jigsaw ---------- */
+  /* Each āyah is a jigsaw piece with its picture. The edges interlock, so a piece only fits in its own place:
+     left to right, row by row (or right to left, a Grown-up Corner choice). In the whole sūrah ("Big Puzzle"),
+     each checkpoint becomes one big piece, and the big pieces fit together the same way. */
+  const PZ_M = 24; // room around a 100-unit piece for its knobs
+  const PZ_FILL = ['#ffd9e4', '#d5efff', '#ddf7d2', '#fff0c2', '#e8dcff', '#ffe2c8'];
+  function seeded(n) {
+    let a = n >>> 0;
+    return () => {
+      a = (a + 0x6d2b79f5) | 0;
+      let t = Math.imul(a ^ (a >>> 15), 1 | a);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+  // knob outlines along an edge of length 1 (u along the edge, v outwards): round, square, pointed
+  const KNOBS = [
+    (a) => [['L', a - 0.07, 0], ['C', a - 0.03, 0.06, a - 0.13, 0.08, a - 0.12, 0.15], ['C', a - 0.11, 0.25, a + 0.11, 0.25, a + 0.12, 0.15], ['C', a + 0.13, 0.08, a + 0.03, 0.06, a + 0.07, 0]],
+    (a) => [['L', a - 0.09, 0], ['L', a - 0.09, 0.17], ['L', a + 0.09, 0.17], ['L', a + 0.09, 0]],
+    (a) => [['L', a - 0.12, 0], ['L', a, 0.2], ['L', a + 0.12, 0]],
+  ];
+  /* The board: n pieces in `cols` columns, each piece's outline path (100 units a side) and its cell. */
+  function jigsaw(n, cols, seed, rtl) {
+    const rnd = seeded(seed),
+      rows = Math.ceil(n / cols);
+    const at = (r, c) => {
+      const j = r * cols + (rtl ? cols - 1 - c : c);
+      return r >= 0 && c >= 0 && c < cols && j < n ? j : -1;
+    };
+    const E = {};
+    const edge = (key) => E[key] || (E[key] = { d: rnd() < 0.5 ? 1 : -1, sh: (rnd() * 3) | 0, a: 0.38 + rnd() * 0.24 });
+    const side = (x0, y0, x1, y1, e, out) => {
+      // from (x0,y0) to (x1,y1); out: +1 knob outwards, -1 inwards, 0 flat
+      if (!e || !out) return `L${x1} ${y1}`;
+      const dx = x1 - x0,
+        dy = y1 - y0,
+        nx = dy * out,
+        ny = -dx * out,
+        a = out === e.d ? e.a : 1 - e.a; // the same spot seen from either piece
+      const pt = (u, v) => `${(x0 + u * dx + v * nx).toFixed(1)} ${(y0 + u * dy + v * ny).toFixed(1)}`;
+      return KNOBS[e.sh](a)
+        .map(([cmd, ...q]) => cmd + (cmd === 'C' ? `${pt(q[0], q[1])} ${pt(q[2], q[3])} ${pt(q[4], q[5])}` : pt(q[0], q[1])))
+        .join('') + `L${x1} ${y1}`;
+    };
+    const cells = [];
+    for (let r = 0; r < rows; r++)
+      for (let c = 0; c < cols; c++) {
+        const j = at(r, c);
+        if (j < 0) continue;
+        const up = at(r - 1, c) >= 0 ? edge(`v${r - 1},${c}`) : null,
+          right = at(r, c + 1) >= 0 ? edge(`h${r},${c}`) : null,
+          down = at(r + 1, c) >= 0 ? edge(`v${r},${c}`) : null,
+          left = at(r, c - 1) >= 0 ? edge(`h${r},${c - 1}`) : null;
+        const path =
+          'M0 0' + side(0, 0, 100, 0, up, up ? -up.d : 0) + side(100, 0, 100, 100, right, right ? right.d : 0) + side(100, 100, 0, 100, down, down ? down.d : 0) + side(0, 100, 0, 0, left, left ? -left.d : 0) + 'Z';
+        cells[j] = { r, c, path };
+      }
+    return { cols, rows, cells, W: cols * 100 + 2 * PZ_M, H: rows * 100 + 2 * PZ_M };
+  }
+  const pieceSVG = (path, fill) =>
+    `<svg class="pz-svg" viewBox="${-PZ_M} ${-PZ_M} ${100 + 2 * PZ_M} ${100 + 2 * PZ_M}" aria-hidden="true"><path d="${path}" fill="${fill}"/></svg>`;
+  /* what the puzzle is made of: āyāt (a checkpoint, or a short sūrah) or, for the Big Puzzle, checkpoints */
+  function puzzleItems() {
+    const s = S[st.i];
+    if (st.p === 'all')
+      return s.P.map((P, p) => ({
+        html: `<span class="pzgroup"><span class="gm">${range(P).map((k) => s.ayat[k].scene[0]).join('')}</span><b>${P.from + 1}–${P.to + 1}</b></span>`,
+        say: range(P),
+        label: `āyāt ${P.from + 1}–${P.to + 1}`,
+      }));
+    return range(ctx()).map((k) => ({ html: pics(s.ayat[k]), say: [k], label: `āyah ${k + 1}`, ar: s.ayat[k].ar }));
+  }
   V.order = () => {
     const s = S[st.i],
-      c = ctx(),
-      idx = range(c);
-    const placedK = Object.values(st.placed);
-    const left = st.deck.filter((k) => !placedK.includes(k));
-    const full = left.length === 0;
-    return `<div class="screen" style="${cv(s.color)}">
-    ${bar('Picture Puzzle', `${s.name}${multi(s) ? ' · ' + partLabel(s, st.p) : ''}`, 'surah')}
-    ${heartsBar()}
-    ${coach(full ? 'All in order! 🎉' : st.sel != null ? 'Now tap the number where it goes!' : '<b>Drag</b> each picture to its number, and say that āyah! Tap a placed picture to hear it.', '🧩')}
-    <div class="slots">${idx
-      .map((k, j) =>
-        st.placed[j] != null
-          ? `<button class="slot filled" data-act="say" data-n="${s.n}" data-k="${k}" aria-label="Hear āyah ${k + 1}"><span class="num">${k + 1}</span>${pics(s.ayat[st.placed[j]])}<span class="slothear">🔊</span></button>`
-          : `<button class="slot ${st.sel != null ? 'ready' : ''}" data-act="slot" data-j="${j}"><span class="num" style="opacity:.55">${k + 1}</span></button>`,
+      big = st.p === 'all',
+      items = puzzleItems(),
+      n = items.length;
+    const J = jigsaw(n, n <= 4 ? 2 : 3, s.n * 10 + (big ? 9 : st.p), prefs.pzrtl);
+    const pct = (v, of) => ((v / of) * 100).toFixed(3) + '%';
+    const box = (c, r, pad) => `left:${pct(c * 100 + pad, J.W)};top:${pct(r * 100 + pad, J.H)};width:${pct(100 + 2 * (PZ_M - pad), J.W)};height:${pct(100 + 2 * (PZ_M - pad), J.H)}`;
+    const outlines = J.cells
+      .map((cl, j) => (st.placed[j] ? '' : `<g transform="translate(${cl.c * 100} ${cl.r * 100})"><path class="pz-hole" d="${cl.path}"/><text x="50" y="62" text-anchor="middle">${big ? j + 1 : range(ctx())[j] + 1}</text></g>`))
+      .join('');
+    const slots = J.cells
+      .map((cl, j) =>
+        st.placed[j]
+          ? `<button class="pzp" style="${box(cl.c, cl.r, 0)}" data-act="pzsay" data-j="${j}" aria-label="Hear ${items[j].label}">${pieceSVG(cl.path, PZ_FILL[j % PZ_FILL.length])}<span class="pzbody">${items[j].html}</span></button>`
+          : `<button class="slot pzslot ${st.sel != null ? 'ready' : ''}" style="${box(cl.c, cl.r, PZ_M)}" data-act="slot" data-j="${j}" aria-label="Place for ${items[j].label}"></button>`,
       )
-      .join('')}</div>
-    ${st.say != null ? `<div class="say">🗣️ Say āyah ${st.say + 1}! &nbsp;${prefs.actions ? `<span style="font-weight:600">${s.ayat[st.say].gesture}</span>` : ''}</div>` : ''}
-    <div class="deck">${left.map((k) => `<div class="pcard ${st.sel === k ? 'sel' : ''}" data-k="${k}" role="button" aria-label="Picture card">${pics(s.ayat[k])}</div>`).join('')}</div>
-    ${st.say != null ? `<details class="adult"><summary>👁️ Grown-up check · āyah ${st.say + 1}</summary><div class="ar sm" lang="ar">${s.ayat[st.say].ar}</div></details>` : ''}
+      .join('');
+    const left = st.deck.filter((j) => !st.placed[j]);
+    const full = !left.length;
+    const saying = st.say != null ? items[st.say] : null;
+    return `<div class="screen" style="${cv(s.color)}">
+    ${bar(big ? 'Big Puzzle' : 'Picture Puzzle', `${s.name}${big ? ' · whole sūrah' : multi(s) ? ' · ' + partLabel(s, st.p) : ''}`, 'surah')}
+    ${heartsBar()}
+    ${coach(full ? 'All in place! 🎉' : st.sel != null ? 'Now tap the place where it fits!' : big ? 'Each checkpoint is a big piece. <b>Drag</b> them together in order!' : '<b>Drag</b> each piece to where it fits, and say that āyah! Each piece fits in only one place.', '🧩')}
+    <div class="pzboard ${full ? 'full' : ''}" style="aspect-ratio:${J.W}/${J.H}">
+      <svg class="pz-holes" viewBox="${-PZ_M} ${-PZ_M} ${J.W} ${J.H}" aria-hidden="true">${outlines}</svg>
+      ${slots}
+    </div>
+    ${saying ? `<div class="say">🗣️ Say ${saying.label}! ${!big && prefs.actions ? `&nbsp;<span style="font-weight:600">${s.ayat[saying.say[0]].gesture}</span>` : ''}</div>` : ''}
+    <div class="deck pzdeck">${left.map((j) => `<div class="pcard pzt ${st.sel === j ? 'sel' : ''}" data-k="${j}" role="button" aria-label="Puzzle piece">${pieceSVG(J.cells[j].path, PZ_FILL[j % PZ_FILL.length])}<span class="pzbody">${items[j].html}</span></div>`).join('')}</div>
+    ${saying && !big ? `<details class="adult"><summary>👁️ Grown-up check · ${saying.label}</summary><div class="ar sm" lang="ar">${s.ayat[saying.say[0]].ar}</div></details>` : ''}
   </div>`;
   };
 
@@ -1682,7 +2068,8 @@
   V.done = () => {
     const s = S[st.i];
     const plain = st.plain; // Word Steps keeps its celebration emoji-free
-    const stars = plain ? `<span class="tstar">★</span>`.repeat(st.stars || 1) : '<span>⭐</span>'.repeat(st.stars || 1);
+    const nst = st.stars == null ? 1 : st.stars; // the Big Puzzle gives no star
+    const stars = plain ? `<span class="tstar">★</span>`.repeat(nst) : '<span>⭐</span>'.repeat(nst);
     const prof = P();
     // a recovered item flies back onto the sad explorer, who then smiles (and shines when nothing else is lost)
     const found =
@@ -1711,6 +2098,7 @@
     ${world}
     ${st.cpGift ? `<div class="memo">🚩 Checkpoint crossed! A little gift for you.</div>` : ''}
     ${st.prizes ? `<div class="memo">⭐ ${totalStars()} stars! ${st.prizes > 1 ? st.prizes + ' prizes' : 'A prize'} for you.</div>` : ''}
+    ${st.levelGift ? `<div class="memo">🎁 ${st.firstTime ? 'Your first Big Puzzle' : 'A new star'}! A little gift for you.</div>` : ''}
     ${nextPrizeNote(prof)}
     ${g ? `<button class="giftbtn" data-act="opengift"><span class="rattle">${giftArt(g)}</span>${prof.pending.length > 1 ? `<span class="badge">${prof.pending.length}</span>` : ''}<b>${prof.pending.length > 1 ? prof.pending.length + ' gifts' : 'A gift'} for you!</b><small>Tap to open${prof.pending.length > 1 ? ' one at a time' : ''}</small></button>` : ''}
     <div class="row" style="margin-top:22px">
@@ -1743,12 +2131,12 @@
      scrolls sideways. */
   V.bag = () => {
     const prof = P(),
-      tab = st.tab || 'look',
+      tab = st.tab || 'hat',
       worn = wornOutfit(prof);
-    const tabs = ['look', ...SLOTS.filter((t) => t !== 'hijab' || kidOf(prof) === 'girl'), 'stickers']
+    const tabs = [...SLOTS.filter((t) => t !== 'hijab' || kidOf(prof) === 'girl'), 'stickers']
       .map((t) => {
-        const ic = t === 'look' ? '🙂' : t === 'stickers' ? '⭐' : SLOT_INFO[t][0];
-        const nm = t === 'look' ? 'Me' : t === 'stickers' ? 'Stickers' : SLOT_INFO[t][1];
+        const ic = t === 'stickers' ? '⭐' : SLOT_INFO[t][0];
+        const nm = t === 'stickers' ? 'Stickers' : SLOT_INFO[t][1];
         const isNew = prof.fresh.some((k) => (t === 'stickers' ? k[0] === 's' : k[0] === 'i' && ITEM[k.slice(2)].slot === t));
         return `<button class="wtab ${tab === t ? 'on' : ''} ${isNew ? 'hasnew' : ''}" data-act="tab" data-t="${t}"><span>${ic}</span><small>${nm}</small>${isNew ? NEWDOT : ''}</button>`;
       })
@@ -1773,7 +2161,7 @@
       ? `<button class="wd-side wd-comfy on" data-act="comfy" aria-label="Put my things back on">✨<small>Back</small></button>`
       : `<button class="wd-side wd-comfy" data-act="comfy" ${fancy ? '' : 'disabled'} aria-label="Just comfy clothes">👕<small>Comfy</small></button>`;
     return `<div class="screen bagscr">
-    ${bar('My Explorer', prof.name ? esc(prof.name) : 'Dress up and collect', 'map', giftIcon(prof, 'inbar'))}
+    ${bar('My Explorer', prof.name ? esc(prof.name) : 'Dress up and collect', 'map', giftIcon(prof, 'inbar') + `<button class="icon-btn mebtn ${tab === 'look' ? 'on' : ''}" data-act="tab" data-t="${tab === 'look' ? 'hat' : 'look'}" aria-label="Change how I look" aria-pressed="${tab === 'look'}"><span>🙂</span><small>Me</small></button>`)}
     <div class="wd-stage"><button class="wd-ex" data-act="exmove" aria-label="Tap your explorer">${explorer({ view: st.backView ? 'back' : 'front' })}</button>${comfy}<button class="wd-side wd-turn" data-act="turn" aria-label="Turn around">↻<small>Turn</small></button></div>
     <div class="wtabs" id="wtabs">${tabs}</div>
     <div class="wbody">${body}</div>
@@ -1828,7 +2216,7 @@
       <h3>🔊 Sounds</h3>
       ${tg('audio', 'Listen button', 'The orange button at the top plays the reciter')}
       <div class="setrow col"><span>Reciter<small>Tap ▶ to hear a sample</small></span><div class="recs">${recs}</div></div>
-      <div class="setrow"><span>Repeat each āyah<small>Hear it again and again</small></span>${seg('repeat', [
+      <div class="setrow"><span>Repeat each āyah<small>Hear it again and again (Look &amp; Repeat and the muṣḥaf have their own loop button)</small></span>${seg('repeat', [
         [1, '1×'],
         [2, '2×'],
         [3, '3×'],
@@ -1839,6 +2227,7 @@
     <div class="sheet">
       <h3>❤️ Game</h3>
       ${tg('hearts', 'Hearts in review games', 'Three hearts, plus one for each finished world (up to 5). Losing them all drops an item, which comes back after trying again')}
+      ${tg('pzrtl', 'Puzzle from right to left', 'The Picture Puzzle fills from the right, like reading Arabic. Off: left to right, row by row')}
     </div>
     ${noExplorers() ? '' : `    <div class="sheet">
       <h3>💾 Progress${prof.name ? ` · ${esc(prof.name)}` : ''}</h3>
@@ -1859,7 +2248,7 @@
       <ol class="tips">
         <li><b>Follow the glowing step.</b> In each sūrah: 1 Look &amp; Repeat, 2 Word Steps, 3 Stepping Stones (levels 1 → 3), then the review games.</li>
         <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Then do the 🏁 whole sūrah.</li>
-        <li><b>One star wins a sūrah's treasure</b> and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, and every few stars wins a prize from the star track (an astronaut set, kufis for boys, hijabs for girls, new hats, buddies and more). Memorized = Stepping Stones Level 3.</li>
+        <li><b>Every level finished for the first time wins a gift.</b> One star wins a sūrah's treasure and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, and every few stars wins a prize from the star track (an astronaut set, kufis for boys, hijabs for girls, new hats, buddies and more). Memorized = Stepping Stones Level 3.</li>
         <li><b>The summit.</b> A star in every sūrah: the explorer climbs the mountain, and every treasure, every sticker and the Summit cloak are theirs. Three stars in every sūrah: the Hafiz crown. Every single star: the one-of-a-kind Golden hoopoe.</li>
         <li><b>Revise any sūrah any time:</b> tap it on the map, or tap the 📖 / ⭐ counters at the top of the map to see every sūrah and jump straight in. In review games, tap “Not quite” when a mistake is made; a 💔 on the map shows where the hearts ran out.</li>
         <li><b>5–10 minutes a day is plenty.</b> Stop while it's still fun; recite again at bedtime or in ṣalāh.</li>
@@ -2048,6 +2437,8 @@
   function finish(extra) {
     const s = S[st.i];
     const prof = P();
+    const giftsBefore = prof.pending.length,
+      newStar = st.starsBefore != null && totalStars(prof) > st.starsBefore;
     // lost items at this sūrah come back after finishing a review game here
     if (['path', 'order', 'next'].includes(st.view)) {
       prof.fix = prof.fix.filter((n) => n !== s.n);
@@ -2072,6 +2463,7 @@
     if (st.view === 'path' && multi(s) && st.p !== 'all' && giveCheckpointGift(s, st.p)) extra.cpGift = true;
     giveDailyGift();
     extra.prizes = giveTrackPrizes(prof);
+    if ((newStar || extra.firstTime) && prof.pending.length === giftsBefore && giveLevelGift(prof)) extra.levelGift = true;
     // the summit milestones for the whole Juz
     const feats = Object.keys(FEAT_TEST).filter((f) => !prof.feats.includes(f) && FEAT_TEST[f](prof));
     feats.forEach((f) => {
@@ -2118,7 +2510,22 @@
     });
     return n;
   }
-  const nextPrize = (prof) => TRACK.find((it) => it.track > totalStars(prof)) || null;
+  const nextPrize = (prof) => TRACK.find((it) => it.track > totalStars(prof) && !hasOrWaits(it, prof) && forKid(it, prof)) || null;
+  const hasOrWaits = (it, prof) => prof.items.includes(it.id) || prof.pending.some((g) => g.id === it.id);
+  /* Every level finished for the first time brings a gift. When nothing else came with it: a sticker not
+     collected yet, or once there are none left, the next prize on the star track, early. */
+  function giveLevelGift(prof) {
+    const have = new Set([...prof.stickers, ...prof.pending.filter((g) => g.k === 's').map((g) => g.id)]);
+    const left = ART.STICKERS.filter((x) => !have.has(x.id));
+    if (left.length) {
+      prof.pending.push({ k: 's', id: left[(Math.random() * left.length) | 0].id, m: 1 });
+      return true;
+    }
+    const early = TRACK.find((it) => forKid(it, prof) && !hasOrWaits(it, prof));
+    if (!early) return false;
+    prof.pending.push({ k: 'i', id: early.id });
+    return true;
+  }
   function giveCheckpointGift(s, p) {
     const prof = P(),
       key = s.n + ':' + p;
@@ -2184,7 +2591,13 @@
       gotIt(prof, 'i:' + g.id);
       art = itemPic(g.id);
       name = itemName(g.id);
-      sub = it.feat ? FEAT_WHY[it.feat] : it.track ? `A prize for collecting ${it.track} stars!` : TIER_LABEL[it.tier || 1] + ` From ${BYN[it.from].name}.`;
+      sub = it.feat
+        ? FEAT_WHY[it.feat]
+        : it.track
+          ? totalStars(prof) < it.track
+            ? `An early prize from the star track, for all your hard work!`
+            : `A prize for collecting ${it.track} stars!`
+          : TIER_LABEL[it.tier || 1] + ` From ${BYN[it.from].name}.`;
       wear = true;
     } else {
       if (!prof.stickers.includes(g.id)) prof.stickers.push(g.id);
@@ -2214,13 +2627,17 @@
   }
   function startOrder() {
     sfx.tap();
-    const p = pnum(st.p);
+    const s = S[st.i];
+    const p = st.p === 'all' && multi(s) ? 'all' : pnum(st.p);
     st.p = p;
-    const idx = range(ctx());
-    let deck = shuffle(idx);
-    while (idx.length > 1 && deck.every((v, j) => v === idx[j])) deck = shuffle(idx);
+    const n = p === 'all' ? s.P.length : range(ctx()).length;
+    const order = range({ from: 0, to: n - 1 });
+    let deck = shuffle(order);
+    while (n > 1 && deck.every((v, j) => v === order[j])) deck = shuffle(order);
     go('order', { i: st.i, p, deck, placed: {}, say: null, sel: null, hearts: maxHearts(P()), maxH: maxHearts(P()) });
   }
+  /* the Big Puzzle opens once every checkpoint's Picture Puzzle is done */
+  const bigReady = (s) => multi(s) && s.P.every((_, p) => P().prog[s.n] && P().prog[s.n].parts[p] && P().prog[s.n].parts[p].order);
   function startNext() {
     sfx.tap();
     const s = S[st.i];
@@ -2248,6 +2665,8 @@
     const m = document.getElementById('modal');
     if (e.target === m) {
       if (m.querySelector('.dropcard')) return; // must press "Try again"
+      if (m.querySelector('.dlcard.busy')) return; // downloading
+      if (dlAnswer) stopAudio(); // a download question left unanswered: don't download
       pendingYes = null;
       m.classList.remove('show');
       return;
@@ -2338,9 +2757,10 @@
           k = b.dataset.k;
         L[k] = k === 'hair' || k === 'kid' ? b.dataset.v : +b.dataset.v;
         if (k === 'kid') {
-          // boys don't wear the hijab; things for the other kind of explorer wait unopened no more
-          const prof = P();
-          if (L.kid === 'boy' && L.hair === 'hijab') L.hair = 'short';
+          // each kind of explorer has their own hair styles; things for the other kind wait unopened no more
+          const prof = P(),
+            mine = ART.LOOKS.hairFor[L.kid];
+          if (!mine.includes(L.hair)) L.hair = mine[0];
           prof.pending = prof.pending.filter((g) => g.k !== 'i' || forKid(ITEM[g.id], prof));
           giveTrackPrizes(prof);
         }
@@ -2384,7 +2804,7 @@
         break;
       case 'bag':
         sfx.tap();
-        go('bag', { tab: 'look' });
+        go('bag', { tab: 'hat' });
         break;
       case 'tab': {
         sfx.tap();
@@ -2495,7 +2915,7 @@
         if (P().pending.length) showGift();
         else {
           m.classList.remove('show');
-          go('bag', { tab: it ? it.slot : 'look' });
+          go('bag', { tab: it ? it.slot : 'hat' });
         }
         break;
       }
@@ -2557,6 +2977,8 @@
       }
       case 'bism':
         sfx.tap();
+        if (s) bismSaid = s.n;
+        b.classList.remove('breathe');
         showBism();
         break;
       case 'bismplay':
@@ -2647,7 +3069,36 @@
           break;
         }
         const t = fabTarget();
-        if (t) playList(t.items);
+        if (t) playList(t.items, t.loop ? { loop: loopN } : null);
+        break;
+      }
+      case 'mushaf':
+        sfx.tap();
+        go('mushaf', { i: st.i, p: st.p, sel: null });
+        break;
+      case 'mclear':
+        if (hold && hold.fired) {
+          hold = null; // the click that ends a long press
+          break;
+        }
+        if (st.sel != null) {
+          st.sel = null;
+          render();
+        }
+        break;
+      case 'loop':
+        sfx.tap();
+        loopN = LOOPS[(LOOPS.indexOf(loopN) + 1) % LOOPS.length];
+        if (playing) stopAudio();
+        drawLoops();
+        break;
+      case 'dlyes':
+      case 'dlno': {
+        const f = dlAnswer;
+        dlAnswer = null;
+        if (act === 'dlno') m.classList.remove('show');
+        else m.querySelector('.dlcard').classList.add('busy');
+        if (f) f(act === 'dlyes');
         break;
       }
       case 'say':
@@ -2860,14 +3311,29 @@
       case 'hop':
         hopFrog();
         break;
+      case 'stset': {
+        const el = document.getElementById('stsets');
+        if (el) el.scrollTo({ left: +b.dataset.q * el.clientWidth, behavior: 'smooth' });
+        break;
+      }
 
       /* puzzle */
       case 'order':
         startOrder();
         break;
+      case 'biglocked':
+        sfx.boop();
+        wobble(b);
+        toast('Finish the Picture Puzzle in every checkpoint first. Then they all fit together here!');
+        break;
       case 'slot':
         if (st.sel != null) tryPlace(st.sel, +b.dataset.j, b);
         break;
+      case 'pzsay': {
+        const it = puzzleItems()[+b.dataset.j];
+        if (it) playList(it.say.map((k) => [s.n, k + 1]));
+        break;
+      }
 
       /* what comes next */
       case 'next':
@@ -2994,6 +3460,13 @@
                 ? 'shake'
                 : 'bounce';
     el._last = kind;
+    // tap an animal on the map a few times in a row: it runs away, peeks back in, then comes home
+    if (kind === 'hop' && el.classList.contains('mprop')) {
+      const now = Date.now();
+      el._taps = (el._taps || []).filter((t) => now - t < 2500).concat(now);
+      if (el._away) return;
+      if (el._taps.length >= 3 && runAway(el)) return;
+    }
     el.classList.remove('poke-joy', 'poke-puff', 'poke-hop', 'poke-shake', 'poke-bounce', 'poke-spin', 'poke-dance', 'poke-hops', 'poke-flag');
     void el.getBoundingClientRect();
     el.classList.add('poke-' + kind);
@@ -3004,13 +3477,56 @@
     ({ joy: sfx.hop, spin: sfx.whoosh, dance: MOVES.dance, hops: sfx.hop, flag: sfx.win, puff: sfx.whoosh, hop: sfx.pop, shake: sfx.rustle, bounce: sfx.tap })[kind]();
   }
 
+  function runAway(el) {
+    const who = el.firstElementChild; // the map moves the prop itself while scrolling, so animate what's inside
+    if (!who || !who.animate || reduceMotion) return false;
+    el._away = true;
+    el._taps = [];
+    const r = el.getBoundingClientRect(),
+      k = r.width / (el.offsetWidth || r.width) || 1, // things near the horizon are drawn smaller
+      dir = r.left + r.width / 2 < innerWidth / 2 ? -1 : 1, // off the nearest side
+      out = (dir > 0 ? innerWidth - r.left + 30 : -(r.right + 30)) / k,
+      peek = (dir > 0 ? innerWidth - r.left - r.width * 0.55 : -r.left - r.width * 0.45) / k;
+    const at = (offset, x, y) => ({ offset, transform: `translate(${Math.round(x)}px, ${y || 0}px)` });
+    const run = who.animate(
+      [
+        at(0, 0),
+        at(0.05, out * 0.18, -16),
+        at(0.1, out * 0.4),
+        at(0.15, out * 0.66, -12),
+        at(0.2, out),
+        at(0.42, out), // gone…
+        at(0.5, peek), // …peeks in from the edge
+        at(0.55, peek, -5),
+        at(0.6, peek),
+        at(0.65, peek, -5),
+        at(0.7, peek),
+        at(0.92, 0), // and comes home
+        at(0.96, 0, -10),
+        at(1, 0),
+      ],
+      { duration: 5600 },
+    );
+    sfx.whoosh();
+    const t = setTimeout(() => sfx.pop(), 5600 * 0.5);
+    run.onfinish = run.oncancel = () => {
+      clearTimeout(t);
+      el._away = false;
+      if (el.isConnected) burstAt(el, 5, ['💕', '✨']);
+    };
+    return true;
+  }
+
   /* frog hop: animate from the current stone to the next one, then advance */
   function hopFrog() {
     if (st.hopping) return;
     const s = S[st.i],
       idx = range(ctx());
     const cur = $app.querySelector('.stone.cur'),
-      next = cur && cur.nextElementSibling;
+      next = $app.querySelector(`.stone[data-j="${st.k + 1}"]`),
+      sets = document.getElementById('stsets'),
+      turn = sets && next && Math.floor((st.k + 1) / STONES_PER) !== Math.floor(st.k / STONES_PER); // on to the next set
+    if (sets && Math.round(sets.scrollLeft / sets.clientWidth) !== sets._q) sets.scrollTo({ left: sets._q * sets.clientWidth }); // back to the frog
     st.hopping = true;
     sfx.hop();
     const advance = () => {
@@ -3045,6 +3561,7 @@
         st.k++;
         st.hint = 0;
         render();
+        if (turn) burstAt($app.querySelector('.stone.cur'), 8, ['💦', '💧', '✨']);
       }
     };
     if (!cur || reduceMotion || !Element.prototype.animate) {
@@ -3052,7 +3569,16 @@
       return;
     }
     const a = cur.getBoundingClientRect(),
-      target = next ? next.getBoundingClientRect() : { left: a.left + 70, top: a.top + 40, width: a.width, height: a.height };
+      edge = turn ? sets.getBoundingClientRect() : null;
+    const target = turn
+      ? { left: edge.right - a.width, top: a.top - 10, width: a.width, height: a.height } // off the edge, as the next set slides in
+      : next
+        ? next.getBoundingClientRect()
+        : { left: a.left + 70, top: a.top + 40, width: a.width, height: a.height };
+    if (turn) {
+      sets._q = Math.floor((st.k + 1) / STONES_PER);
+      sets.scrollTo({ left: sets._q * sets.clientWidth, behavior: 'smooth' });
+    }
     const f = document.createElement('div');
     f.className = 'flyfrog';
     f.innerHTML = ART.frog();
@@ -3082,47 +3608,56 @@
       if (landed) return;
       landed = true;
       f.remove();
-      burst(target.left + target.width / 2, target.top + target.height / 2, 8, ['💦', '💧', '✨']);
+      if (!turn) burst(target.left + target.width / 2, target.top + target.height / 2, 8, ['💦', '💧', '✨']);
       advance();
     };
   }
 
-  /* puzzle: drag & drop (plus tap a card, then tap a number) */
+  /* puzzle: drag & drop (plus tap a piece, then tap its place) */
   let drag = null;
-  function slotAt(x, y) {
-    const el = document.elementFromPoint(x, y);
-    return el && el.closest('.slot:not(.filled)');
-  }
   function tryPlace(k, j, slotEl) {
     const s = S[st.i],
-      idx = range(ctx());
-    if (st.placed[j] == null && s.ayat[k].ar === s.ayat[idx[j]].ar) {
-      st.placed[j] = k;
-      st.say = idx[j];
+      items = puzzleItems(),
+      big = st.p === 'all';
+    // twin āyāt (the same words) may swap places
+    if (!st.placed[j] && (k === j || (!big && items[k].ar === items[j].ar))) {
+      if (k !== j) st.deck = st.deck.map((x) => (x === j ? k : x === k ? j : x));
+      st.placed[j] = true;
+      st.say = j;
       st.sel = null;
       sfx.chime();
       render();
-      const filled = $app.querySelectorAll('.slot.filled');
-      burstAt([...filled].find((el) => el.textContent.trim().startsWith(String(idx[j] + 1))) || null, 14);
-      if (Object.keys(st.placed).length === idx.length) {
-        partRec(s.n, st.p).order = 1;
+      burstAt($app.querySelector(`.pzp[data-j="${j}"]`), 14);
+      if (Object.keys(st.placed).length === items.length) {
+        const r = rec(s.n),
+          first = big && !r.big;
+        if (big) r.big = 1;
+        else partRec(s.n, st.p).order = 1;
         save();
         setTimeout(() => {
           if (st.view === 'order')
-            finish({
-              big: '🧩',
-              msg: `You put ${multi(s) ? partLabel(s, st.p).toLowerCase() + ' of ' : 'all of '}${s.name} in order!`,
-              stars: 1,
-              nextAct: 'next',
-              nextLabel: 'What Comes Next? 🔮',
-            });
+            finish(
+              big
+                ? { big: '🧩', msg: `You fit all of ${s.name} together, every checkpoint in order!`, stars: 0, firstTime: first }
+                : {
+                    big: '🧩',
+                    msg: `You put ${multi(s) ? partLabel(s, st.p).toLowerCase() + ' of ' : 'all of '}${s.name} in order!`,
+                    stars: 1,
+                    nextAct: 'next',
+                    nextLabel: 'What Comes Next? 🔮',
+                  },
+            );
         }, 1500);
       }
     } else {
       sfx.boop();
       wobble(slotEl);
-      if (!loseHeart()) toast('Not that one. Try another number!');
+      if (!loseHeart()) toast("That piece doesn't fit there. Try another place!");
     }
+  }
+  function slotAt(x, y) {
+    const el = document.elementFromPoint(x, y);
+    return el && el.closest('.slot:not(.filled)');
   }
   document.addEventListener('pointerdown', (e) => {
     if (st.view !== 'order') return;

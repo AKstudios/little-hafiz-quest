@@ -60,6 +60,7 @@
   --gold2: #ff9f1c;
   --go: #2fbf71;
   --go2: #1f9a58;
+  --oktx: #17804a; /* green text on --okbg */
   --c: #14a899;
   --r: 26px;
   --barbg: rgba(205, 235, 255, 0.86);
@@ -101,6 +102,7 @@
     --gold2: #f08c1a;
     --go: #27a862;
     --go2: #16733f;
+    --oktx: #8ff0b6;
     --barbg: rgba(14, 15, 45, 0.86);
     --sunbg: radial-gradient(circle, #f4f1ff 0%, #c9c2ff 30%, rgba(140, 130, 255, 0) 68%);
     --sunop: 0.7;
@@ -133,6 +135,7 @@
   --gold2: #f08c1a;
   --go: #27a862;
   --go2: #16733f;
+  --oktx: #8ff0b6;
   --barbg: rgba(14, 15, 45, 0.86);
   --sunbg: radial-gradient(circle, #f4f1ff 0%, #c9c2ff 30%, rgba(140, 130, 255, 0) 68%);
   --sunop: 0.7;
@@ -164,6 +167,7 @@
   --gold2: #f08c1a;
   --go: #27a862;
   --go2: #16733f;
+  --oktx: #8ff0b6;
   --barbg: rgba(14, 15, 45, 0.86);
   --sunbg: radial-gradient(circle, #f4f1ff 0%, #c9c2ff 30%, rgba(140, 130, 255, 0) 68%);
   --sunop: 0.7;
@@ -1387,58 +1391,111 @@ details.adult summary::-webkit-details-marker {
   align-items: center;
   gap: 10px 8px;
 }
-.word {
+.wbox {
+  position: relative;
   font-family: 'Amiri Quran', 'Scheherazade New', serif;
   font-size: 24px;
   font-size: clamp(24px, 6.6vw, 32px);
+  font-weight: 400;
   line-height: 1.9;
   padding: 0 10px;
+  border: 0;
   border-radius: 14px;
   border-bottom: 5px solid var(--wc);
-  background: var(--wc10);
+  color: var(--ink);
   cursor: pointer;
-  transition: 0.25s;
+  transition:
+    background 0.25s,
+    transform 0.25s;
+}
+.wbox .wnum {
+  position: absolute;
+  inset: 0;
+  display: none;
+  place-items: center;
+  font: 800 18px 'Baloo 2', system-ui, sans-serif;
+}
+.word {
+  background: var(--wc10);
+}
+.word .wnum,
+.wtile.shown .wnum {
+  display: none;
 }
 .word.new {
-  font-size: 40px;
-  font-size: clamp(40px, 12vw, 58px);
+  z-index: 1;
   background: var(--wc22);
   box-shadow: 0 0 0 3px var(--wc);
-  animation: popin 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+  transform: scale(1.18);
+  animation: wordnew 0.35s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+@keyframes wordnew {
+  from {
+    transform: scale(0.6);
+  }
+  to {
+    transform: scale(1.18);
+  }
 }
 .word.ph {
-  min-width: 44px;
-  height: 30px;
-  border: 2px dashed var(--line);
-  border-bottom: 5px solid var(--wc45);
-  background: transparent;
-  padding: 0;
+  cursor: default;
+  background: var(--wc10);
+  outline: 2px dashed var(--line);
+  outline-offset: -2px;
+  border-bottom-color: var(--wc45);
+}
+.word.ph .wtx,
+.wtile:not(.shown) .wtx {
+  visibility: hidden;
+}
+.word.ph .wnum {
+  display: grid;
+  color: var(--soft);
+  opacity: 0.6;
 }
 .wtile {
-  min-width: 56px;
-  height: 56px;
-  border-radius: 14px;
   background: var(--wcd);
-  box-shadow: 0 4px 0 var(--wcdd);
+  border-bottom-color: var(--wcdd);
+  box-shadow: 0 2px 0 var(--wcdd);
   color: #fff;
-  font-weight: 800;
-  font-size: 18px;
+}
+.wtile:not(.shown) .wnum {
   display: grid;
-  place-items: center;
-  padding: 0 12px;
 }
 .wtile.shown {
   background: var(--wc12);
   color: var(--ink);
   box-shadow: none;
-  border-bottom: 5px solid var(--wc);
-  font-family: 'Amiri Quran', 'Scheherazade New', serif;
-  font-size: 24px;
-  font-size: clamp(24px, 6.6vw, 32px);
-  font-weight: 400;
-  height: auto;
-  line-height: 1.9;
+  border-bottom-color: var(--wc);
   animation: popin 0.3s cubic-bezier(0.2, 1.6, 0.4, 1);
+}
+/* the āyah's picture, so the words link to the picture from Look & Repeat */
+.wpic {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  margin: -4px auto 14px;
+  padding: 4px 14px 4px 6px;
+  border-radius: 99px;
+  background: var(--c14);
+  width: fit-content;
+  max-width: 100%;
+  font-weight: 800;
+  font-size: 16px;
+}
+.wpic .num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--c);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 15px;
+}
+.wpic .pics .e {
+  font-size: 30px;
 }
 .wcount {
   text-align: center;
@@ -2730,7 +2787,7 @@ body.v-map::after {
 }
 .hero-st.done {
   background: var(--okbg);
-  color: var(--go2);
+  color: var(--oktx);
 }
 .h2 small {
   display: block;
@@ -3124,17 +3181,12 @@ body.v-map::after {
 .stones {
   margin: 0;
 }
-.stone,
-.stones.many .stone {
+.stone {
   width: 56px;
   height: 50px;
   background: none;
   box-shadow: none;
   border-radius: 0;
-}
-.stones.many .stone {
-  width: 44px;
-  height: 40px;
 }
 .stone .stbg {
   position: absolute;
@@ -3567,8 +3619,8 @@ body.v-map::after {
   box-shadow: 0 0 0 4px var(--gold2);
 }
 .hairpick {
-  width: 54px;
-  height: 64px;
+  width: 62px;
+  height: 70px;
   border-radius: 16px;
   background: var(--card2);
   overflow: hidden;
@@ -3577,10 +3629,10 @@ body.v-map::after {
 }
 .hairpick > svg {
   position: absolute;
-  width: 108px;
-  height: 162px;
-  left: -27px;
-  top: -4px;
+  width: 110px;
+  height: 165px;
+  left: -20px;
+  top: -26px;
 }
 .hairpick.on {
   outline: 4px solid var(--gold2);
@@ -5299,4 +5351,458 @@ body {
   .hud .hud-stars small {
     display: none;
   }
+}
+
+/* ---------- v2.4.0: the loop button (Look & Repeat, the muṣḥaf) ---------- */
+.loopbtn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 50px;
+  height: 50px;
+  padding: 0;
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--soft);
+  display: grid;
+  place-items: center;
+}
+.loopbtn svg {
+  width: 46px;
+  height: 46px;
+  overflow: visible;
+}
+.loopbtn circle {
+  fill: none;
+  stroke-linecap: round;
+}
+.loopbtn .lr-track {
+  stroke: var(--line);
+  stroke-width: 4;
+}
+.loopbtn .lr-arc {
+  stroke: currentColor;
+  stroke-width: 4;
+  transition: stroke-dasharray 0.4s ease;
+}
+.loopbtn .lr-tip {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.loopbtn text {
+  fill: currentColor;
+  font: 800 14px 'Baloo 2', system-ui, sans-serif;
+}
+.loopbtn.on {
+  color: var(--gold2);
+}
+.loopbtn:active {
+  transform: scale(0.92);
+}
+
+/* ---------- v2.4.0: downloading a long sūrah before it first plays ---------- */
+.dlcard {
+  text-align: center;
+}
+.dlico {
+  font-size: 44px;
+}
+.dlprog {
+  display: none;
+  height: 12px;
+  border-radius: 99px;
+  background: var(--line);
+  overflow: hidden;
+  margin: 12px 4px 4px;
+}
+.dlprog i {
+  display: block;
+  height: 100%;
+  width: 0;
+  border-radius: 99px;
+  background: var(--go);
+  transition: width 0.2s;
+}
+.dlcard.busy .dlprog {
+  display: block;
+}
+.dlcard.busy .row {
+  display: none;
+}
+
+/* ---------- v2.4.0: the Bismillah moon beside "Your quest" (breathes until tapped) ---------- */
+.h2.qhead2 {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.bismbtn {
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1px;
+  padding: 6px 10px 4px;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--shd);
+  color: var(--ink);
+}
+.bismbtn svg.i {
+  width: 30px;
+  height: 30px;
+}
+.bismbtn small {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--soft);
+  margin: 0;
+}
+.bismbtn.breathe {
+  animation: bismbreathe 2.2s ease-in-out infinite;
+}
+@keyframes bismbreathe {
+  0%,
+  100% {
+    transform: scale(1);
+    box-shadow:
+      0 4px 0 var(--shd),
+      0 0 0 0 rgba(255, 200, 61, 0);
+  }
+  50% {
+    transform: scale(1.1);
+    box-shadow:
+      0 4px 0 var(--shd),
+      0 0 0 9px rgba(255, 200, 61, 0.45);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .bismbtn.breathe {
+    animation: none;
+    box-shadow:
+      0 4px 0 var(--shd),
+      0 0 0 4px var(--gold);
+  }
+}
+
+/* ---------- v2.4.0: My Explorer's "Me" button in the top bar ---------- */
+.mebtn {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  font-size: 24px;
+  line-height: 1;
+}
+.mebtn small {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--soft);
+}
+.mebtn.on {
+  background: var(--ink);
+}
+.mebtn.on small {
+  color: var(--card);
+}
+
+/* ---------- v2.4.0: stepping stones, at most two rows; long runs swipe sideways in sets ---------- */
+.stream .stones {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 5), 1fr);
+  justify-items: center;
+  row-gap: 14px;
+  max-width: 330px;
+  margin: 0 auto;
+  padding-top: 14px;
+}
+.stream .stone {
+  width: min(56px, 15vw);
+  height: min(50px, 13.4vw);
+}
+.stsets {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scrollbar-width: none;
+  overscroll-behavior-x: contain;
+}
+.stsets::-webkit-scrollbar {
+  display: none;
+}
+.stset {
+  flex: 0 0 100%;
+  scroll-snap-align: start;
+}
+.stdots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 10px;
+}
+.stdots button {
+  width: 12px;
+  height: 12px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.55);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.stdots button.on {
+  width: 26px;
+  border-radius: 99px;
+  background: #fff;
+}
+.stsets .stones {
+  padding-top: 30px; /* room for the frog and its "tap me!" inside the sideways scroller */
+}
+
+/* ---------- v2.4.0: the muṣḥaf (read the whole sūrah; hold an āyah to color its words) ---------- */
+.hero {
+  position: relative;
+}
+.bookbtn {
+  position: absolute;
+  top: 6px;
+  right: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 6px 10px 4px;
+  border-radius: 18px;
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--shd);
+  font-size: 28px;
+  line-height: 1;
+}
+.bookbtn small {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--soft);
+  margin-top: 2px;
+}
+.bookbtn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--shd);
+}
+.mtools {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 2px 2px 10px;
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--soft);
+  line-height: 1.3;
+}
+.mtools b {
+  color: var(--ink);
+}
+.mtools .loopbtn {
+  position: static;
+  flex: none;
+  box-shadow: 0 3px 0 var(--shd);
+}
+.card.mushaf {
+  padding: 16px 16px 20px;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
+}
+.mtitle {
+  font-family: 'Amiri Quran', 'Scheherazade New', serif;
+  font-size: 26px;
+  color: var(--cd);
+  border: 2px solid var(--c30);
+  border-radius: 16px;
+  padding: 0 14px;
+  display: inline-block;
+  line-height: 1.8;
+}
+.mbism {
+  font-family: 'Amiri Quran', 'Scheherazade New', serif;
+  font-size: 24px;
+  line-height: 2;
+  margin: 8px 0 4px;
+}
+.mtext {
+  font-family: 'Amiri Quran', 'Scheherazade New', serif;
+  font-size: 26px;
+  font-size: clamp(24px, 6.4vw, 32px);
+  line-height: 2.3;
+  text-align: justify;
+  text-align-last: center;
+  color: var(--ink);
+}
+.mayah {
+  border-radius: 10px;
+  transition: background 0.3s;
+  cursor: pointer;
+}
+.mayah.now {
+  background: var(--c14);
+  box-shadow: 0 0 0 3px var(--c14);
+}
+.mayah.sel {
+  background: none;
+  box-shadow: none;
+}
+.mnum {
+  color: var(--cd);
+  white-space: nowrap;
+}
+.mw {
+  background: var(--wc22);
+  border-bottom: 4px solid var(--wc);
+  border-radius: 8px;
+  padding: 0 3px;
+  box-decoration-break: clone;
+  -webkit-box-decoration-break: clone;
+}
+
+/* ---------- v2.4.0: the Picture Puzzle as a jigsaw ---------- */
+.pzboard {
+  position: relative;
+  width: 100%;
+  max-width: 420px;
+  margin: 6px auto 12px;
+}
+.pz-holes {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+.pz-hole {
+  fill: var(--slot);
+  stroke: var(--soft);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 6;
+  stroke-linejoin: round;
+}
+.pz-holes text {
+  font: 800 28px 'Baloo 2', system-ui, sans-serif;
+  fill: var(--soft);
+  opacity: 0.6;
+}
+.slot.pzslot {
+  position: absolute;
+  min-height: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 16px;
+  background: transparent;
+}
+.slot.pzslot.ready {
+  box-shadow: inset 0 0 0 3px var(--gold2);
+}
+.slot.pzslot.over {
+  transform: none;
+  background: rgba(255, 200, 61, 0.3);
+}
+.pzp {
+  position: absolute;
+  padding: 0;
+  background: none;
+  animation: popin 0.4s cubic-bezier(0.2, 1.8, 0.4, 1);
+}
+.pz-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  filter: drop-shadow(0 3px 0 rgba(43, 35, 64, 0.22));
+}
+.pz-svg path {
+  stroke: #2b2340;
+  stroke-width: 3;
+  stroke-linejoin: round;
+}
+.pzbody {
+  position: absolute;
+  left: 16.2%;
+  top: 16.2%;
+  width: 67.6%;
+  height: 67.6%;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+  color: #2b2340;
+}
+.pzp .pics {
+  font-size: clamp(20px, 7.4vw, 34px);
+  line-height: 1.05;
+}
+.pzboard.full .pzp {
+  animation: pzdone 0.6s ease-out;
+}
+@keyframes pzdone {
+  50% {
+    transform: scale(1.06);
+  }
+}
+.pcard.pzt {
+  position: relative;
+  display: block;
+  width: 96px;
+  height: 96px;
+  min-width: 0;
+  min-height: 0;
+  padding: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+}
+.pcard.pzt .pics {
+  font-size: 24px;
+  line-height: 1.05;
+}
+.pcard.pzt.sel {
+  outline: none;
+  filter: drop-shadow(0 0 7px var(--gold2));
+}
+.deck.pzdeck {
+  gap: 2px 6px;
+}
+.drag-ghost.pzt {
+  box-shadow: none;
+  filter: drop-shadow(0 14px 16px rgba(0, 0, 0, 0.3));
+}
+.pzgroup {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  line-height: 1.1;
+}
+.pzgroup .gm {
+  font-size: 13px;
+  letter-spacing: -1px;
+  max-width: 100%;
+  word-break: break-all;
+  text-align: center;
+}
+.pzgroup b {
+  font: 800 13px 'Baloo 2', system-ui, sans-serif;
+}
+.pzp .pzgroup .gm {
+  font-size: clamp(13px, 4vw, 18px);
+}
+.pzp .pzgroup b {
+  font-size: clamp(13px, 4vw, 17px);
+}
+.qstep.locked {
+  opacity: 0.62;
+}
+.qgo.lock {
+  background: none;
+  box-shadow: none;
+  font-size: 22px;
 }

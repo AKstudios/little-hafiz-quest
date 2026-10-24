@@ -14,7 +14,7 @@
  */
 'use strict';
 
-const VERSION = '2.3.2';
+const VERSION = '2.4.0';
 const SHELL_CACHE = `lhq2-shell-${VERSION}`;
 const AUDIO_CACHE = 'lhq2-audio'; // keep across app updates; change only if the audio files change
 const DATA_CACHE = 'lhq2-data'; // small lists that can change between versions (reciters, versions)
@@ -30,6 +30,7 @@ const SHELL_FILES = [
   './js/art.js',
   './js/map.js',
   './js/sounds.js',
+  './audio/silence.mp3',
   './js/game.js',
   './css/art.css',
   './manifest.webmanifest',

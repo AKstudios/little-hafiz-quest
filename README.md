@@ -40,21 +40,21 @@ Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and c
 
 ## How to play (for the grown-up)
 
-1. **Make an explorer.** Tap **Begin**, pick a name, boy or girl, a skin tone, a hair style and a hair color (girls can also choose a hijab and its color). Girls wear the crowns as tiaras. Each child can have their own explorer, with their own stars and treasures (tap the name on the start screen). Explorers can be removed in the Grown-up Corner, all of them if you like; Begin then makes a new one.
-2. **Walk the map.** Start at 🚩 An-Nās at the bottom and climb. Tap a sūrah: the explorer pops up beside it, walks in, and the lesson opens. Each world has its own border to cross (a river, the sea, a gorge, a gate, the clouds, a frozen river), and the scenery on the horizon changes as you climb. The world list on the side jumps between worlds. You can go back to any sūrah at any time to revise.
+1. **Make an explorer.** Tap **Begin**, pick a name, boy or girl, a skin tone, a hair style (boys and girls each have six) and a hair color (girls can also choose a hijab and its color). Girls wear the crowns as tiaras. Each child can have their own explorer, with their own stars and treasures (tap the name on the start screen). Explorers can be removed in the Grown-up Corner, all of them if you like; Begin then makes a new one.
+2. **Walk the map.** Start at 🚩 An-Nās at the bottom and climb. Tap a sūrah: the explorer pops up beside it, walks in, and the lesson opens. Each sūrah's page has a 🌙 **Bismillah** button that gently breathes when you arrive, a reminder to say Bismillah first, and a 📖 **Read** button for children who can read the muṣḥaf: the whole sūrah in Arabic. There, hold an āyah to color its words in the same order as Word Steps, and Listen plays the whole sūrah or just the chosen āyah. Each world has its own border to cross (a river, the sea, a gorge, a gate, the clouds, a frozen river), and the scenery on the horizon changes as you climb. The world list on the side jumps between worlds. You can go back to any sūrah at any time to revise.
 3. **Follow the glowing step** in each sūrah:
-   1. **👀 Look & Repeat.** Read the āyah. Your child repeats it three times while doing the action (pop a bubble each time), then says it with only the picture showing. After each new āyah, chain from the first āyah up to the new one. Tap the numbered dots at the top to practice any āyah in that part. The “Do it” actions can be switched off in the Grown-up Corner. Progress is saved āyah by āyah, so you can stop and carry on later.
-   2. **Word Steps.** Build the āyah one word at a time, always going back to the first word. Tap any word to hear just that word. Then your child says it all while you reveal each word.
-   3. **🐸 Stepping Stones.** Your child says each āyah and taps the frog to hop. Level 1 shows the picture and first word, Level 2 only the picture, and Level 3 no picture at all. **Hint** reveals a little more each tap (the picture, then one word at a time, then the whole āyah to hear). Level 3 means it's memorized.
-   4. **Review games:** 🧩 Picture Puzzle and 🔮 What Comes Next.
+   1. **👀 Look & Repeat.** Read the āyah. Your child repeats it three times while doing the action (pop a bubble each time), then says it with only the picture showing. The loop button at the top of the āyah sets how many times Listen plays it: once, 3, 10 or 99 times (until Stop); its ring empties as the plays go by. After each new āyah, chain from the first āyah up to the new one. Tap the numbered dots at the top to practice any āyah in that part. The “Do it” actions can be switched off in the Grown-up Corner. Progress is saved āyah by āyah, so you can stop and carry on later.
+   2. **Word Steps.** Build the āyah one word at a time, always going back to the first word, with the āyah's picture at the top. Tap any word to hear just that word. Then your child says it all while you reveal each word; every colored box stays exactly where it was while practicing.
+   3. **🐸 Stepping Stones.** Your child says each āyah and taps the frog to hop. Level 1 shows the picture and first word, Level 2 only the picture, and Level 3 no picture at all. **Hint** reveals a little more each tap (the picture, then one word at a time, then the whole āyah to hear). Level 3 means it's memorized. Long runs show ten stones at a time; swipe to see the others, and the frog hops on to the next set by itself.
+   4. **Review games:** 🧩 Picture Puzzle, a jigsaw where each āyah is a piece that fits in only one place (left to right, or right to left in the Grown-up Corner), and 🔮 What Comes Next. In a long sūrah, once every checkpoint's puzzle is done, the 🏁 whole sūrah has a **Big Puzzle**: each checkpoint becomes one big piece to fit together.
 4. **Hearts.** Once a part has been learned, the review games (and Stepping Stones) have 3 hearts, plus one more for each finished world (a star in every sūrah of it), up to 5. A wrong pick, or the grown-up tapping **Not quite**, costs a heart. Losing them all drops the explorer's newest treasure at that sūrah, puts a 💔 on it on the map, and leaves the explorer a little sad and scruffy. Finishing a review game there fixes it: the treasure flies back on and the explorer smiles again. You can switch hearts off in the Grown-up Corner.
-5. **Gifts.** One star is enough to move on.
+5. **Gifts.** One star is enough to move on, and **every level finished for the first time wins a gift**.
    - The first star in a sūrah wins its own treasure (they get shinier higher up the mountain); **every** star in a sūrah wins a golden edition of it.
    - The **star track** gives a prize every few stars, from 4 stars up to 900: an astronaut set with a toy rocket, new hats, a little thobe, walking sticks, buddies and color versions of the clothes. Boys win kufis and girls win hijabs. The end of each game shows how many stars are left to the next prize.
-   - Crossing a checkpoint wins a small gift, and the first game of each day gives a sticker to stick on the explorer's shirt.
+   - Crossing a checkpoint wins a small gift, and the first game of each day gives a sticker to stick on the explorer's shirt. Any other first finish wins a sticker too (or, once every sticker is collected, the next star-track prize early).
    - Gifts wait in a little rattling box at the top; tap it to open them one at a time.
-6. **My Explorer** (the backpack): the explorer always stays in view while you pick from a row of categories. A red dot marks new things, which come first. The 👕 button beside the explorer swaps between just the comfy clothes and everything they were wearing. Tap the explorer (or just wait) and they giggle, jump, dance, wave or twirl their stick. On the map and the start screen, the explorer, animals, trees, houses and the summit flag react to a tap too.
-7. **Progress.** Tap the 📖 (sūrahs done, at least one star each) or ⭐ (all stars) counters at the top of the map to see every sūrah. Tap one to go straight there: the explorer walks in and the next lesson starts.
+6. **My Explorer** (the backpack): the explorer always stays in view while you pick from a row of categories; the **Me** button at the top changes their name and look. A red dot marks new things, which come first. The 👕 button beside the explorer swaps between just the comfy clothes and everything they were wearing. Tap the explorer (or just wait) and they giggle, jump, dance, wave or twirl their stick. On the map and the start screen, the explorer, animals, trees, houses and the summit flag react to a tap too. Tap an animal a few times in a row and it runs away, peeks back in, then comes home.
+7. **Progress.** Each sūrah on the map shows its stars, with a ✓ once it's memorized. Tap the 📖 (sūrahs done, at least one star each) or ⭐ (all stars) counters at the top of the map to see every sūrah. Tap one to go straight there: the explorer walks in and the next lesson starts.
 8. **The summit.** With a star in every sūrah, the explorer climbs to the top of the mountain and cheers: every treasure and sticker is unlocked, plus the **Summit cloak**. Three stars in every sūrah win the **Hafiz crown** (a tiara for girls), and every single star wins the one-of-a-kind **Golden hoopoe**.
 
 Longer sūrahs are split into checkpoints of a few āyāt; finish the checkpoints, then the 🏁 whole sūrah. Each sūrah also has a **tip for grown-ups**, sometimes with a toy to tap along (a bell, a drum, a clap).
@@ -66,6 +66,8 @@ The orange **Listen** button at the top plays the recitation of what's on screen
 ## Versions
 
 The newest version opens by default. Tap the version badge on the start screen (or Grown-up Corner → Version) to switch to the classic **v1**, which keeps the original island list. The choice is remembered on that device, and you can switch back the same way. If something goes wrong, opening https://akramali.github.io/little-hafiz-quest/?latest always brings back the newest version.
+
+A sūrah's recitation downloads the first time it plays and is then kept on the device. Long sūrahs (about 1–3 MB) ask first.
 
 ## Put it on a phone like an app
 
@@ -116,6 +118,7 @@ versions.json              the versions offered in the version chooser
 audio/reciters.json        the reciters offered in the Grown-up Corner
 audio/<reciter>/NNN.mp3    recitation, one file per sūrah (plus 001.mp3 for the Basmalah)
 audio/<reciter>/timings.json  where each āyah and each word sits in those files
+audio/silence.mp3          a moment of silence that lets phones start the recitation after a download
 fonts/                     Amiri Quran and Baloo 2, with their licenses
 icons/                     app icons
 tools/serve.py             local preview server

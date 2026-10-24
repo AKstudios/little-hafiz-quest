@@ -235,9 +235,11 @@
   const SKIN = ['#ffe1c8', '#f6c49c', '#d99c72', '#a86d48', '#6f452e'];
   const HAIRC = ['#3a2f45', '#5a3726', '#87552f', '#b04a2c'];
   const HIJABC = ['#ff8db6', '#b49cff', '#35c3b0', '#5fb2ff', '#ff9c6e', '#ffcf4d'];
-  const LOOKS = { skin: SKIN.slice(), hair: ['short', 'curly', 'ponytail', 'hijab'], hairColor: HAIRC.slice(), hijabColor: HIJABC.slice(), kid: ['boy', 'girl'] };
-  // boy or girl: chosen by the grown-up; until then a ponytail or hijab means girl
-  const isGirl = (look) => !!look && (look.kid === 'girl' || (look.kid !== 'boy' && (look.hair === 'ponytail' || look.hair === 'hijab')));
+  // Hair styles for each kid; the first one of each list is that kid's default. LOOKS.hair = every style.
+  const HAIR_FOR = { boy: ['short', 'curly', 'spiky', 'buzz', 'sidepart', 'wavy'], girl: ['ponytail', 'hijab', 'long', 'pigtails', 'bun', 'braid'] };
+  const LOOKS = { skin: SKIN.slice(), hair: HAIR_FOR.boy.concat(HAIR_FOR.girl), hairFor: HAIR_FOR, hairColor: HAIRC.slice(), hijabColor: HIJABC.slice(), kid: ['boy', 'girl'] };
+  // boy or girl: chosen by the grown-up; until then any girl's hair style (ponytail, hijab, ...) means girl
+  const isGirl = (look) => !!look && (look.kid === 'girl' || (look.kid !== 'boy' && HAIR_FOR.girl.indexOf(look.hair) >= 0));
 
   // Body geometry (front view; the character's right side is on the viewer's left).
   const MIR = ' transform="matrix(-1 0 0 1 184 0)"'; // mirror around x = 92
@@ -264,22 +266,30 @@
       ? EF(92, 116, 40, 38.5, sk) + F(crescent(92, 116, 40, 38.5, 7, 8), dk(sk, 0.1)) + E(92, 116, 40, 38.5, 'none')
       : EF(92, 112, 47, 43, sk) + F(crescent(92, 112, 47, 43, 8, 9), dk(sk, 0.1)) + E(92, 112, 47, 43, 'none');
   }
-  function face(sk, mood) {
+  // A girl's face: little eyelashes at the outer corner of each eye (they blink with the eyes) and rosier,
+  // rounder cheeks with a tiny shine, so boy and girl look different even with the same hair.
+  function lashes(y, r) {
+    const one = (x, s) => L('M' + n(x + s * r * 0.86) + ' ' + n(y - r * 0.7) + 'L' + n(x + s * r * 1.5) + ' ' + n(y - r * 1.1) + 'M' + n(x + s * r * 0.42) + ' ' + n(y - r * 1.12) + 'L' + n(x + s * r * 0.8) + ' ' + n(y - r * 1.68), INK, 2.5);
+    return one(75, -1) + one(109, 1);
+  }
+  const rosy = (y, rx, dark) =>
+    EF(63, y, rx, n(rx * 0.68), dark ? '#e0607a' : '#ff7f9a', 0.62) + EF(121, y, rx, n(rx * 0.68), dark ? '#e0607a' : '#ff7f9a', 0.62) + CF(n(60 - rx * 0.1), n(y - rx * 0.22), 1.7, '#fff', 0.75) + CF(n(118 - rx * 0.1), n(y - rx * 0.22), 1.7, '#fff', 0.75);
+  function face(sk, mood, girl) {
     const dark = sk === SKIN[3] || sk === SKIN[4];
     if (mood === 'sad')
       // worried brows, a wobbly frown, a little sweat drop and a smudge on the cheek
       return (
         L('M68 106Q75 104.5 81 100.5', INK, 2.4) + L('M103 100.5Q109 104.5 116 106', INK, 2.4) +
-        G(cuteEyes(75, 119, 109, 119, 5.8).replace(/^<g>|<\/g>$/g, ''), cls('ex-eyes')) +
-        cheeks(63, 132, 121, 132, 6.6, dark ? '#c9566e' : '#f4a0b0') +
+        G(cuteEyes(75, 119, 109, 119, 5.8).replace(/^<g>|<\/g>$/g, '') + (girl ? lashes(119, 5.8) : ''), cls('ex-eyes')) +
+        (girl ? rosy(132, 7.4, dark) : cheeks(63, 132, 121, 132, 6.6, dark ? '#c9566e' : '#f4a0b0')) +
         L('M85.5 136Q92 130.5 98.5 136', INK, 2.6) +
         P('M149 96Q145 103 145.5 106Q146.5 110 150 110Q153.5 110 154 106Q154 103 149 96Z', '#9fd8ff', sw(1.8)) + P('M156 116Q154 120 154.3 121.6Q154.8 124 157 124Q159.2 124 159.6 121.6Q159.8 120 156 116Z', '#9fd8ff', sw(1.6)) +
         EF(65, 124, 6, 3.4, '#7a5a3a', 0.28)
       );
     return (
       L('M68 104.5Q75 101 82 104.5', INK, 2.4) + L('M102 104.5Q109 101 116 104.5', INK, 2.4) +
-      G(cuteEyes(75, 118, 109, 118, 6.4).replace(/^<g>|<\/g>$/g, ''), cls('ex-eyes')) +
-      cheeks(63, 131, 121, 131, 7.6, dark ? '#e0607a' : '#ff8fa3') +
+      G(cuteEyes(75, 118, 109, 118, 6.4).replace(/^<g>|<\/g>$/g, '') + (girl ? lashes(118, 6.4) : ''), cls('ex-eyes')) +
+      (girl ? rosy(131, 8.4, dark) : cheeks(63, 131, 121, 131, 7.6, dark ? '#e0607a' : '#ff8fa3')) +
       L('M85 132Q92 139.5 99 132', INK, 2.8)
     );
   }
@@ -303,9 +313,31 @@
     pony: 'M47 122C40 104 41 84 55 74C70 62 114 60 129 74C143 84 144 104 137 122C135 108 131 98 125 90C110 102 88 103 70 94C62 98 54 106 47 122Z',
     ponyTail: 'M122 78C146 62 170 86 164 118C161 134 153 146 143 152C148 134 147 116 134 100Z',
     back: 'M43 114C40 84 62 62 92 62C122 62 144 84 141 114C140 130 134 144 122 150Q113 144 104 151Q96 145 88 151Q80 145 72 150Q60 146 50 134C46 128 44 122 43 114Z',
+    backSh: 'M120 70C136 80 143 96 141 114C140 130 134 144 122 150Q118 148 114 147C126 132 132 100 120 70Z',
     backPony: 'M43 114C40 84 62 62 92 62C122 62 144 84 141 114C140 132 134 144 124 150Q92 158 60 150C50 144 44 132 43 114Z',
     hijabF: 'M39 112C39 78 62 58 92 58C122 58 145 78 145 112C145 130 140 142 134 150Q150 162 148 178Q130 192 92 192Q54 192 36 178Q34 162 50 150C44 142 39 130 39 112Z',
     hijabB: 'M39 112C39 78 62 58 92 58C122 58 145 78 145 112C145 136 140 148 136 154Q152 168 146 194Q120 206 92 206Q64 206 38 194Q32 168 48 154C44 148 39 136 39 112Z',
+    // boys
+    spiky: 'M47 120C41 106 41 92 47 82L41 70L57 71L58 55L72 63L80 46L91 60L104 46L110 62L125 55L125 71L141 70L137 82C143 92 143 106 137 120C134 108 130 98 124 92L117 101L110 92L101 102L93 92L84 102L76 92L68 100L62 92C54 98 50 108 47 120Z',
+    spikySh: 'M137 82C143 92 143 106 137 120C134 108 130 98 124 92C130 89 134 86 137 82Z',
+    spikyB: 'M43 114C40 98 42 86 47 78L41 65L57 65L58 50L73 57L82 42L92 55L102 42L111 57L126 50L127 65L143 65L137 78C142 88 143 100 141 114C140 130 134 144 122 150Q113 144 104 151Q96 145 88 151Q80 145 72 150Q60 146 50 134C46 128 44 122 43 114Z',
+    buzz: 'M48 110C46 84 66 64 92 64C118 64 138 84 136 110C133 98 128 90 122 86Q92 78 62 86C56 90 51 98 48 110Z',
+    buzzSh: 'M116 67C130 74 137 90 136 110C133 98 128 90 122 86C123 80 121 73 116 67Z',
+    buzzB: 'M45 114C43 86 64 64 92 64C120 64 141 86 139 114C138 130 133 141 126 147Q92 154 58 147C51 141 46 130 45 114Z',
+    side: 'M47 120C40 104 41 84 55 74C66 64 76 60 86 60C100 54 122 58 131 72C144 84 144 104 137 120C135 106 131 97 124 91C106 100 84 96 72 79C67 90 57 98 47 120Z',
+    sideB: 'M43 114C40 84 62 62 92 62C122 62 144 84 141 114C140 128 136 140 128 147Q92 155 56 147C48 140 44 128 43 114Z',
+    wavy: 'M47 120C40 106 40 90 49 80C50 66 62 58 76 60C82 50 100 48 110 56C124 54 136 64 136 78C143 88 144 104 137 120C135 108 132 100 126 94C126 102 116 106 110 98C106 106 94 106 90 96C84 104 72 104 68 94C62 100 56 98 56 92C51 100 49 110 47 120Z',
+    wavySh: 'M136 78C143 88 144 104 137 120C135 108 132 100 126 94C132 90 136 85 136 78Z',
+    wavyB: 'M43 114C40 84 62 62 92 62C122 62 144 84 141 114C141 124 139 132 135 138C134 146 126 146 122 150C116 156 108 148 102 153C96 158 88 150 82 153C76 156 68 148 62 150C54 150 52 142 48 136C45 130 43 122 43 114Z',
+    // girls
+    longBehind: 'M40 112C40 80 62 60 92 60C122 60 144 80 144 112C144 134 146 154 150 170Q152 180 140 180Q128 182 120 176C117 168 116 160 116 150L68 150C68 160 67 168 64 176Q56 182 44 180Q32 180 34 170C38 154 40 134 40 112Z',
+    long: 'M92 61C122 61 142 76 144 100C147 118 146 136 142 152Q136 158 130 152C133 136 134 116 128 92Q92 100 56 92C50 116 51 136 54 152Q48 158 42 152C38 136 37 118 40 100C42 76 62 61 92 61Z',
+    longSh: 'M128 68C138 76 143 87 144 100C147 118 146 136 142 152Q136 158 130 152C133 136 134 116 128 92C132 84 132 75 128 68Z',
+    longB: 'M40 112C40 80 62 60 92 60C122 60 144 80 144 112C144 134 146 156 150 172Q150 184 136 184Q92 190 48 184Q34 184 34 172C38 156 40 134 40 112Z',
+    longBSh: 'M122 66C138 76 145 92 144 112C144 134 146 156 150 172Q150 184 136 184Q128 185 120 186C132 170 136 150 136 128C136 104 132 82 122 66Z',
+    parted: 'M47 118C40 102 42 84 55 74C70 62 114 60 129 74C142 84 144 102 137 118C134 104 128 94 118 89C108 85 98 81 92 75C86 81 76 85 66 89C56 94 50 104 47 118Z',
+    pigtail: 'M53 98C34 94 22 110 23 130C24 144 30 153 38 158C36 142 40 126 52 114Z',
+    pigtailSh: 'M29 114C24 124 23 138 27 148C30 153 34 156 38 158C36 146 37 132 41 122Z',
   };
   const curlyFront = (() => {
     const outer = ellPts(92, 106, 54, 47, 160, 380, 11);
@@ -315,28 +347,165 @@
   const curlyBack = bumps(ellPts(92, 104, 57, 41, 0, 360, 16).slice(0, 16), true, 0.62);
   const curlyFull = bumps(ellPts(92, 106, 55, 48, 0, 360, 16).slice(0, 16), true, 0.62);
   const PONY_TIE = '#ff6fa3';
-
-  function hairFrontBack(look) {
-    // hair drawn behind the face in the front view
-    const hc = HAIRC[look.hairColor];
-    if (look.hair === 'curly') return S(curlyBack, hc, null, null);
-    if (look.hair === 'ponytail')
-      return S(HAIR.ponyTail, hc, 'M150 84C164 96 166 116 160 130C156 140 150 147 143 152C148 134 147 116 140 104C146 98 150 92 150 84Z') + L('M140 92Q156 104 152 132', dk(hc), 2) +
-        E(129, 82, 6.5, 8.5, PONY_TIE, ' transform="rotate(-42 129 82)"');
-    return '';
+  const ellD = (cx, cy, rx, ry) => 'M' + (cx - rx) + ' ' + cy + 'A' + rx + ' ' + ry + ' 0 1 0 ' + (cx + rx) + ' ' + cy + 'A' + rx + ' ' + ry + ' 0 1 0 ' + (cx - rx) + ' ' + cy + 'Z';
+  const hairShine = (d, hc, w, o) => L(d, lt(hc, 0.32), w || 4, ' opacity="' + (o || 0.7) + '"');
+  // A braid: plaits through pts (top to bottom), drawn from the bottom up so each one overlaps the next.
+  // end = true finishes it with a hair tie and a little tuft.
+  function braid(pts, hc, end) {
+    let s = '';
+    const z = pts[pts.length - 1];
+    if (end) s += S('M' + (z[0] - 5) + ' ' + (z[1] + 4) + 'Q' + (z[0] - 7) + ' ' + (z[1] + 17) + ' ' + z[0] + ' ' + (z[1] + 20) + 'Q' + (z[0] + 7) + ' ' + (z[1] + 17) + ' ' + (z[0] + 5) + ' ' + (z[1] + 4) + 'Z', hc) +
+      L('M' + z[0] + ' ' + (z[1] + 8) + 'L' + z[0] + ' ' + (z[1] + 16), dk(hc, 0.35), 1.6) + E(z[0], z[1] + 2, 6.5, 4, PONY_TIE);
+    for (let i = pts.length - (end ? 2 : 1); i >= 0; i--) {
+      const [x, y] = pts[i],
+        r = i % 2 ? 24 : -24;
+      s += G(S(ellD(x, y, 9, 7), hc, crescent(x, y, 9, 7, 2.6, 2.6)) + L('M' + (x - 5) + ' ' + (y - 1) + 'Q' + x + ' ' + (y + 2) + ' ' + (x + 5) + ' ' + (y - 1), dk(hc, 0.35), 1.6), ' transform="rotate(' + r + ' ' + x + ' ' + y + ')"');
+    }
+    return s;
   }
-  function hairFront(look) {
+  const ties = (pts) => pts.map((p) => ball(p[0], p[1], 6, 6, PONY_TIE, { hlo: 0.8 })).join('');
+
+  /* Each hair style:
+   *   behind(hc)    hair behind the face in the front view (a ponytail, long hair, a braid, a bun ...)
+   *   front(hc, sk) hair over the forehead (drawn after the face)
+   *   back(hc)      the back of the head, drawn over the bare head
+   *   hat           [y shift, scale] for hats (they are drawn for the short-hair head)
+   *   bun           a part that hides under a hat (crowns and tiaras leave it showing)
+   * The hijab is drawn on its own (headFront / headBack). */
+  const HAIRS = {
+    short: {
+      hat: [0, 1],
+      front: (hc) => S(HAIR.short, hc, HAIR.shortSh) + L('M57 82Q69 70 87 67', lt(hc, 0.32), 4.5, ' opacity=".75"') + P('M86 64Q87 52 100 53Q93 58 96 64Z', hc),
+      back: (hc) => S(HAIR.back, hc, HAIR.backSh) + L('M96 86Q88 80 86 88Q86 96 95 94', dk(hc, 0.35), 2.4) + L('M58 82Q68 70 82 66', lt(hc, 0.32), 4, ' opacity=".7"'),
+    },
+    curly: {
+      hat: [-6, 1.1],
+      behind: (hc) => S(curlyBack, hc, null, null),
+      front: (hc) =>
+        S(curlyFront, hc, null, null) + L('M64 78Q70 72 76 78', dk(hc), 2.2) + L('M104 70Q110 66 114 72', dk(hc), 2.2) + L('M124 86Q130 84 132 90', dk(hc), 2.2) +
+        L('M56 84Q62 74 72 70', lt(hc, 0.32), 4, ' opacity=".7"') + L('M84 66Q90 63 96 64', lt(hc, 0.32), 3.4, ' opacity=".6"'),
+      back(hc) {
+        const dh = dk(hc, 0.35);
+        return S(curlyFull, hc) + L('M70 84Q78 78 84 86', dh, 2.2) + L('M100 96Q108 90 114 98', dh, 2.2) + L('M74 122Q82 116 88 124', dh, 2.2) + L('M106 130Q112 126 118 132', dh, 2.2) + L('M60 82Q68 70 80 66', lt(hc, 0.32), 4, ' opacity=".7"');
+      },
+    },
+    // spikes all over the top, pointing up and out
+    spiky: {
+      hat: [-7, 1.1],
+      front: (hc) => S(HAIR.spiky, hc, HAIR.spikySh) + F('M110 62L125 55L125 71Z', dk(hc)) + L('M91 60L93 74M72 63L76 76M110 62L108 74', dk(hc, 0.35), 2) + hairShine('M57 82Q63 74 72 70', hc, 4.5, 0.75),
+      back: (hc) =>
+        S(HAIR.spikyB, hc, HAIR.backSh) + F('M111 57L126 50L127 65Z', dk(hc)) + L('M92 55L92 70M73 57L76 72M111 57L108 72', dk(hc, 0.35), 2) + L('M70 100Q76 108 74 118M110 100Q106 110 110 120', dk(hc, 0.35), 2) +
+        hairShine('M56 80Q64 70 74 66', hc),
+    },
+    // a buzz cut: very short all over, the skin shows through a little
+    buzz: {
+      hat: [3, 0.97],
+      front(hc, sk) {
+        const b = mix(hc, sk, 0.3);
+        return S(HAIR.buzz, b, HAIR.buzzSh) + [[64, 76], [76, 72], [90, 70], [104, 71], [118, 75], [70, 82], [84, 78], [98, 77], [112, 80], [58, 90], [126, 88]].map((p) => CF(p[0], p[1], 1.3, dk(hc, 0.3), 0.7)).join('') +
+          hairShine('M58 86Q66 74 80 69', b, 3.6, 0.6);
+      },
+      back(hc, sk) {
+        const b = mix(hc, sk, 0.3);
+        return S(HAIR.buzzB, b, 'M118 68C134 78 140 94 139 114C138 130 133 141 126 147Q120 148 116 149C128 132 132 98 118 68Z') +
+          [[66, 82], [80, 76], [94, 74], [108, 76], [122, 84], [58, 100], [72, 94], [86, 90], [100, 90], [114, 94], [128, 102], [64, 116], [78, 110], [92, 108], [106, 110], [120, 118], [70, 132], [86, 128], [100, 128], [114, 134]]
+            .map((p) => CF(p[0], p[1], 1.3, dk(hc, 0.3), 0.7)).join('') + hairShine('M58 86Q66 74 80 69', b, 3.6, 0.6);
+      },
+    },
+    // neatly combed to one side from a side parting
+    sidepart: {
+      hat: [0, 1],
+      front: (hc, sk) =>
+        S(HAIR.side, hc, HAIR.shortSh) + L('M72 79Q69 72 67.5 67', dk(hc, 0.35), 4.6) + L('M72 79Q69 72 67.5 67', sk, 2) + L('M82 76Q102 90 124 87M90 69Q110 78 128 78', dk(hc), 1.8) +
+        hairShine('M86 65Q106 61 122 69', hc, 4.5, 0.75) + hairShine('M54 86Q57 80 62 76', hc, 3.6, 0.7),
+      back: (hc) =>
+        S(HAIR.sideB, hc, 'M120 70C136 80 143 96 141 114C140 128 136 140 128 147Q120 149 114 150C126 132 132 100 120 70Z') + L('M110 64Q118 70 124 78', dk(hc, 0.35), 2.4) +
+        L('M108 70Q86 76 66 92M118 84Q100 100 92 126M124 100Q112 120 110 140', dk(hc), 1.8) + hairShine('M58 82Q68 70 82 66', hc),
+    },
+    // soft waves on top and a wavy fringe
+    wavy: {
+      hat: [-4, 1.06],
+      front: (hc) =>
+        S(HAIR.wavy, hc, HAIR.wavySh) + L('M62 76Q70 68 80 72Q88 62 100 66Q110 60 120 68', dk(hc), 2) + L('M68 88Q74 80 84 84M96 84Q104 78 114 82', dk(hc), 1.8) + hairShine('M54 84Q58 72 70 66', hc, 4.2, 0.7) +
+        hairShine('M86 58Q96 54 104 58', hc, 3.4, 0.6),
+      back: (hc) =>
+        S(HAIR.wavyB, hc, 'M120 70C136 80 143 96 141 114C141 124 139 132 135 138C134 146 126 146 122 150Q118 148 114 148C126 132 132 100 120 70Z') +
+        L('M60 98Q70 90 80 96Q90 88 100 94Q110 86 122 92M58 120Q68 112 78 118Q88 110 98 116Q108 108 120 114', dk(hc, 0.35), 2) + hairShine('M58 82Q68 70 82 66', hc),
+    },
+    ponytail: {
+      hat: [0, 1],
+      behind: (hc) =>
+        S(HAIR.ponyTail, hc, 'M150 84C164 96 166 116 160 130C156 140 150 147 143 152C148 134 147 116 140 104C146 98 150 92 150 84Z') + L('M140 92Q156 104 152 132', dk(hc), 2) +
+        E(129, 82, 6.5, 8.5, PONY_TIE, ' transform="rotate(-42 129 82)"'),
+      front: (hc) => S(HAIR.pony, hc, HAIR.shortSh) + L('M57 82Q69 70 87 67', lt(hc, 0.32), 4.5, ' opacity=".75"') + L('M74 90Q96 84 116 80', dk(hc), 2),
+      back(hc) {
+        const dh = dk(hc, 0.35);
+        return S(HAIR.backPony, hc) + L('M58 96Q76 100 86 99', dh, 2) + L('M126 96Q108 100 98 99', dh, 2) + L('M92 66L92 92', dh, 2) +
+          S('M84 100C70 122 76 152 92 182C108 154 114 122 100 100Z', hc, 'M100 100C114 122 108 154 92 182C100 150 100 124 96 102Z') + L('M88 112Q84 140 92 166', dh, 2) +
+          E(92, 99, 10, 6.5, PONY_TIE) + L('M58 80Q68 70 82 66', lt(hc, 0.32), 4, ' opacity=".7"');
+      },
+    },
+    // long straight hair with a fringe, falling past the shoulders
+    long: {
+      hat: [-2, 1.03],
+      behind: (hc) => S(HAIR.longBehind, hc, 'M150 170Q152 180 140 180Q128 182 120 176C130 172 140 168 150 170Z') + L('M46 156Q44 166 46 176M138 156Q140 166 138 176M126 158Q126 168 128 176', dk(hc, 0.35), 2),
+      front: (hc) => S(HAIR.long, hc, HAIR.longSh) + L('M70 93Q72 84 70 76M92 96Q93 86 92 74M112 94Q112 84 116 76', dk(hc), 1.8) + hairShine('M52 92Q56 74 74 66', hc, 4.5, 0.75) + hairShine('M44 112Q42 126 44 140', hc, 3.4, 0.6),
+      back: (hc) =>
+        S(HAIR.longB, hc, HAIR.longBSh) + L('M92 64Q90 120 92 186M70 70Q60 120 64 184M114 70Q124 120 120 184', dk(hc, 0.35), 2) + hairShine('M54 90Q60 72 76 64', hc) + hairShine('M46 120Q44 140 46 160', hc, 3.4, 0.6),
+    },
+    // two pigtails with bobbles, a middle parting
+    pigtails: {
+      hat: [0, 1],
+      behind: (hc) => {
+        const t = S(HAIR.pigtail, hc, HAIR.pigtailSh) + L('M42 112Q34 126 36 144', dk(hc, 0.35), 2);
+        return t + G(t, MIR);
+      },
+      front: (hc) => S(HAIR.parted, hc, HAIR.shortSh) + L('M92 75L92 64M84 80Q70 84 60 94M100 80Q114 84 124 94', dk(hc, 0.35), 2) + hairShine('M57 84Q66 72 84 68', hc, 4.5, 0.75) + ties([[49, 104], [135, 104]]),
+      back(hc) {
+        const t = S(HAIR.pigtail, hc, HAIR.pigtailSh) + L('M42 112Q34 126 36 144', dk(hc, 0.35), 2);
+        return t + G(t, MIR) + S(HAIR.backPony, hc, 'M120 70C136 80 143 96 141 114C140 132 134 144 124 150Q118 152 112 153C126 134 132 100 120 70Z') +
+          L('M92 63L92 150M88 76Q66 84 54 102M96 76Q118 84 130 102M86 110Q66 108 52 106M98 110Q118 108 132 106', dk(hc, 0.35), 2) + hairShine('M58 82Q68 70 82 66', hc) + ties([[49, 104], [135, 104]]);
+      },
+    },
+    // hair pulled up into a round bun on top
+    bun: {
+      hat: [0, 1],
+      bun: {
+        front: (hc) => S(ellD(92, 50, 17, 15), hc, crescent(92, 50, 17, 15, 4, 4)) + L('M80 48Q88 40 98 44Q104 50 96 56', dk(hc, 0.35), 2) + hairShine('M80 44Q84 38 90 37', hc, 3.4, 0.7),
+        tie: () => S('M78 66Q92 58 106 66Q106 72 92 72Q78 72 78 66Z', PONY_TIE, null, 'M82 65Q92 60 102 64Q92 63 82 66Z'),
+        back: (hc) =>
+          S(ellD(92, 56, 19, 16), hc, crescent(92, 56, 19, 16, 4, 4)) + L('M78 54Q86 44 98 48Q106 54 98 62Q90 64 86 58', dk(hc, 0.35), 2) + hairShine('M80 50Q84 44 90 42', hc, 3.4, 0.7) +
+          S('M76 72Q92 64 108 72Q108 78 92 78Q76 78 76 72Z', PONY_TIE, null, 'M80 71Q92 66 104 70Q92 69 80 72Z'),
+      },
+      front: (hc) => S(HAIR.pony, hc, HAIR.shortSh) + hairShine('M57 82Q69 70 87 67', hc, 4.5, 0.75) + L('M72 92Q84 82 90 70M112 88Q102 80 96 70', dk(hc, 0.35), 2),
+      back: (hc) =>
+        S(HAIR.backPony, hc, 'M120 70C136 80 143 96 141 114C140 132 134 144 124 150Q118 152 112 153C126 134 132 100 120 70Z') +
+        L('M60 130Q70 100 84 76M124 130Q114 100 100 76M92 148L92 80M74 146Q78 110 88 78M110 146Q106 110 96 78', dk(hc, 0.35), 2) + hairShine('M58 82Q68 70 82 66', hc),
+    },
+    // one long braid from behind the ear, over the shoulder; a side-swept fringe
+    braid: {
+      hat: [0, 1],
+      behind: (hc) => braid([[140, 98], [145, 110], [145, 122], [142, 134], [139, 146], [137, 158], [136, 170], [136, 182]], hc, true),
+      front: (hc) => S(HAIR.side, hc, HAIR.shortSh) + L('M82 76Q102 88 124 86', dk(hc), 1.8) + hairShine('M84 68Q104 66 120 72', hc, 4.5, 0.75) + hairShine('M54 86Q57 80 62 76', hc, 3.6, 0.7),
+      back: (hc) =>
+        S(HAIR.backPony, hc, 'M120 70C136 80 143 96 141 114C140 132 134 144 124 150Q118 152 112 153C126 134 132 100 120 70Z') +
+        L('M112 66Q86 84 52 118M132 92Q96 108 54 126M124 136Q90 136 56 132', dk(hc, 0.35), 2) + hairShine('M58 82Q68 70 82 66', hc) +
+        braid([[48, 122], [43, 133], [42, 145], [45, 157]], hc, false),
+    },
+  };
+  // with a hat on, a bun hides under it (crowns and tiaras sit around it)
+  const bunShows = (hat) => !hat || /crown/.test(hat);
+
+  function hairFrontBack(look, hat) {
+    // hair drawn behind the face in the front view
     const hc = HAIRC[look.hairColor],
-      h = look.hair,
-      hl = lt(hc, 0.32);
-    if (h === 'curly')
-      return S(curlyFront, hc, null, null) + L('M64 78Q70 72 76 78', dk(hc), 2.2) + L('M104 70Q110 66 114 72', dk(hc), 2.2) + L('M124 86Q130 84 132 90', dk(hc), 2.2) +
-        L('M56 84Q62 74 72 70', hl, 4, ' opacity=".7"') + L('M84 66Q90 63 96 64', hl, 3.4, ' opacity=".6"');
-    const d = h === 'ponytail' ? HAIR.pony : HAIR.short;
-    return (
-      S(d, hc, HAIR.shortSh) + L('M57 82Q69 70 87 67', hl, 4.5, ' opacity=".75"') +
-      (h === 'short' ? P('M86 64Q87 52 100 53Q93 58 96 64Z', hc) : L('M74 90Q96 84 116 80', dk(hc), 2))
-    );
+      h = HAIRS[look.hair] || HAIRS.short;
+    return (h.bun && bunShows(hat) ? h.bun.front(hc) : '') + (h.behind ? h.behind(hc) : '');
+  }
+  function hairFront(look, hat) {
+    const hc = HAIRC[look.hairColor],
+      h = HAIRS[look.hair] || HAIRS.short;
+    return h.front(hc, SKIN[look.skin]) + (h.bun && bunShows(hat) ? h.bun.tie() : '');
   }
   // a hijab style's print, kept inside the hijab's outline (hs = { c, pat(view), trim() } from a Hijabs item)
   function hijabPrint(d, hs, v) {
@@ -344,40 +513,36 @@
     const id = uid('hj');
     return '<clipPath id="' + id + '"><path d="' + d + '"/></clipPath>' + G(hs.pat(v), ' clip-path="url(#' + id + ')"') + P(d, 'none');
   }
-  function headFront(look, mood, hs) {
-    const sk = SKIN[look.skin];
+  // hat = the hat item being worn (if any), so a bun can tuck under it
+  function headFront(look, mood, hs, hat) {
+    const sk = SKIN[look.skin],
+      girl = isGirl(look);
     if (look.hair === 'hijab') {
       const hj = hs ? hs.c : HIJABC[look.hijabColor];
       return (
         S(HAIR.hijabF, hj, 'M50 150Q34 162 36 178Q54 192 92 192Q130 192 148 178Q150 162 134 150Q122 168 92 168Q62 168 50 150Z') + hijabPrint(HAIR.hijabF, hs, 'front') +
         L('M53 98Q60 74 84 65', lt(hj, 0.55), 5, ' opacity=".7"') + L('M62 170Q70 180 68 189', dk(hj, 0.35), 2.2) + L('M122 170Q114 180 116 189', dk(hj, 0.35), 2.2) +
-        faceShape(sk, true) + face(sk, mood) +
+        faceShape(sk, true) + face(sk, mood, girl) +
         P('M52 117C52 92 70 77 92 77C114 77 132 92 132 117C128 98 112 84 92 84C72 84 56 98 52 117Z', hs && hs.band ? hs.band : lt(hj, 0.55)) +
         (hs && hs.trim ? hs.trim() : '') + (hs && hs.pin ? hs.pin() : C(132, 152, 4.2, '#fff6dc', sw(2.2)) + CF(130.8, 150.8, 1.4, '#fff'))
       );
     }
-    return hairFrontBack(look) + ears(sk) + faceShape(sk, false) + face(sk, mood) + hairFront(look);
+    return hairFrontBack(look, hat) + ears(sk) + faceShape(sk, false) + face(sk, mood, girl) + hairFront(look, hat);
   }
-  function headBack(look, hs) {
+  function headBack(look, hs, hat) {
     const sk = SKIN[look.skin],
-      hc = HAIRC[look.hairColor],
-      dh = dk(hc, 0.35);
+      hc = HAIRC[look.hairColor];
     if (look.hair === 'hijab') {
       const hj = hs ? hs.c : HIJABC[look.hijabColor];
       return S(HAIR.hijabB, hj, 'M48 154Q32 168 38 194Q64 206 92 206Q120 206 146 194Q152 168 136 154Q124 172 92 172Q60 172 48 154Z') + hijabPrint(HAIR.hijabB, hs, 'back') +
         L('M56 92Q64 72 86 64', lt(hj, 0.55), 5, ' opacity=".7"') + L('M92 156Q90 180 92 204', dk(hj, 0.35), 2.2) + L('M66 164Q60 182 62 199', dk(hj, 0.35), 2.2) + L('M118 164Q124 182 122 199', dk(hj, 0.35), 2.2);
     }
-    let s = ears(sk) + E(92, 112, 46, 43, sk);
-    if (look.hair === 'curly') s += S(curlyFull, hc) + L('M70 84Q78 78 84 86', dh, 2.2) + L('M100 96Q108 90 114 98', dh, 2.2) + L('M74 122Q82 116 88 124', dh, 2.2) + L('M106 130Q112 126 118 132', dh, 2.2) + L('M60 82Q68 70 80 66', lt(hc, 0.32), 4, ' opacity=".7"');
-    else if (look.hair === 'ponytail')
-      s += S(HAIR.backPony, hc) + L('M58 96Q76 100 86 99', dh, 2) + L('M126 96Q108 100 98 99', dh, 2) + L('M92 66L92 92', dh, 2) +
-        S('M84 100C70 122 76 152 92 182C108 154 114 122 100 100Z', hc, 'M100 100C114 122 108 154 92 182C100 150 100 124 96 102Z') + L('M88 112Q84 140 92 166', dh, 2) +
-        E(92, 99, 10, 6.5, PONY_TIE) + L('M58 80Q68 70 82 66', lt(hc, 0.32), 4, ' opacity=".7"');
-    else s += S(HAIR.back, hc, 'M120 70C136 80 143 96 141 114C140 130 134 144 122 150Q118 148 114 147C126 132 132 100 120 70Z') + L('M96 86Q88 80 86 88Q86 96 95 94', dh, 2.4) + L('M58 82Q68 70 82 66', lt(hc, 0.32), 4, ' opacity=".7"');
-    return s;
+    const h = HAIRS[look.hair] || HAIRS.short;
+    return ears(sk) + E(92, 112, 46, 43, sk) + h.back(hc, sk) + (h.bun && bunShows(hat) ? h.bun.back(hc) : '');
   }
-  // Hats are drawn for the short-hair head; other hair styles move/scale them a little.
-  const HATFIT = { short: [0, 1], ponytail: [0, 1], curly: [-6, 1.1], hijab: [-6, 1.1] };
+  // Hats are drawn for the short-hair head; other hair styles move/scale them a little ([y shift, scale]).
+  const HATFIT = { hijab: [-6, 1.1] };
+  Object.keys(HAIRS).forEach((k) => (HATFIT[k] = HAIRS[k].hat));
   const hatFit = (h) => {
     const f = HATFIT[h] || HATFIT.short;
     return ' transform="translate(92 ' + (92 + f[0]) + ') scale(' + f[1] + ') translate(-92 -92)"';
@@ -1392,8 +1557,8 @@
     const bag = o.bag ? ART[o.bag].ex(v) + fxOf('bag') : '';
     const hat = o.hat ? G(ART[o.hat].ex(v, look) + fxOf('hat'), hatFit(look.hair)) : '';
     let head;
-    if (back) head = (mess ? mess.hair : '') + headBack(look, hs) + hat;
-    else head = (mess ? mess.hair : '') + headFront(look, mood, hs) + (o.glasses ? ART[o.glasses].ex('front') + fxOf('glasses') : '') + hat;
+    if (back) head = (mess ? mess.hair : '') + headBack(look, hs, o.hat) + hat;
+    else head = (mess ? mess.hair : '') + headFront(look, mood, hs, o.hat) + (o.glasses ? ART[o.glasses].ex('front') + fxOf('glasses') : '') + hat;
     if (sad) head = G(head, ' transform="translate(0 3) rotate(-3 92 150)"'); // a droopy head
     const pet = o.pet ? G(G(OUT(ART[o.pet].pet.d() + fxm(T('pet'), PETFX[o.pet] || [[-30, -50], [30, -36]], 1.4), SW / PET_S), tf(PET_AT[0], PET_AT[1], PET_S)), cls('ex-pet')) : '';
     const wingsF = '';
@@ -2033,7 +2198,7 @@
     });
     // meadow hills with flowers
     s += NF('M-10 800L-10 722Q220 690 460 712Q700 694 900 714Q1140 690 1380 710Q1500 702 1610 714L1610 800Z', '#8fdc6a') + NF('M-10 800L-10 752Q400 728 800 744Q1200 728 1610 748L1610 800Z', '#7ccf5c');
-    [[120, 726, '#ff8fcf'], [260, 716, '#ffd23f'], [380, 724, '#fff'], [1240, 716, '#ff8fcf'], [1340, 724, '#ffd23f'], [1480, 718, '#fff'], [1060, 726, '#7fb6ff'], [560, 720, '#7fb6ff']].forEach((f) => { s += CF(f[0], f[1], 5, N(f[2])) + CF(f[0], f[1], 2, N('#ffb000')); });
+    [[120, 726, '#ff8fcf'], [260, 716, '#ffd23f'], [380, 724, '#ffffff'], [1240, 716, '#ff8fcf'], [1340, 724, '#ffd23f'], [1480, 718, '#ffffff'], [1060, 726, '#7fb6ff'], [560, 720, '#7fb6ff']].forEach((f) => { s += CF(f[0], f[1], 5, N(f[2])) + CF(f[0], f[1], 2, N('#ffb000')); });
     // the trail from our ledge to the mountain: across the meadow, over a little bridge on the lake,
     // up through the canyon and the starry hills; a pennant in each world's color at every bend
     const lowA = [[742, 786], [860, 752], [972, 716], [948, 688], [931, 664]],
