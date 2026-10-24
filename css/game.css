@@ -4719,11 +4719,7 @@ body {
   flex: none;
   width: 62px;
 }
-.wtab.hasnew:not(.on) {
-  box-shadow:
-    0 0 0 3px #ff3b6b,
-    0 3px 0 var(--shd);
-}
+/* a category with something new has just its red dot (no outline: two red marks were confusing) */
 .bagscr .wbody {
   flex: none;
   padding: 10px 0 6px;
@@ -6147,8 +6143,6 @@ body {
 .wd-side.wd-show {
   right: 8%;
   bottom: 14px;
-  background: var(--gold);
-  color: #2b2340;
 }
 
 /* ---------- v2.4.1: my achievements ---------- */

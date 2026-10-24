@@ -501,7 +501,7 @@
     },
   };
   // with a hat on, a bun hides under it (crowns and tiaras sit around it)
-  const bunShows = (hat) => !hat || /crown/.test(hat);
+  const bunShows = (hat) => !hat || /crown|visor/.test(hat);
 
   function hairFrontBack(look, hat) {
     // hair drawn behind the face in the front view
@@ -682,6 +682,29 @@
     if (r[0] === 'pair') r.slice(1).forEach((q) => ITEMS.push({ id: q[0], slot: q[1], name: q[2], tier, from: null, track: t, for: q[3] }));
     else ITEMS.push({ id: r[0], slot: r[1], name: r[2], tier, from: null, track: t, vof: r[3] || null, deg: r[4] || 0 });
   });
+  /* ---------- everyday accessories: small surprise gifts dropped at random (drop: true) ----------
+   * Not starter clothes, not on the star track and not from a sūrah: the game picks them with ITEMS.filter((it) => it.drop).
+   * New designs: [id, slot, name]. Color versions: [color word, base item, hue turn in degrees] (like TRACK_COLORS). */
+  const DROP_NEW = [
+    ['knobbly-branch', 'stick', 'Knobbly branch'], ['knob-cane', 'stick', 'Knob-top cane'], ['flower-stick', 'stick', 'Flower stick'],
+    ['drawstring-sack', 'bag', 'Drawstring bag'], ['buckle-satchel', 'bag', 'Buckle satchel'], ['round-pouch', 'bag', 'Little round pouch'],
+    ['sun-visor', 'hat', 'Sun visor'], ['earflap-hat', 'hat', 'Earflap hat'],
+    ['sandals', 'shoes', 'Summer sandals'], ['frog-boots', 'shoes', 'Froggy rain boots'],
+    ['band-watch', 'watch', 'Simple watch'], ['star-buckler', 'shield', 'Star buckler'], ['scarf-cape', 'cape', 'Scarf cape'],
+    ['polo-shirt', 'top', 'Polo shirt'], ['square-specs', 'glasses', 'Square glasses'],
+  ];
+  const DROP_COLORS = [
+    ['red', 'basic-shirt', 153], ['teal', 'basic-shirt', 330], ['olive', 'basic-pants', 199], ['purple', 'basic-shoes', 252], ['green', 'hoodie', 229],
+    ['pink', 'striped-tee', 318], ['purple', 'bucket-hat', 236], ['purple', 'beanie', 285], ['red', 'little-backpack', 332],
+    ['blue', 'polo-shirt', 65], ['red', 'polo-shirt', 205], ['pink', 'sun-visor', 149], ['purple', 'sun-visor', 90], ['blue', 'earflap-hat', 211], ['green', 'earflap-hat', 136],
+    ['pink', 'sandals', 160], ['blue', 'frog-boots', 95], ['red', 'drawstring-sack', 143], ['orange', 'drawstring-sack', 170], ['red', 'buckle-satchel', 338], ['blue', 'buckle-satchel', 190],
+    ['orange', 'round-pouch', 130], ['pink', 'band-watch', 113], ['yellow', 'band-watch', 188], ['blue', 'scarf-cape', 185], ['purple', 'scarf-cape', 245], ['red', 'knob-cane', 139],
+  ];
+  DROP_NEW.forEach((r) => ITEMS.push({ id: r[0], slot: r[1], name: r[2], tier: 1, from: null, drop: true }));
+  DROP_COLORS.forEach(([c, base, deg]) => {
+    const b = ITEMS.find((i) => i.id === base);
+    ITEMS.push({ id: c + '-' + base, slot: b.slot, name: colorName(c, base), tier: 1, from: null, drop: true, vof: base, deg });
+  });
   const BYID = Object.create(null);
   ITEMS.forEach((it) => (BYID[it.id] = it));
   const DEFAULTS = { top: 'basic-shirt', pants: 'basic-pants', shoes: 'basic-shoes', stick: 'twig' };
@@ -851,6 +874,41 @@
         S('M45 88Q92 80 139 88L139 100Q92 92 45 100Z', dk(c, 0.15)) + L('M58 86L58 97M72 84L72 95M86 83L86 94M100 83L100 94M114 84L114 95M128 86L128 97', dk(c, 0.35), 1.4) + ball(92, 44, 9, 9, '#ffffff', { shc: '#e3e6f0' });
     },
   };
+  /* everyday hats (surprise gifts) */
+  // a sun visor: just a band and a peak, the hair shows on top (a bun stays out, see bunShows)
+  ART['sun-visor'] = {
+    box: [40, 62, 144, 114],
+    // the icon shows the open band going round behind the peak, so it reads as a visor
+    ic: () => DL('M52 88Q48 64 92 64Q136 64 132 88', '#22b8c9', 7) + L('M53 84Q52 68 92 68Q132 68 131 84', '#f4ecdc', 1.6) + ART['sun-visor'].ex('front'),
+    ex(v) {
+      const c = '#22b8c9',
+        w = '#f4ecdc';
+      if (v === 'back')
+        return S('M49 90Q92 102 135 90L135 99Q92 111 49 99Z', c, 'M112 98Q126 96 135 93L135 99Q126 103 114 104Z') + L('M50 92.6Q92 104.6 134 92.6', w, 1.6) + S(rr(83, 98, 18, 9, 3.5), lt(c, 0.25)) + L('M88 102.5L96 102.5', dk(c, 0.3), 1.6);
+      return (
+        S('M49 84Q92 74 135 84L135 94Q92 84 49 94Z', c, 'M116 80Q128 81 135 84L135 94Q126 90 116 89Z') + L('M50 86.6Q92 77 134 86.6', w, 1.6) +
+        S('M44 93Q92 82 140 93Q146 101 135 105Q92 114 49 105Q38 101 44 93Z', dk(c, 0.1), 'M44 99Q46 103 49 105Q92 114 135 105Q138 104 140 101Q92 111 44 99Z', 'M54 94Q72 89 86 88Q70 92 58 97Z')
+      );
+    },
+  };
+  // a knitted hat with ear flaps and little pompom strings
+  ART['earflap-hat'] = {
+    box: [34, 42, 150, 154],
+    ex() {
+      const c = '#e8524a',
+        w = '#f4ecdc';
+      const flap = S('M40 92L39 120Q40 132 49 132Q58 132 59 120L60 94Z', c, 'M52 94L60 94L59 120Q58 132 49 132Q55 124 52 94Z') + L('M42 118Q49 124 57 118', w, 1.8) +
+        L('M49 132L50 145', INK, 2) + ball(50, 147.5, 4, 4, w, { shc: '#d9d0c0' });
+      let zig = '';
+      for (let x = 50; x < 134; x += 8) zig += (zig ? 'L' : 'M') + x + ' ' + (x % 16 === 2 ? 95 : 89);
+      return (
+        flap + G(flap, MIR) +
+        S('M47 96C45 64 66 50 92 50C118 50 139 64 137 96Z', c, 'M114 54C130 62 139 76 137 96L125 96Q127 70 114 54Z', 'M58 80C59 68 66 61 74 58C68 66 64 74 62 84Z') +
+        L('M70 60L66 92M92 52L92 90M114 60L118 92', dk(c, 0.18), 1.5) +
+        S('M45 87Q92 79 139 87L139 99Q92 91 45 99Z', w, 'M118 85Q132 85 139 87L139 99Q130 96 120 95Z') + L(zig, c, 2.2) + ball(92, 49, 5, 4.4, dk(c, 0.12), { hl: false })
+      );
+    },
+  };
   // everyday glasses: a thin, plain frame (no thick outline), like a child's own glasses
   const thinGlasses = (c) => {
     const lens = (x) => rr(x - 12.5, 109, 25, 18, 7);
@@ -863,6 +921,7 @@
   };
   ART['everyday-glasses'] = { box: [44, 102, 140, 134], ex: (v) => (v === 'back' ? '' : thinGlasses('#3d3a5c')) };
   ART['round-specs'] = { box: [44, 102, 140, 134], ex: (v) => (v === 'back' ? '' : glassesBase('#c99a3a', '#e8f6ff', 0.25)) };
+  ART['square-specs'] = { box: [44, 102, 140, 134], ex: (v) => (v === 'back' ? '' : glassesBase('#34406b', '#e8f6ff', 0.22, 'sq')) };
   ART['goggles'] = {
     box: [42, 100, 142, 136],
     ex(v) {
@@ -994,6 +1053,18 @@
     },
   };
   TOP['striped-tee'].bk = TOP['striped-tee'].fr;
+  // a polo shirt (surprise gift): a white collar, a short button strip and white cuffs
+  TOP['polo-shirt'] = {
+    c: '#3fbf7f',
+    cf: '#f4ecdc',
+    fr() {
+      const c = '#3fbf7f',
+        half = P('M80 152L92 160L85 168L73 156Z', '#f4ecdc', sw(2.4));
+      return P(rr(88.4, 158, 7.2, 24, 2.6), lt(c, 0.22), sw(2)) + C(92, 166.5, 1.9, '#f4ecdc', sw(1.4)) + C(92, 175, 1.9, '#f4ecdc', sw(1.4)) + half + G(half, MIR) +
+        P('M104 184L116 184L116 194Q110 198 104 194Z', dk(c, 0.1), sw(1.8)) + F('M71 168C71 162 74 159 78 159C77 172 75 188 73 200C71 190 70 178 71 168Z', '#fff', 0.35);
+    },
+    bk: () => P('M71 154Q92 165 113 154L114 161Q92 173 70 161Z', '#f4ecdc', sw(2.4)) + L('M62 221Q92 226 122 221', dk('#3fbf7f', 0.25), 1.8),
+  };
   Object.keys(TOP).forEach((id) => {
     const t = TOP[id];
     t.sl = t.sl || t.c;
@@ -1051,6 +1122,29 @@
     return F(d, c) + F('M84 250L87.5 250Q92.6 250 92.6 255L92.4 271C95 273.5 95.6 278 95.6 284L88 284C88 276 86 262 84 250Z', '#d4dbe8') + F(SOLE.replace(/94\.4/g, '95.6'), '#8d97b0') +
       F('M68 262L92.6 262L92.6 268L68 268Z', '#ff8a3d') + P(d, 'none') + L('M68 262L92.6 262M68 268L92.6 268', INK, 1.6);
   };
+  /* everyday shoes (surprise gifts) */
+  // the skin as rgb(): recolored items (color versions, golden editions) only turn #rrggbb colors, so the foot keeps its skin
+  const skinRGB = (c) => 'rgb(' + rgb(c).join(',') + ')';
+  // sandals show the foot: shoe(sk) gets the explorer's skin (the icon uses a default one)
+  SHOE['sandals'] = (sk) => {
+    sk = sk || SKIN[1];
+    const c = '#2fbfa6',
+      foot = 'M65.6 285C64.2 278 66.6 274 70.2 271.6L71 264L90 264L90.4 271.4C92.2 273.6 92.6 278 92.6 282L92.6 285Z',
+      so = 'M62.6 283.4L95.4 283.4L95.4 287.4C95.4 290.4 93.4 292 90.4 292L67.6 292C64.6 292 62.6 290.4 62.6 287.4Z';
+    return F(foot, skinRGB(sk)) + F('M85.6 264L90 264L90.4 271.4C92.2 273.6 92.6 278 92.6 282L92.6 285L86.6 285Q88 274 85.6 264Z', skinRGB(dk(sk, 0.12))) + P(foot, 'none') +
+      S(so, '#ece4d8', 'M62.6 288.4L95.4 288.4C95.4 290.6 93.4 292 90.4 292L67.6 292C64.6 292 62.6 290.6 62.6 288.4Z') +
+      L('M74 283.4Q75 281 77 283.4M78.6 283.4Q79.8 281 81.8 283.4M83.4 283.4Q84.6 281.2 86.4 283.4', skinRGB(dk(sk, 0.3)), 1.2) +
+      DL('M68.4 273Q78 276 88.8 273', c, 2.2) + DL('M66.8 281.4Q72 277.2 78 277.6Q84 277.2 90.6 281.4', c, 2.6) + C(78, 277.6, 2.2, '#ece4d8', sw(1.6));
+  };
+  // rain boots with a flared cuff, a round toe and a little frog face
+  SHOE['frog-boots'] = () => {
+    const c = '#5cc45a',
+      d = 'M63.6 287C62 279 66 275 68.2 272.4L67.8 255Q67 250 64.8 245.6Q79 242.6 95 245.6Q93.4 250 92.8 255L92.6 270.6C96.4 273 97 278 97 284L97 287C97 290 95 292 92 292L68 292C65 292 63.6 290 63.6 287Z';
+    return F(d, c) + F('M84 244.2Q90 244.6 95 245.6Q93.4 250 92.8 255L92.6 270.6C96.4 273 97 278 97 284L89 284C89 272 87.6 258 84 244.2Z', dk(c, 0.2)) +
+      F('M64.8 245.6Q79 242.6 95 245.6Q94 249 93.4 251.4Q79 248.6 66.2 251.4Q65.6 248 64.8 245.6Z', lt(c, 0.3)) + F(rr(70.6, 256, 3.6, 12, 1.8), '#fff', 0.55) +
+      F('M63.4 284.6L97 284.6L97 287C97 290 95 292 92 292L68 292C65 292 63.4 290 63.4 287Z', dk(c, 0.45)) + P(d, 'none') + L('M66.2 251.4Q79 248.6 93.4 251.4', INK, 1.8) +
+      C(76, 273, 3.6, '#ffffff', sw(1.6)) + C(85, 273, 3.6, '#ffffff', sw(1.6)) + CF(76.6, 273.4, 1.7, INK) + CF(85.6, 273.4, 1.7, INK) + L('M75 279.4Q80.5 283 86 279.4', INK, 1.6);
+  };
   const SHOEFX = { 'gallop-boots': [[80, 266]], 'comfy-sneakers': [[70, 272]], 'cloud-boots': [[66, 252], [92, 262]] };
   Object.keys(SHOE).forEach((id) => (ART[id] = { shoe: SHOE[id], box: [52, 236, 132, 296], fx: SHOEFX[id] }));
 
@@ -1097,6 +1191,45 @@
     },
   };
 
+  // a short cape with a scarf collar (surprise gift); over() = the scarf knot drawn over the shirt in the front view
+  ART['scarf-cape'] = {
+    box: [44, 146, 140, 226],
+    // the icon: the cape hanging from a round scarf collar (the neck hole shows), the knotted ends in front
+    ic() {
+      const c = '#ff8a3d',
+        w = '#f4ecdc';
+      return ART['scarf-cape'].cape() +
+        E(92, 156, 34, 11, dk(c, 0.15)) + EF(92, 159, 33, 7, dk(c, 0.3)) + E(92, 154.6, 22, 5.4, dk(c, 0.62), sw(2.4)) + L('M60 153Q92 170 124 153', w, 2) + G(ART['scarf-cape'].knot(), ' transform="translate(-2 -4)"');
+    },
+    knot() {
+      const c = '#ff8a3d',
+        w = '#f4ecdc',
+        tail = (d) => S(d, dk(c, 0.15));
+      return tail('M101 170L98 198L106 196L108 172Z') + tail('M107 170L114 194L121 189L111 168Z') + L('M99 190L106 189M113 186L119.6 183', w, 2) + ball(106, 170, 6, 5, dk(c, 0.1), { hl: false });
+    },
+    // the short cape seen from the back, without its collar
+    cape() {
+      const c = '#ff8a3d',
+        d = 'M62 158Q92 150 122 158C125 178 129 196 134 214Q123 222 113 215Q103 223 92 216Q81 223 71 215Q61 222 50 214C55 196 59 178 62 158Z';
+      return S(d, c, 'M106 154Q116 155 122 158C125 178 129 196 134 214Q123 222 113 215Q115 186 106 154Z', 'M66 170Q63 186 60 204Q58 186 62 166Z') + L('M77 170Q74 192 72 212M92 168L92 212M107 170Q110 192 112 212', dk(c, 0.3), 1.8);
+    },
+    ex(v) {
+      const c = '#ff8a3d',
+        w = '#f4ecdc';
+      if (v === 'back') {
+        return ART['scarf-cape'].cape() +
+          S('M60 151Q92 166 124 151L126 161Q92 178 58 161Z', dk(c, 0.15), 'M108 159Q120 156 125 154L126 161Q118 166 110 168Z') + L('M60 155.6Q92 170.6 124 155.6', w, 2) + L('M59 158.6Q92 173.6 125 158.6', w, 2);
+      }
+      return S('M70 156L114 156C120 176 127 196 136 214Q124 222 112 214L72 214Q60 222 48 214C57 196 64 176 70 156Z', dk(c, 0.2), null, null);
+    },
+    over() {
+      const c = '#ff8a3d',
+        w = '#f4ecdc';
+      return S('M66 156Q92 172 118 156L119 164Q92 182 65 164Z', dk(c, 0.15), 'M104 167Q114 163 119 160L119 164Q112 170 104 172Z') + L('M66 159.6Q92 175.6 118 159.6', w, 2) + L('M65.6 162.4Q92 178.4 118.6 162.4', w, 2) +
+        ART['scarf-cape'].knot();
+    },
+  };
+
   /* ---------- bags: back view = whole bag, front view = straps ---------- */
   ART['little-backpack'] = {
     box: [58, 150, 126, 234],
@@ -1140,6 +1273,51 @@
         S('M' + (x - 7) + ' 220L' + (x + 7) + ' 220L' + (x + 5) + ' 230L' + (x - 5) + ' 230Z', st) +
         '<g class="pr-flame">' + F('M' + (x - 5) + ' 231Q' + x + ' 258 ' + (x + 5) + ' 231Z', '#ffb347') + F('M' + (x - 2.6) + ' 231Q' + x + ' 247 ' + (x + 2.6) + ' 231Z', '#fff3b0') + '</g>';
       return tank(78) + tank(106) + S(rr(86, 178, 12, 32, 4), st) + CF(92, 186, 2.2, '#3fd08a') + CF(92, 196, 2.2, '#ffd23f');
+    },
+  };
+  /* everyday bags (surprise gifts) */
+  const CORD = '#efe6d6';
+  // a soft sack, gathered at the top, worn on two cords
+  ART['drawstring-sack'] = {
+    box: [60, 150, 124, 234],
+    ex(v) {
+      const c = '#4a8cff';
+      if (v !== 'back') return DL('M74 155L76 214', CORD, 2.4) + DL('M110 155L108 214', CORD, 2.4);
+      const body = 'M72 178Q92 172 112 178Q122 200 117 222Q116 229 108 229L76 229Q68 229 67 222Q62 200 72 178Z';
+      return DL('M78 158Q70 192 69 226', CORD, 2.4) + DL('M106 158Q114 192 115 226', CORD, 2.4) +
+        S('M74 179Q73 166 81 168Q86 158 92 164Q98 158 103 168Q111 166 110 179Z', c, 'M103 168Q111 166 110 179L104 179Q106 172 103 168Z') + L('M84 170L86 178M92 166L92 177M100 170L98 178', dk(c, 0.3), 1.6) +
+        S(body, c, 'M106 177Q113 178 112 178Q122 200 117 222Q116 229 108 229L102 229Q112 204 106 177Z', 'M73 188Q70 200 72 214Q68 200 71 186Z') +
+        DL('M71 179Q92 174 113 179', CORD, 2.6) + L('M89 177Q86 186 84 192M95 177Q98 186 100 192', INK, 4.2) + L('M89 177Q86 186 84 192M95 177Q98 186 100 192', CORD, 2) +
+        ball(92, 177, 3.6, 3.2, CORD, { hl: false, shc: '#d9cfbd' }) + P(star5(92, 207, 7, 3.2), '#ffffff', sw(1.8));
+    },
+  };
+  // a box-shaped school satchel: a big flap with two buckled straps and a handle on top
+  ART['buckle-satchel'] = {
+    box: [58, 150, 126, 234],
+    ex(v) {
+      const c = '#d9783f',
+        st = dk(c, 0.25),
+        bk = '#e9e2d6';
+      const buckle = (x, y) => P(rr(x - 4.6, y - 3.6, 9.2, 7.2, 2), bk, sw(1.6)) + L('M' + x + ' ' + (y - 3.6) + 'L' + x + ' ' + (y + 3.6), INK, 1.4);
+      if (v !== 'back') return DL('M73 155L75 212', st, 4.6) + DL('M111 155L109 212', st, 4.6) + buckle(74.6, 199) + buckle(109.4, 199);
+      return DL('M84 168Q84 157 92 157Q100 157 100 168', st, 3) +
+        S(rr(64, 166, 56, 62, 9), c, 'M108 166Q120 166 120 175L120 219Q120 228 111 228L104 228Q112 200 108 166Z') +
+        S('M64 175Q64 166 73 166L111 166Q120 166 120 175L120 202Q120 210 112 210L72 210Q64 210 64 202Z', dk(c, 0.1), 'M108 166Q120 166 120 175L120 202Q120 210 112 210L106 210Q112 190 108 166Z', 'M69 186Q69 174 76 171Q72 178 72 190Z') +
+        P(rr(74, 194, 8, 24, 2), st, sw(1.8)) + P(rr(102, 194, 8, 24, 2), st, sw(1.8)) + buckle(78, 210) + buckle(106, 210) + L('M70 222L114 222', dk(c, 0.3), 1.6, ' stroke-dasharray="3 3"');
+    },
+  };
+  // a little round pouch on a long cord, worn across the body
+  const pouch = (x, y) => {
+    const c = '#8a63d2';
+    return ball(x, y, 11.5, 11, c, { hl: false }) + S('M' + (x - 11.4) + ' ' + (y - 1.6) + 'Q' + x + ' ' + (y - 12) + ' ' + (x + 11.4) + ' ' + (y - 1.6) + 'Q' + x + ' ' + (y + 8) + ' ' + (x - 11.4) + ' ' + (y - 1.6) + 'Z', lt(c, 0.18)) +
+      C(x, y + 3.2, 2.6, '#ffd23f', sw(1.6)) + EF(x - 6, y + 4, 2.4, 1.4, '#fff', 0.5);
+  };
+  ART['round-pouch'] = {
+    box: [66, 150, 132, 230],
+    ic: () => DL('M72 156Q80 196 110 206', CORD, 2.4) + DL('M118 156Q122 186 118 202', CORD, 2.4) + pouch(116, 212),
+    ex(v) {
+      if (v === 'back') return DL('M112 156L70 206', CORD, 2.4) + G(pouch(116, 214), MIR);
+      return DL('M72 156L112 206', CORD, 2.4) + pouch(116, 214);
     },
   };
 
@@ -1280,6 +1458,46 @@
         S('M39.6 152Q38.6 136 46 132Q53.4 136 52.4 152Z', '#a86b3c', 'M46 132Q53.4 136 52.4 152L47 152Q49 140 46 132Z') + EF(46, 288, 2.6, 1.6, INK);
     },
   };
+  /* everyday sticks (surprise gifts) */
+  // a bumpy branch with knots, a cut top and a side shoot with two leaves
+  ART['knobbly-branch'] = {
+    box: [30, 134, 66, 292],
+    rot: 42,
+    fs: 108,
+    ex() {
+      const w = '#9a6436',
+        d = 'M42.6 144Q42 139 46 138.6Q50.6 138.6 50 144L49.4 166Q52.6 171 49.8 176L49.6 214Q52.4 219 49.6 224L49.6 254Q52.2 259 49.6 264L49.8 287Q47 290 43.4 287L43.2 262Q40.6 256 43.2 250L43 210Q40.2 204 43 198L42.8 176Q40.4 170 42.8 162Z';
+      return DL('M48 192Q56 186 59 176', w, 2.8) + S('M59 176Q56 166 62 160Q66 168 59 176Z', '#5fbf4a') + S('M57 182Q64 180 68 184Q62 190 57 182Z', '#5fbf4a') +
+        S(d, w, limb(48, 142, 48, 285, 1.4, 1.2)) + EF(46, 141.6, 3, 1.8, lt(w, 0.45), 0.9) + E(46, 141.6, 3, 1.8, 'none', sw(1.4)) +
+        E(45, 232, 1.8, 3, dk(w, 0.35), sw(1.4)) + L('M43.4 186Q46.4 188 48.8 185.4M43.4 274Q46 276 49 273.4', dk(w, 0.4), 1.6) + EF(46, 288, 2.6, 1.6, INK);
+    },
+  };
+  // a straight painted cane with a round wooden knob and a rubber tip
+  ART['knob-cane'] = {
+    box: [32, 132, 60, 292],
+    rot: 42,
+    fs: 108,
+    ex() {
+      const c = '#3f7fe0',
+        k = '#efe6d6';
+      return S(limb(46, 146, 46, 284, 3.4, 3), c, limb(47.8, 148, 47.8, 282, 1.3, 1.1), limb(44, 160, 44, 230, 0.8, 0.8)) + L('M42.8 160L49.2 160M42.8 166L49.2 166', '#ffffff', 2.2) +
+        P(rr(42, 278, 8, 10, 3), '#4a4458', sw(2)) + P(rr(41.6, 147, 8.8, 5, 2), '#c9c2d4', sw(1.6)) + ball(46, 141, 7, 6.6, k, { shc: '#d6ccbb' }) + EF(46, 289, 2.6, 1.4, INK);
+    },
+  };
+  // a green stem with two leaves and a big pink flower on top
+  ART['flower-stick'] = {
+    box: [28, 128, 64, 292],
+    rot: 42,
+    fs: 108,
+    ex() {
+      const g = '#5fbf4a',
+        pk = '#ff8fcf';
+      return S(limb(46, 150, 46, 287, 2.8, 2.6), g, limb(47.4, 152, 47.4, 285, 1, 1)) + S('M46 214Q36 202 30 208Q34 220 46 218Z', g, 'M46 218Q36 220 31 211Q38 218 46 214Z') +
+        S('M46 246Q56 236 62 241Q58 252 46 250Z', g, 'M46 250Q58 252 61 244Q56 250 46 246Z') + L('M46 216L36 209M46 248L57 241', dk(g, 0.3), 1.4) +
+        [0, 72, 144, 216, 288].map((a) => { const r = ((a - 90) * Math.PI) / 180; return ball(n(46 + 9 * Math.cos(r)), n(142 + 9 * Math.sin(r)), 6.6, 6.6, pk, { hl: false }); }).join('') +
+        ball(46, 142, 6, 6, '#ffd23f', { hl: false }) + CF(44, 140, 1.6, '#fff', 0.8) + EF(46, 288, 2.6, 1.6, INK);
+    },
+  };
 
 
   /* ---------- shields: local coordinates around (0,0), worn on the other arm ---------- */
@@ -1323,6 +1541,17 @@
         ball(0, 0, 6, 6, '#c9d2e3') + [0, 90, 180, 270].map((a) => CF(n(15 * Math.cos((a * Math.PI) / 180)), n(15 * Math.sin((a * Math.PI) / 180)), 1.8, '#8d97b0')).join('');
     },
   };
+  // a small wooden buckler with a painted star (surprise gift)
+  ART['star-buckler'] = {
+    box: [-21, -21, 21, 21],
+    sh() {
+      const w = '#b9844e',
+        R = 'M0 -19A19 19 0 1 0 0.01 -19Z',
+        I = 'M0 -13.6A13.6 13.6 0 1 0 0.01 -13.6Z';
+      return S(R, w, 'M7 -17.6A19 19 0 0 1 0.01 19Q12 4 7 -17.6Z') + S(I, '#3f7fe0', 'M5 -12.6A13.6 13.6 0 0 1 0.01 13.6Q9 3 5 -12.6Z') + P(star5(0, 0.6, 9, 4.2), '#ffd23f', sw(1.8)) +
+        [45, 135, 225, 315].map((a) => CF(n(16.3 * Math.cos((a * Math.PI) / 180)), n(16.3 * Math.sin((a * Math.PI) / 180)), 1.5, dk(w, 0.4))).join('') + F('M-11 -7Q-9 -11 -5 -12Q-9 -7 -10 -2Z', '#fff', 0.5);
+    },
+  };
   const SHIELDS = () => Object.keys(ART).filter((id) => ART[id].sh);
   SHIELDS().forEach((id) => (ART[id].ex = () => G(OUT(ART[id].sh(), SW / 0.85), tf(SHIELD_AT[0], SHIELD_AT[1], 0.85))));
 
@@ -1345,6 +1574,12 @@
   ART['sport-watch'] = {
     box: [-27, -46, 27, 46],
     w: (big) => watch('#ff5d5d', { rim: '#3a3f52', c: '#c8f7d4', mini: F(rr(-2, -1, 4, 2, 1), '#2b2340') }, F(rr(-11, -5, 22, 10, 2), '#2b2340', 0.85) + F(rr(-8, -2, 4, 4, 1), '#3fd08a') + F(rr(-2, -2, 4, 4, 1), '#3fd08a') + F(rr(4, -2, 4, 4, 1), '#3fd08a'), big),
+  };
+  // a plain watch with a white face and two hands (surprise gift)
+  ART['band-watch'] = {
+    box: [-27, -46, 27, 46],
+    w: (big) => watch('#4a8cff', { rim: '#e4e1ec', c: '#fff', mini: L('M0 0L0 -2.6M0 0L2 0.6', INK, 1) }, [0, 30, 60, 90, 120, 150, 180, 210, 240, 270, 300, 330].map((a) => CF(n(14.6 * Math.cos((a * Math.PI) / 180)), n(14.6 * Math.sin((a * Math.PI) / 180)), a % 90 ? 1.1 : 1.8, INK)).join('') +
+      L('M0 0L0 -10.5', INK, 2.6) + L('M0 0L6.6 3.4', INK, 2.6) + CF(0, 0, 2.2, '#ff5d5d'), big),
   };
   const WATCHES = () => Object.keys(ART).filter((id) => ART[id].w);
   WATCHES().forEach((id) => {
@@ -1564,7 +1799,7 @@
       else if (s === 'stick' && back) a = [184 - a[0], a[1], a[2], a[3]];
       auras += aura(n(a[0]), n(a[1]), n(a[2]), n(a[3]));
     });
-    const leg = S(LEG, ART[o.pants].pants, LEG_SH) + ART[o.shoes].shoe() + fxOf('shoes');
+    const leg = S(LEG, ART[o.pants].pants, LEG_SH) + ART[o.shoes].shoe(sk) + fxOf('shoes');
     const legs = back ? G(leg, cls('ex-leg-l')) + G(G(leg, MIR), cls('ex-leg-r')) : G(leg, cls('ex-leg-r')) + G(G(leg, MIR), cls('ex-leg-l'));
     const sleeve = S(SLEEVE, top.sl, SLEEVE_SH) + S(CUFF, top.cf);
     const hand = ball(HAND[0], HAND[1], HAND[2], HAND[2], sk, { hl: false, dx: 0.2, dy: 0.25 });
@@ -1588,7 +1823,7 @@
     const stk = !back && outfit && outfit.sticker ? badge(outfit.sticker) : '';
     const body = back
       ? torso + armsEarly + cape + bag + G(head, cls('ex-head')) + armsLate
-      : torso + armsEarly + bag + stk + G(head, cls('ex-head')) + armsLate;
+      : torso + (o.cape && ART[o.cape].over ? ART[o.cape].over() : '') + armsEarly + bag + stk + G(head, cls('ex-head')) + armsLate;
     // shining again: a warm glow and twinkles all around
     const shine = mood === 'shine' ? tw(34, 70, 9, 0) + tw(156, 96, 8, 0.6) + tw(26, 200, 7, 1.2) + tw(166, 186, 9, 0.3) + tw(98, 40, 7, 0.9) + tw(150, 250, 6, 1.6) : '';
     if (mood === 'shine') auras = aura(92, 170, 90, 120) + auras;
@@ -2290,6 +2525,7 @@
     defs,
     LOOKS,
     ITEMS,
+    DROPS: ITEMS.filter((it) => it.drop), // everyday accessories given as random surprise gifts (also flagged drop: true)
     SLOTS,
     DEFAULTS,
     explorer,

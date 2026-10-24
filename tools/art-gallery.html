@@ -57,7 +57,7 @@
 <body>
   <h1>Little Hafiz Quest: art gallery</h1>
   <nav>
-    <a href="#items">items</a><a href="#stickers">stickers</a><a href="#gifts">gifts &amp; pieces</a><a href="#props">props</a><a href="#ambient">ambient</a>
+    <a href="#items">items</a><a href="#drops">surprise drops</a><a href="#stickers">stickers</a><a href="#gifts">gifts &amp; pieces</a><a href="#props">props</a><a href="#ambient">ambient</a>
     <a href="#ex-styles">hair styles</a><a href="#ex-hair">explorer looks</a><a href="#ex-items">explorer items</a><a href="#ex-worlds">decked</a><a href="#ex-walk">walk</a><a href="#splash">splash</a><a href="#worlds">worlds</a>
   </nav>
   <main id="out"></main>
@@ -74,6 +74,33 @@
       // items
       sec('items', 'Items (icon, silhouette, 56px)', grid(A.ITEMS.map((it) => cell(tryf(() => A.item(it.id)), it.name + ' · ' + it.slot + ' · t' + it.tier + (it.from ? ' · ' + it.from : ''))
         + cell(tryf(() => A.silhouette(it.id)), '?', 'small') + cell(tryf(() => A.item(it.id)), '56px', 'small')).join('')));
+
+      // everyday accessories dropped as random surprise gifts (drop: true): icon, silhouette, 56px, front, back
+      if (A.DROPS) {
+        const hairs0 = A.LOOKS.hair, HF0 = A.LOOKS.hairFor;
+        const kidOf = (hair) => (HF0.girl.indexOf(hair) >= 0 && hair !== 'bald' ? 'girl' : 'boy');
+        let hd = '<p>' + A.DROPS.length + ' drop items (' + A.DROPS.filter((it) => !it.vof).length + ' new designs, ' + A.DROPS.filter((it) => it.vof).length + ' color versions)</p>';
+        // ?only=drops&q=hat,bag shows only the drops whose id or slot contains "hat" or "bag"
+        const q0 = new URLSearchParams(location.search).get('q') || '', list0 = A.DROPS.filter((it) => q0.split(',').some((q) => (it.id + ' ' + it.slot).indexOf(q) >= 0));
+        hd += '<div id="drops-list" class="grid">' + list0.map((it, i) => {
+          const hair = hairs0[i % hairs0.length], look = { kid: kidOf(hair), hair, skin: i % 5, hairColor: i % 4, hijabColor: i % 6 };
+          return '<div class="grid kidrow">' + cell(tryf(() => A.item(it.id, look)), it.name + ' · ' + it.slot + (it.vof ? ' · ' + it.vof + ' ' + it.deg + '°' : '')) +
+            cell(tryf(() => A.silhouette(it.id, look)), '?', 'small') + cell(tryf(() => A.item(it.id, look)), '56px', 'small') +
+            cell(tryf(() => A.explorer(look, { [it.slot]: it.id })), hair, 'ex') + cell(tryf(() => A.explorer(look, { [it.slot]: it.id }, { view: 'back' })), 'back', 'ex') + '</div>';
+        }).join('') + '</div>';
+        // the new hats on every hair style (front and back), close-up
+        const cu0 = (svg) => svg.replace('viewBox="0 0 200 300"', 'viewBox="14 0 160 190" style="width:96px;height:114px"');
+        hd += '<div id="drops-hats"><h3>New hats on every hair style (front, back)</h3>' + A.DROPS.filter((it) => it.slot === 'hat' && !it.vof).map((it) =>
+          '<div class="grid kidrow">' + hairs0.map((hair, j) => { const l = { kid: kidOf(hair), hair, skin: j % 5, hairColor: j % 4, hijabColor: j % 6 };
+            return cell(tryf(() => cu0(A.explorer(l, { hat: it.id }))), it.id + ' · ' + hair, 'hat') + cell(tryf(() => cu0(A.explorer(l, { hat: it.id }, { view: 'back' }))), 'back', 'hat'); }).join('') + '</div>').join('') + '</div>';
+        // everything at once, and the sandals on every skin
+        const full0 = {}; A.DROPS.filter((it) => !it.vof).forEach((it) => (full0[it.slot] = it.id));
+        hd += '<div id="drops-full"><h3>All new designs at once; sandals on every skin</h3><div class="grid kidrow">' +
+          cell(tryf(() => A.explorer({ hair: 'ponytail', skin: 1 }, full0)), 'front', 'ex') + cell(tryf(() => A.explorer({ hair: 'ponytail', skin: 1 }, full0, { view: 'back' })), 'back', 'ex') +
+          cell(tryf(() => A.explorer({ hair: 'curly', skin: 4 }, Object.assign({}, full0, { hat: 'earflap-hat' }), { walk: true })), 'walk', 'ex') +
+          [0, 1, 2, 3, 4].map((sk) => cell(tryf(() => A.explorer({ hair: 'short', skin: sk }, { shoes: 'sandals' }).replace('viewBox="0 0 200 300"', 'viewBox="40 230 104 70" style="width:104px;height:70px;overflow:hidden"')), 'skin ' + sk)).join('') + '</div></div>';
+        sec('drops', 'Surprise drops (everyday accessories)', hd);
+      }
 
       if (A.sticker) sec('stickers', 'Stickers', grid(A.STICKERS.map((s) => cell(tryf(() => A.sticker(s.id)), s.name) + cell(tryf(() => A.sticker(s.id)), '', 'small')).join('')));
 

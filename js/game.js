@@ -37,7 +37,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.4.5';
+  const VERSION = '2.4.6';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const ART = window.LHQ_ART;
@@ -74,7 +74,8 @@
   ITEMS.forEach((it) => {
     if (it.from) (it.gold ? GOLD_ITEM : SURAH_ITEM)[it.from] = it;
   });
-  const starter = (it) => !it.from && !it.feat && !it.track; // the comfy clothes everyone starts with
+  const starter = (it) => !it.from && !it.feat && !it.track && !it.drop; // the comfy clothes everyone starts with
+  const DROPS = ITEMS.filter((it) => it.drop); // everyday accessories that come as surprise gifts (art.js)
   const wornByDefault = (it) => starter(it) && ART.DEFAULTS[it.slot] === it.id; // the everyday glasses are owned, not worn
   const TRACK = ITEMS.filter((it) => it.track).sort((a, b) => a.track - b.track); // a prize every few stars
   const FEAT_ITEM = Object.create(null); // 'once' | 'three' | 'all' -> the summit reward
@@ -533,10 +534,20 @@
     const prof = P();
     if (prof.daily === today()) return false;
     prof.daily = today();
-    const have = new Set([...prof.stickers, ...prof.pending.filter((g) => g.k === 's').map((g) => g.id)]);
-    const left = ART.STICKERS.filter((x) => !have.has(x.id));
-    if (!left.length) return false;
-    prof.pending.push({ k: 's', id: left[(Math.random() * left.length) | 0].id });
+    return giveSurprise(prof);
+  }
+  /* A surprise gift: a sticker not collected yet, or an everyday accessory not won yet (a stick, a bag, a
+     hat…), picked at random, so there is often something new to wear. The sūrah and milestone treasures
+     stay the special ones. Returns false when every sticker and accessory is already collected. */
+  function giveSurprise(prof, small) {
+    const waiting = (k) => prof.pending.filter((g) => g.k === k).map((g) => g.id);
+    const haveS = new Set([...prof.stickers, ...waiting('s')]);
+    const stickers = ART.STICKERS.filter((x) => !haveS.has(x.id));
+    const things = DROPS.filter((it) => forKid(it, prof) && !hasOrWaits(it, prof));
+    if (!stickers.length && !things.length) return false;
+    const pick = (list) => list[(Math.random() * list.length) | 0];
+    if (things.length && (!stickers.length || Math.random() < 0.6)) prof.pending.push({ k: 'i', id: pick(things).id });
+    else prof.pending.push(small ? { k: 's', id: pick(stickers).id, m: 1 } : { k: 's', id: pick(stickers).id });
     return true;
   }
   const isLost = (id, prof) => (prof || P()).lost.some((x) => x.id === id);
@@ -1325,7 +1336,9 @@
     else setScene(worldOf(S[P().at] || S[0]));
     const html = V[st.view](),
       key = st.view + ':' + st.i + ':' + st.p + ':' + (st.L || '');
-    if (key === drawn) {
+    // the map is always drawn afresh: it adds elements of its own (the horizon) that an in-place update
+    // would mistake for the map itself, leaving a blank map after, say, the last gift was opened there
+    if (key === drawn && st.view !== 'map') {
       const t = document.createElement('template');
       t.innerHTML = html;
       morphKids($app, t.content);
@@ -2179,7 +2192,7 @@
       return `<button class="icell lost" data-act="goto" data-i="${BYN[lost.n].idx}"><span class="iart">${itemPic(it.id)}</span><span class="lostbadge">${ART.lostMarker()}</span><small>Lost at ${BYN[lost.n].name}!</small></button>`;
     if (owned)
       return `<button class="icell t${it.tier || 0} ${it.gold ? 'gold' : ''} ${on ? 'on' : ''}" data-act="equip" data-id="${it.id}" aria-pressed="${on}"><span class="iart">${itemPic(it.id)}</span><small>${itemName(it.id)}</small>${prof.fresh.includes('i:' + it.id) ? NEWDOT : ''}</button>`;
-    return `<div class="icell locked ${it.gold ? 'goldlock' : ''}"><span class="iart">${ART.silhouette(it.id, P().look)}</span><small>${it.feat ? FEAT_HINT[it.feat] : it.track ? `At ${it.track} ⭐` : it.gold ? `Every star in ${BYN[it.from].name}` : `A star in ${BYN[it.from].name}`}</small></div>`;
+    return `<div class="icell locked ${it.gold ? 'goldlock' : ''}"><span class="iart">${ART.silhouette(it.id, P().look)}</span><small>${it.feat ? FEAT_HINT[it.feat] : it.drop ? 'A surprise gift' : it.track ? `At ${it.track} ⭐` : it.gold ? `Every star in ${BYN[it.from].name}` : `A star in ${BYN[it.from].name}`}</small></div>`;
   }
   function stickerCell(id, prof) {
     const on = prof.badge === id;
@@ -2212,7 +2225,7 @@
       // won things newest first, then the starting clothes, then the ones still to find
       const list = ITEMS.filter((it) => it.slot === tab && forKid(it, prof) && (!it.gold || prof.items.includes(it.id) || prof.items.includes(it.base)));
       const won = list.filter((it) => !starter(it) && prof.items.includes(it.id)).sort((a, b) => gotAt(prof, 'i:' + b.id) - gotAt(prof, 'i:' + a.id));
-      const rank = (it) => (starter(it) ? 0 : it.track ? 2000 + it.track : 1000);
+      const rank = (it) => (starter(it) ? 0 : it.drop ? 1500 : it.track ? 2000 + it.track : 1000); // to find: sūrah treasures, surprises, the star track
       const rest = list.filter((it) => !won.includes(it)).sort((a, b) => rank(a) - rank(b));
       body = `<div class="wrow">${[...won, ...rest].map((it) => itemCell(it, prof, worn)).join('')}</div><p class="wnote2">${SLOT_INFO[tab][1]} · tap to wear, tap again to take off${nextPrize(prof) ? ` · next prize at ${nextPrize(prof).track} ⭐` : ''}</p>`;
     }
@@ -2726,12 +2739,7 @@
   /* Every level finished for the first time brings a gift. When nothing else came with it: a sticker not
      collected yet, or once there are none left, the next prize on the star track, early. */
   function giveLevelGift(prof) {
-    const have = new Set([...prof.stickers, ...prof.pending.filter((g) => g.k === 's').map((g) => g.id)]);
-    const left = ART.STICKERS.filter((x) => !have.has(x.id));
-    if (left.length) {
-      prof.pending.push({ k: 's', id: left[(Math.random() * left.length) | 0].id, m: 1 });
-      return true;
-    }
+    if (giveSurprise(prof, true)) return true;
     const early = TRACK.find((it) => forKid(it, prof) && !hasOrWaits(it, prof));
     if (!early) return false;
     prof.pending.push({ k: 'i', id: early.id });
@@ -2765,7 +2773,7 @@
       <ol class="tips">
         <li><b>Pick a step.</b> In each sūrah: the quest (Look &amp; Repeat, then Word Steps), then the review games (Stepping Stones, then the Picture Puzzle).</li>
         <li><b>One checkpoint at a time.</b> Longer sūrahs are split into parts of a few āyāt. Then do the 🏁 whole sūrah.</li>
-        <li><b>Every level finished for the first time wins a gift.</b> One star wins a sūrah's treasure and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Each checkpoint crossed wins a little gift, every few stars wins a prize from the star track, and every 100 stars a star badge. Memorized = Stepping Stones done.</li>
+        <li><b>Every level finished for the first time wins a gift.</b> One star wins a sūrah's treasure and is enough to move on. <b>Every star</b> in a sūrah wins a special golden edition of it. Surprise gifts bring stickers and everyday accessories; each checkpoint crossed wins a little gift, every few stars wins a prize from the star track, and every 100 stars a star badge. Memorized = Stepping Stones done.</li>
         <li><b>The summit.</b> A star in every sūrah: the explorer climbs the mountain, and every treasure, every sticker and the Summit cloak are theirs. Three stars in every sūrah: the Hafiz crown. Every single star: the one-of-a-kind Golden hoopoe.</li>
         <li><b>Revise any sūrah any time:</b> tap it on the map, or tap the 📖 / ⭐ counters at the top of the map to see every sūrah and jump straight in. In review games, tap “Not quite” when a mistake is made; a 💔 on the map shows where the hearts ran out.</li>
         <li><b>5–10 minutes a day is plenty.</b> Stop while it's still fun; recite again at bedtime or in ṣalāh.</li>
@@ -2824,7 +2832,9 @@
       name = itemName(g.id);
       sub = it.feat
         ? FEAT_WHY[it.feat]
-        : it.track
+        : it.drop
+          ? 'A surprise for all your hard work!'
+          : it.track
           ? totalStars(prof) < it.track
             ? `An early prize from the star track, for all your hard work!`
             : `A prize for collecting ${it.track} stars!`
