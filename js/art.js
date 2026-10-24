@@ -1555,10 +1555,10 @@
     const torso = S(TORSO, top.c, TORSO_SH, TORSO_HL) + (back ? top.bk() : top.fr()) + fxOf('top') + (mess ? mess.dust : '');
     const cape = o.cape ? G(ART[o.cape].ex(v) + fxOf('cape'), cls('ex-cape')) : '';
     const bag = o.bag ? ART[o.bag].ex(v) + fxOf('bag') : '';
-    const hat = o.hat ? G(ART[o.hat].ex(v, look) + fxOf('hat'), hatFit(look.hair)) : '';
+    const hat = o.hat ? G(G(ART[o.hat].ex(v, look) + fxOf('hat'), hatFit(look.hair)), cls('ex-hat')) : '';
     let head;
     if (back) head = (mess ? mess.hair : '') + headBack(look, hs, o.hat) + hat;
-    else head = (mess ? mess.hair : '') + headFront(look, mood, hs, o.hat) + (o.glasses ? ART[o.glasses].ex('front') + fxOf('glasses') : '') + hat;
+    else head = (mess ? mess.hair : '') + headFront(look, mood, hs, o.hat) + (o.glasses ? G(ART[o.glasses].ex('front') + fxOf('glasses'), cls('ex-glasses')) : '') + hat;
     if (sad) head = G(head, ' transform="translate(0 3) rotate(-3 92 150)"'); // a droopy head
     const pet = o.pet ? G(G(OUT(ART[o.pet].pet.d() + fxm(T('pet'), PETFX[o.pet] || [[-30, -50], [30, -36]], 1.4), SW / PET_S), tf(PET_AT[0], PET_AT[1], PET_S)), cls('ex-pet')) : '';
     const wingsF = '';
@@ -1685,13 +1685,22 @@
     ['heart', 'Heart', () => S('M50 86C34 74 10 60 10 38C10 22 22 12 34 12C42 12 48 18 50 24C52 18 58 12 66 12C78 12 90 22 90 38C90 60 66 74 50 86Z', '#ff5d8f', 'M70 14C82 18 90 26 90 38C90 60 66 74 50 86C64 70 76 50 70 14Z', 'M18 34Q20 22 30 20Q24 28 24 38Z') + face2(50, 46, 3)],
   ];
   const STICKERS = STK.map((s) => ({ id: s[0], name: s[1] }));
+  /* Star badges: one for every 100 stars, each its own color. Earned, never given at random. */
+  const BADGE_C = ['#d9905a', '#b9c6d8', '#ffc83d', '#5fd27a', '#5fb2ff', '#b48cff', '#ff7aa8', '#ff9f1c', '#ffd23f'];
+  const badgeArt = (m, c) =>
+    P('M36 56L26 94L37 88L45 97L52 60Z', '#ff5d6c') + P('M64 56L74 94L63 88L55 97L48 60Z', '#5fb2ff') +
+    ball(50, 44, 36, 36, c) + C(50, 44, 27, lt(c, 0.45), sw(2)) +
+    P(star5(50, 31, 8.5, 3.8), '#fff', sw(2)) +
+    '<text x="50" y="59" text-anchor="middle" font-family="\'Baloo 2\', ui-rounded, system-ui, sans-serif" font-weight="800" font-size="' + (m >= 1000 ? 17 : 21) + '" fill="#2b2340" stroke="none">' + m + '</text>';
+  const BADGES = BADGE_C.map((c, j) => ({ id: 'stars' + (j + 1) * 100, name: (j + 1) * 100 + ' stars', stars: (j + 1) * 100, c }));
   const STKBY = Object.create(null);
   STK.forEach((s) => (STKBY[s[0]] = s[2]));
+  BADGES.forEach((b) => (STKBY[b.id] = () => badgeArt(b.stars, b.c)));
   function sticker(id) {
     const f = STKBY[id];
     if (!f) return '';
     const art = OUT(f());
-    return svg100('lhq-sticker', G(flat(art, INK, 12), ' opacity=".16" transform="translate(1.5 3)"') + flat(art, '#ffffff', 11) + art, (STICKERS.find((s) => s.id === id) || {}).name);
+    return svg100('lhq-sticker', G(flat(art, INK, 12), ' opacity=".16" transform="translate(1.5 3)"') + flat(art, '#ffffff', 11) + art, (STICKERS.find((s) => s.id === id) || BADGES.find((s) => s.id === id) || {}).name);
   }
 
   /* ---------- gifts, hearts, markers, flags, frog, stepping stones ---------- */
@@ -2264,6 +2273,7 @@
     item,
     silhouette,
     STICKERS,
+    BADGES,
     sticker,
     gift,
     heart,

@@ -2100,8 +2100,11 @@ details.adult summary::-webkit-details-marker {
   position: fixed;
   top: 0;
   right: 0;
-  bottom: 0;
   left: 0;
+  /* a fixed height, not bottom: 0, so the scene doesn't jump when a phone's toolbars slide in or out at the
+     end of a page (the part below shows the page background, which is the same ground color) */
+  height: 100vh;
+  height: 100lvh;
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
@@ -2124,6 +2127,7 @@ details.adult summary::-webkit-details-marker {
   right: 0;
   bottom: 0;
   height: 20vh;
+  height: 20lvh;
   min-height: 110px;
 }
 .scn-ground > svg {
@@ -2880,9 +2884,7 @@ body.v-map::after {
   letter-spacing: 1px;
 }
 .qstep.next {
-  outline: 4px solid var(--gold);
-  outline-offset: 2px;
-  animation: nextGlow 1.8s ease-in-out infinite;
+  /* v2.4.1: no glow; the child picks a step (only the Bismillah moon breathes) */
 }
 @keyframes nextGlow {
   50% {
@@ -4462,13 +4464,22 @@ body {
   text-align: center;
   box-shadow: 0 3px 0 #c98f00;
   z-index: 2;
+  padding: 0;
   pointer-events: none;
   opacity: 0;
   transition: opacity 0.2s;
 }
-.cpwrap.more-r .cpmore {
+.cpwrap.more-r .cpmore:not(.cpless),
+.cpwrap.more-l .cpmore.cpless {
   opacity: 1;
+  pointer-events: auto;
+}
+.cpwrap.more-r .cpmore:not(.cpless) {
   animation: nudgeR 1.2s ease-in-out infinite;
+}
+.cpmore.cpless {
+  right: auto;
+  left: 6px;
 }
 @keyframes nudgeR {
   50% {
@@ -5491,16 +5502,25 @@ body {
 }
 
 /* ---------- v2.4.0: My Explorer's "Me" button in the top bar ---------- */
-.mebtn {
+.icon-btn.mebtn {
   display: flex;
   flex-direction: column;
-  gap: 0;
-  font-size: 24px;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 0;
+  overflow: hidden;
+}
+.mebtn > span {
+  font-size: 22px;
   line-height: 1;
+  height: 22px;
 }
 .mebtn small {
+  display: block;
   font-size: 11px;
   font-weight: 800;
+  line-height: 1;
   color: var(--soft);
 }
 .mebtn.on {
@@ -5567,6 +5587,7 @@ body {
 }
 .bookbtn {
   position: absolute;
+  z-index: 3; /* above the bobbing sūrah picture, which would otherwise catch the tap */
   top: 6px;
   right: 0;
   display: flex;
@@ -5805,4 +5826,367 @@ body {
   background: none;
   box-shadow: none;
   font-size: 22px;
+}
+
+/* ---------- v2.4.1: the Listen button keeps its size, and turns golden while playing ---------- */
+.listen {
+  width: 132px;
+}
+.listen > span:nth-child(2) {
+  flex: 1;
+  min-width: 0;
+}
+.listen small {
+  display: block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.listen.playing {
+  background: linear-gradient(180deg, #ffe066, #f5b800);
+  box-shadow: 0 5px 0 #b88400;
+  color: #3a2a00;
+}
+.listen.playing .ic {
+  background: rgba(255, 255, 255, 0.35);
+}
+.listen.playing .stop {
+  background: #3a2a00;
+}
+.listen.playing .ic::before,
+.listen.playing .ic::after {
+  border-color: #fff8d6;
+}
+
+/* ---------- v2.4.1: puzzle pictures fit inside the piece; the dragged piece shows under the finger ---------- */
+.pzbody {
+  container-type: size;
+}
+.pics.pzpics {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-content: center;
+  width: 62%;
+  line-height: 1;
+  font-size: 18px; /* browsers without container units */
+}
+.pzpics .e {
+  line-height: 1.1;
+}
+.pzp .pics.pzpics.n1,
+.pcard.pzt .pics.pzpics.n1 {
+  font-size: 44cqw;
+}
+.pzp .pics.pzpics.n2,
+.pcard.pzt .pics.pzpics.n2 {
+  font-size: 28cqw;
+}
+.pzp .pics.pzpics.n3,
+.pcard.pzt .pics.pzpics.n3 {
+  font-size: 24cqw;
+}
+.pzp .pzgroup .gm,
+.pcard.pzt .pzgroup .gm {
+  font-size: 11cqw;
+  max-width: 62cqw;
+}
+.pzp .pzgroup b,
+.pcard.pzt .pzgroup b {
+  font-size: 13cqw;
+}
+.pcard.pzt.drag-ghost {
+  position: fixed;
+  z-index: 60;
+}
+
+/* ---------- v2.4.1: each world's own setting behind the stepping stones ---------- */
+.stream {
+  position: relative;
+  overflow: hidden;
+  background: none;
+  padding: 30px 6px 34px;
+}
+.stback {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.stback > svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+.stprop {
+  position: absolute;
+  transform: translateX(-50%);
+}
+.stprop.top {
+  top: -18px;
+}
+.stprop.bot {
+  bottom: -6px;
+}
+.stprop svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+  overflow: visible;
+}
+.stream .stones,
+.stream .stsets,
+.stream .stdots {
+  position: relative;
+  z-index: 1;
+}
+
+/* ---------- v2.4.1: more moves, some with what the explorer is wearing ---------- */
+.ex.mv-look .ex-head {
+  animation: mvLook 1.6s ease-in-out;
+}
+.ex.mv-look .ex-eyes {
+  animation: mvLookEyes 1.6s ease-in-out;
+}
+.ex.mv-stretch .ex-arm-r {
+  animation: mvStretchR 1.6s ease-in-out;
+}
+.ex.mv-stretch .ex-arm-l {
+  animation: mvStretchL 1.6s ease-in-out;
+}
+.ex.mv-stretch .ex-all {
+  transform-origin: 92px 290px;
+  animation: mvTall 1.6s ease-in-out;
+}
+.ex.mv-march .ex-leg-l {
+  animation: mvStep 0.4s ease-in-out 4;
+}
+.ex.mv-march .ex-leg-r {
+  animation: mvStep 0.4s ease-in-out 0.2s 4;
+}
+.ex.mv-march .ex-arm-l,
+.ex.mv-march .ex-arm-r {
+  animation: lhq-swing 0.4s ease-in-out 4;
+}
+.ex.mv-petrun .ex-pet {
+  transform-origin: 164px 291px;
+  animation: mvPetRun 1.6s ease-in-out;
+}
+.ex.mv-hattip .ex-hat {
+  transform-box: view-box;
+  transform-origin: 120px 70px;
+  animation: mvHatTip 1.5s ease-in-out;
+}
+.ex.mv-hattip .ex-head {
+  animation: mvNod 1.5s ease-in-out;
+}
+.ex-front.mv-watch .ex-arm-r {
+  animation: mvWatchArm 1.6s ease-in-out;
+}
+.ex.mv-watch .ex-head {
+  animation: mvWatchHead 1.6s ease-in-out;
+}
+.ex-front.mv-stomp .ex-arm-r {
+  animation: mvStomp 0.76s ease-in-out 2;
+}
+.ex-front.mv-shield .ex-arm-l {
+  animation: mvShield 1.6s ease-in-out;
+}
+.ex.mv-cape .ex-cape {
+  animation: mvCape 1.4s ease-in-out;
+}
+.ex.mv-glasses .ex-glasses {
+  animation: mvGlasses 1.2s ease-in-out;
+}
+.ex.mv-glasses .ex-eyes {
+  animation: mvSquint 1.2s ease-in-out;
+}
+@keyframes mvLook {
+  0%, 100% { transform: none; }
+  25%, 40% { transform: rotate(-9deg); }
+  60%, 80% { transform: rotate(9deg); }
+}
+@keyframes mvLookEyes {
+  0%, 100% { transform: none; }
+  25%, 40% { transform: translateX(-4px); }
+  60%, 80% { transform: translateX(4px); }
+}
+@keyframes mvStretchR {
+  0%, 100% { transform: none; }
+  30%, 70% { transform: rotate(150deg); }
+}
+@keyframes mvStretchL {
+  0%, 100% { transform: none; }
+  30%, 70% { transform: rotate(-150deg); }
+}
+@keyframes mvTall {
+  0%, 100% { transform: none; }
+  30%, 70% { transform: scale(0.97, 1.05); }
+}
+@keyframes mvStep {
+  0%, 100% { transform: none; }
+  50% { transform: translateY(-12px); }
+}
+@keyframes mvPetRun {
+  0% { transform: none; }
+  40% { transform: translateX(-170px); }
+  50% { transform: translateX(-170px) scaleX(-1); }
+  90% { transform: translateX(0) scaleX(-1); }
+  100% { transform: none; }
+}
+@keyframes mvHatTip {
+  0%, 100% { transform: none; }
+  30%, 65% { transform: translate(4px, -22px) rotate(14deg); }
+}
+@keyframes mvNod {
+  0%, 100% { transform: none; }
+  30%, 65% { transform: rotate(4deg) translateY(4px); }
+}
+@keyframes mvWatchArm {
+  0%, 100% { transform: none; }
+  25%, 75% { transform: rotate(-62deg); }
+}
+@keyframes mvWatchHead {
+  0%, 100% { transform: none; }
+  25%, 75% { transform: rotate(10deg) translateY(3px); }
+}
+@keyframes mvStomp {
+  0%, 100% { transform: none; }
+  45% { transform: translateY(-14px); }
+  60% { transform: translateY(2px); }
+}
+@keyframes mvShield {
+  0%, 100% { transform: none; }
+  25%, 75% { transform: rotate(-72deg); }
+}
+@keyframes mvCape {
+  0%, 100% { transform: none; }
+  20% { transform: skewX(14deg) scaleX(1.08); }
+  45% { transform: skewX(-12deg) scaleX(1.1); }
+  70% { transform: skewX(8deg); }
+}
+@keyframes mvGlasses {
+  0%, 100% { transform: none; }
+  30% { transform: translateY(-5px); }
+  50% { transform: translateY(1px); }
+  65% { transform: translateY(-3px); }
+}
+
+/* ---------- v2.4.1: the map's My Explorer button is the explorer's own face ---------- */
+.hud-me .phead {
+  width: 40px;
+  height: 40px;
+  background: var(--card2);
+}
+.hud-me .phead > svg {
+  width: 62px;
+  height: 94px;
+  left: -9px;
+  top: -10px;
+}
+.hud-hanger {
+  position: absolute;
+  bottom: -5px;
+  right: -5px;
+  font-style: normal;
+  font-size: 15px;
+  line-height: 1;
+  background: var(--card);
+  border-radius: 50%;
+  padding: 2px;
+  box-shadow: 0 1px 0 var(--shd);
+}
+
+/* ---------- v2.4.1: "My look" in My Explorer's top bar ---------- */
+.mebtn {
+  flex: none;
+  height: 44px;
+  padding: 0 14px;
+  border-radius: 16px;
+  background: var(--card);
+  box-shadow: 0 4px 0 var(--shd);
+  font-weight: 800;
+  font-size: 15px;
+  line-height: 1;
+  white-space: nowrap;
+  display: flex;
+  align-items: center;
+}
+.mebtn.on {
+  background: var(--go);
+  color: #fff;
+  box-shadow: 0 4px 0 var(--go2);
+}
+.mebtn:active {
+  transform: translateY(3px);
+  box-shadow: 0 1px 0 var(--shd);
+}
+.wd-side.wd-show {
+  right: 8%;
+  bottom: 78px;
+  background: var(--gold);
+  color: #2b2340;
+}
+
+/* ---------- v2.4.1: my achievements ---------- */
+.show-stage {
+  position: relative;
+  height: 46vh;
+  min-height: 260px;
+  max-height: 420px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-end;
+}
+.show-stage .wd-ex {
+  height: 88%;
+}
+.show-stage .wd-ex > svg.ex {
+  height: 100%;
+  width: auto;
+  aspect-ratio: 2 / 3;
+}
+.show-name {
+  margin-top: -6px;
+  padding: 2px 18px;
+  border-radius: 99px;
+  background: var(--card);
+  box-shadow: 0 3px 0 var(--shd);
+  font-weight: 800;
+  font-size: 20px;
+}
+.achgrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 14px 0 12px;
+}
+.ach {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  grid-template-rows: auto auto;
+  column-gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+  border-radius: 18px;
+  background: var(--glass);
+  box-shadow: 0 3px 0 var(--shd);
+}
+.ach-ic {
+  grid-row: span 2;
+  font-size: 26px;
+}
+.ach b {
+  font-size: 20px;
+  line-height: 1.1;
+}
+.ach small {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: var(--soft);
+  line-height: 1.15;
+}
+.ach:last-child:nth-child(odd) {
+  grid-column: span 2;
 }
