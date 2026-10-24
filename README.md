@@ -12,22 +12,32 @@ Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and c
 
 <table>
   <tr>
-    <td align="center"><img src="screenshots/splash.png" width="200" alt="Start screen: the explorer, seen from behind, looks up the winding trail to the mountain top"></td>
-    <td align="center"><img src="screenshots/map.png" width="200" alt="The quest map: sūrah stops along a path, a river and bridge between two worlds, animals and trees"></td>
-    <td align="center"><img src="screenshots/surah.png" width="200" alt="Inside a sūrah: its Arabic name, the checkpoints in a row, and the quest steps with the next one glowing"></td>
+    <td align="center"><img src="screenshots/splash.png" width="200" alt="Start screen: the explorer, in a kufi and backpack with a ladybug buddy, looks up the winding trail to the mountain top"></td>
+    <td align="center"><img src="screenshots/map.png" width="200" alt="The quest map: sūrah stops along a forest path with their stars, a ✓ on finished ones, animals and trees"></td>
+    <td align="center"><img src="screenshots/surah.png" width="200" alt="Inside a sūrah: its Arabic name, the Read button, the checkpoints, and the quest steps beside the Bismillah moon"></td>
   </tr>
   <tr>
     <td align="center">Begin the quest</td>
     <td align="center">Climb the map</td>
-    <td align="center">Follow the steps</td>
+    <td align="center">Pick a step</td>
   </tr>
   <tr>
-    <td align="center"><img src="screenshots/explorer.png" width="200" alt="My Explorer: the explorer in a kufi and vest, with a row of categories and the hats to choose from"></td>
-    <td align="center"><img src="screenshots/progress.png" width="200" alt="Progress: every sūrah with its stars; tap one to go there"></td>
+    <td align="center"><img src="screenshots/puzzle.png" width="200" alt="The Picture Puzzle: jigsaw pieces with the āyāt’s pictures, each fitting only its own place"></td>
+    <td align="center"><img src="screenshots/mushaf.png" width="200" alt="The muṣḥaf page: the whole sūrah in Arabic, one āyah’s words colored like Word Steps, and the loop button"></td>
+    <td align="center"><img src="screenshots/explorer.png" width="200" alt="My Explorer: the explorer in a kufi, vest and glasses with a ladybug buddy, and the hats to choose from"></td>
+  </tr>
+  <tr>
+    <td align="center">Solve the puzzle</td>
+    <td align="center">Read the sūrah</td>
+    <td align="center">Collect and dress up</td>
+  </tr>
+  <tr>
+    <td align="center"><img src="screenshots/awards.png" width="200" alt="My Achievements: the explorer in their world with stars, sūrahs, āyāt, treasures, badges and time spent learning"></td>
+    <td align="center"><img src="screenshots/progress.png" width="200" alt="Progress: every sūrah with its stars and the time spent; tap one to go there"></td>
     <td align="center"><img src="screenshots/summit.png" width="200" alt="The summit: the explorer cheers at the top of the mountain, with the Summit cloak as a reward"></td>
   </tr>
   <tr>
-    <td align="center">Collect and dress up</td>
+    <td align="center">Share the awards</td>
     <td align="center">See the progress</td>
     <td align="center">Reach the summit</td>
   </tr>
@@ -40,9 +50,9 @@ Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and c
 
 ## How to play (for the grown-up)
 
-1. **Make an explorer.** Tap **Begin**, pick a name, boy or girl, a skin tone, a hair style (boys and girls each have six) and a hair color (girls can also choose a hijab and its color). Girls wear the crowns as tiaras. Each child can have their own explorer, with their own stars and treasures (tap the name on the start screen). Explorers can be removed in the Grown-up Corner, all of them if you like; Begin then makes a new one.
+1. **Make an explorer.** Tap **Begin**, pick a name, boy or girl, a skin tone, a hair style (boys and girls each have seven, bald included) and a hair color (girls can also choose a hijab and its color). Girls wear the crowns as tiaras. Each child can have their own explorer, with their own stars and treasures (tap the name on the start screen). Explorers can be removed in the Grown-up Corner, all of them if you like; Begin then makes a new one.
 2. **Walk the map.** Start at 🚩 An-Nās at the bottom and climb. Tap a sūrah: the explorer pops up beside it, walks in, and the lesson opens. Each sūrah's page has a 🌙 **Bismillah** button that gently breathes when you arrive, a reminder to say Bismillah first, and a 📖 **Read** button for children who can read the muṣḥaf: the whole sūrah in Arabic. There, hold an āyah to color its words in the same order as Word Steps, and Listen plays the whole sūrah or just the chosen āyah. Each world has its own border to cross (a river, the sea, a gorge, a gate, the clouds, a frozen river), and the scenery on the horizon changes as you climb. The world list on the side jumps between worlds. You can go back to any sūrah at any time to revise.
-3. **Follow the glowing step** in each sūrah:
+3. **Pick a step** in each sūrah (this order works best):
    1. **👀 Look & Repeat.** Read the āyah. Your child repeats it three times while doing the action (pop a bubble each time), then says it with only the picture showing. The loop button at the top of the āyah sets how many times Listen plays it: once, 3, 10 or 99 times (until Stop); its ring empties and the number counts down as the plays go by. After each new āyah, chain from the first āyah up to the new one. Tap the numbered dots at the top to practice any āyah in that part. The “Do it” actions can be switched off in the Grown-up Corner. Progress is saved āyah by āyah, so you can stop and carry on later.
    2. **Word Steps.** Build the āyah one word at a time, always going back to the first word, with the āyah's picture at the top. Tap any word to hear just that word. Then your child says it all while you reveal each word; every colored box stays exactly where it was while practicing.
    3. **🐸 Stepping Stones.** Your child says each āyah and taps the frog to hop. Level 1 shows the picture and first word, Level 2 only the picture, and Level 3 no picture at all. **Hint** reveals a little more each tap (the picture, then one word at a time, then the whole āyah to hear). Level 3 means it's memorized. The stones lie in each world's own scenery (lily pads on a pond, ice floes between snowbanks…). Long runs show ten stones at a time; swipe to see the others, and the frog hops on to the next set by itself.
@@ -54,7 +64,7 @@ Free, no ads, no accounts, no tracking. It works on iPhone, iPad, Android, and c
    - Every 100 stars wins a 🏅 star badge (100 stars, 200 stars … 900 stars).
    - Crossing a checkpoint wins a small gift, and the first game of each day gives a sticker to stick on the explorer's shirt. Any other first finish wins a sticker too (or, once every sticker is collected, the next star-track prize early).
    - Gifts wait in a little rattling box at the top; tap it to open them one at a time.
-6. **My Explorer** (the backpack): the explorer always stays in view while you pick from a row of categories; **✏️ My look** at the top changes their name and look, and **🏆 Awards** shows the explorer standing in their world with everything they've done: stars, sūrahs, āyāt learned, treasures, badges and time spent learning. **📤 Share** turns that page into a picture to send to family on any app. A red dot marks new things, which come first. The 👕 button beside the explorer swaps between just the comfy clothes and everything they were wearing. Tap the explorer (or just wait) and they giggle, jump, dance, wave or twirl their stick. On the map and the start screen, the explorer, animals, trees, houses and the summit flag react to a tap too. Tap an animal a few times in a row and it runs away, peeks back in, then comes home.
+6. **My Explorer** (the backpack): the explorer always stays in view while you pick from a row of categories; **✏️ My look** at the top changes their name and look, and **🏆 Awards** shows the explorer standing in their world with everything they've done: stars, sūrahs, āyāt learned, treasures, badges and time spent learning. **📤 Share** turns that page into a picture to send to family on any app, or to save to the phone. Everyday glasses are there from the start for children who wear them (tap them on under Glasses); fancier ones are won along the way. A red dot marks new things, which come first. The 👕 button beside the explorer swaps between just the comfy clothes and everything they were wearing. Tap the explorer (or just wait) and they giggle, jump, dance, wave, look around or twirl their stick, and play with what they wear: tip the hat, check the watch, raise the shield, flap the cape, or send the buddy for a run. On the map and the start screen, the explorer, animals, trees, houses and the summit flag react to a tap too. Tap an animal a few times in a row and it runs away, peeks back in, then comes home.
 7. **Progress.** Each sūrah on the map shows its stars, with a ✓ once it's memorized. The explorer's face at the top of the map opens My Explorer. Tap the 📖 (sūrahs done, at least one star each) or ⭐ (all stars) counters at the top of the map to see every sūrah. Tap one to go straight there: the explorer walks in and the next lesson starts. The list also shows the time spent in each sūrah, and in all. Learning time counts only while the game is open and being used, and stays on the device.
 8. **The summit.** With a star in every sūrah, the explorer climbs to the top of the mountain and cheers: every treasure and sticker is unlocked, plus the **Summit cloak**. Three stars in every sūrah win the **Hafiz crown** (a tiara for girls), and every single star wins the one-of-a-kind **Golden hoopoe**.
 
@@ -64,11 +74,11 @@ Five to ten minutes a day is plenty. Stop while it's still fun.
 
 The orange **Listen** button at the top plays the recitation of what's on screen; it turns golden while playing. In the Grown-up Corner (⚙️) you can choose the reciter (Mishary Alafasy, Al-Husary's slow teaching recitation, Al-Minshawi or Abdul Basit), turn the nature sounds on or off (soft water drops, birdsong and a breeze as you play, quieter while the reciter plays), hearts, the “Do it” actions, fullscreen (hides the browser's address bar where the browser allows it; on iPhone, use Add to Home Screen instead), a dim night theme, simple meanings or transliteration, repeat or slow down the recitation, the Picture Puzzle's direction, and manage explorers: add, remove, reset, and save or load a progress file.
 
+A sūrah's recitation downloads the first time it plays and is then kept on the device; long sūrahs (about 1–3 MB) ask first. Tapping a word in Word Steps plays just that word: the cut between words sits at the quietest moment between them.
+
 ## Versions
 
 The newest version opens by default. Tap the version badge on the start screen (or Grown-up Corner → Version) to switch to the classic **v1**, which keeps the original island list. The choice is remembered on that device, and you can switch back the same way. If something goes wrong, opening https://akramali.github.io/little-hafiz-quest/?latest always brings back the newest version.
-
-A sūrah's recitation downloads the first time it plays and is then kept on the device. Long sūrahs (about 1–3 MB) ask first.
 
 ## Put it on a phone like an app
 
@@ -92,7 +102,7 @@ A sūrah's recitation downloads the first time it plays and is then kept on the 
 - No accounts, analytics, ads or trackers.
 - The game never contacts any other website. Every file it uses is in this repository.
 - Stars and settings are stored only on the device (browser cookies and storage). Nothing is uploaded.
-- To keep a copy, use ⚙️ Grown-up Corner → Explorers → **💾 Save progress**: it saves a file you keep yourself, and **📂 Load progress** brings every explorer back from it (after clearing the browser, or on a new phone). Shared pictures are made on the device too.
+- To keep a copy, use ⚙️ Grown-up Corner → Explorers → **💾 Save progress**: it saves a file you keep yourself, and **📂 Load progress** brings every explorer back from it (after clearing the browser, or on a new phone). The MāshāAllāh screen offers **💾 Save progress** too whenever a gift is won. Shared pictures are made on the device too.
 
 ## Browser support
 
@@ -143,7 +153,7 @@ Then open http://localhost:8000/. Use this rather than `python3 -m http.server`,
 
 **Change a tip for grown-ups:** edit the sūrah's `pattern` in `js/data.js`. An optional `toy` (for example `["🔔", "bell"]`) adds a button to tap along.
 
-**Add or rebuild a reciter:** `python3 tools/build_audio.py --list` shows the reciters it knows; `python3 tools/build_audio.py minshawi` builds one. It needs `ffmpeg` (the script explains how to get one without installing anything system-wide). The script downloads each āyah from EveryAyah.com with Quran.com's word timings, joins them into one file per sūrah and writes `timings.json` and `audio/reciters.json`.
+**Add or rebuild a reciter:** `python3 tools/build_audio.py --list` shows the reciters it knows; `python3 tools/build_audio.py minshawi` builds one. It needs `ffmpeg` (the script explains how to get one without installing anything system-wide). The script downloads each āyah from EveryAyah.com with Quran.com's word timings, joins them into one file per sūrah and writes `timings.json` and `audio/reciters.json`. Each boundary between two words is then moved to the quietest moment near it, so a tapped word plays alone without the next one creeping in; `python3 tools/build_audio.py --snap-only --all` does just that step for files already built.
 
 **Change a drawing or add a gift:** see the notes at the top of `js/art.js`, and check the result in `tools/art-gallery.html`.
 
@@ -167,6 +177,6 @@ See also the warranty and liability terms in [LICENSE](LICENSE).
 - **Code and drawings** (`index.html`, `css/`, `js/boot.js`, `js/game.js`, `js/map.js`, `js/art.js`, `sw.js`, `tools/`, `manifest.webmanifest`, `icons/`): MIT, see [LICENSE](LICENSE).
 - **Qur'an text** in `js/data.js`: from [quran-json](https://github.com/risan/quran-json) by Risan Bagja Pradana (Uthmani text from [The Noble Qur'an Encyclopedia](https://quranenc.com)), licensed [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/). `js/data.js` adapts it (open tanwīn marks converted to standard Unicode, memory cues added) and is shared under CC BY-SA 4.0 as well.
 - **Memory cues, simple meanings and transliterations** in `js/data.js`: written for this project, CC BY-SA 4.0. The simple meanings are written for young children and are not a translation; see a full tafsīr for detail.
-- **Recitation** in `audio/`: Sheikh Mishary Rashid Alafasy, Sheikh Mahmoud Khalil Al-Husary (Muallim), Sheikh Mohamed Siddiq Al-Minshawi and Sheikh Abdul Basit Abdul Samad, from [EveryAyah.com](https://everyayah.com), joined into one file per sūrah. Word timings from [Quran.com](https://quran.com). Included for free, non-commercial educational use; all rights to the recordings remain with their owners.
+- **Recitation** in `audio/`: Sheikh Mishary Rashid Alafasy, Sheikh Mahmoud Khalil Al-Husary (Muallim), Sheikh Mohamed Siddiq Al-Minshawi and Sheikh Abdul Basit Abdul Samad, from [EveryAyah.com](https://everyayah.com), joined into one file per sūrah. Word timings from [Quran.com](https://quran.com), with the cut between words moved to the quietest moment. Included for free, non-commercial educational use; all rights to the recordings remain with their owners.
 - **Fonts**: [Amiri Quran](https://github.com/aliftype/amiri) by Khaled Hosny and [Baloo 2](https://github.com/EkType/Baloo2) by Ek Type, both under the SIL Open Font License 1.1 (see `fonts/`).
 - **Āyah pictures** are the device's own emoji, so they look slightly different on each phone. The explorer, gifts and worlds are drawn for this project (`js/art.js`).

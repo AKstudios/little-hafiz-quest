@@ -14,7 +14,7 @@
  */
 'use strict';
 
-const VERSION = '2.4.1';
+const VERSION = '2.4.2';
 const SHELL_CACHE = `lhq2-shell-${VERSION}`;
 const AUDIO_CACHE = 'lhq2-audio'; // keep across app updates; change only if the audio files change
 const DATA_CACHE = 'lhq2-data'; // small lists that can change between versions (reciters, versions)
@@ -75,8 +75,9 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   if (/\/audio\/[a-z0-9-]+\/timings\.json$/.test(url.pathname)) {
-    // timings belong with their recitation: keep them in the audio store
-    event.respondWith(storeFirst(AUDIO_CACHE, req));
+    // timings belong with their recitation: keep them in the audio store, but fetch fresh ones when
+    // online (they can be improved without the recordings changing, like the word cuts in v2.4.2)
+    event.respondWith(networkFirst(req, AUDIO_CACHE));
     return;
   }
   if (/\/(versions|audio\/reciters)\.json$/.test(url.pathname)) {
@@ -94,25 +95,16 @@ self.addEventListener('fetch', (event) => {
   event.respondWith(caches.match(req, { ignoreSearch: true }).then((hit) => hit || fetch(req)));
 });
 
-/* answer from the store, or fetch and store (used for files that never change for a given version) */
-async function storeFirst(name, req) {
-  const cache = await caches.open(name);
-  const key = new URL(req.url).origin + new URL(req.url).pathname;
-  const hit = await cache.match(key);
-  if (hit) return hit;
-  const res = await fetch(req);
-  if (res.ok && res.status === 200) cache.put(key, res.clone());
-  return res;
-}
 /* try the network first (fresh lists), fall back to the last stored copy when offline */
-async function networkFirst(req) {
-  const cache = await caches.open(DATA_CACHE);
+async function networkFirst(req, store) {
+  const cache = await caches.open(store || DATA_CACHE);
+  const key = new URL(req.url).origin + new URL(req.url).pathname;
   try {
     const res = await fetch(req, { cache: 'no-cache' });
-    if (res.ok) cache.put(req.url.split('?')[0], res.clone());
+    if (res.ok && res.status === 200) cache.put(key, res.clone());
     return res;
   } catch (e) {
-    const hit = await cache.match(req.url.split('?')[0]);
+    const hit = await cache.match(key);
     if (hit) return hit;
     throw e;
   }

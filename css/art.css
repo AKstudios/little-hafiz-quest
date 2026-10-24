@@ -509,6 +509,13 @@ svg.lhq-art {
 .ex.ex-win .ex-arm-l {
   transform: rotate(-116deg);
 }
+/* from the back the arms are mirrored, so they turn the other way */
+.ex-back.ex-win .ex-arm-r {
+  transform: rotate(-116deg);
+}
+.ex-back.ex-win .ex-arm-l {
+  transform: rotate(116deg);
+}
 .ex.ex-win .ex-all,
 .ex.ex-win .ex-pet {
   transform-box: view-box;

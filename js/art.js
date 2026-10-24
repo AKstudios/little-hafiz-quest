@@ -236,10 +236,11 @@
   const HAIRC = ['#3a2f45', '#5a3726', '#87552f', '#b04a2c'];
   const HIJABC = ['#ff8db6', '#b49cff', '#35c3b0', '#5fb2ff', '#ff9c6e', '#ffcf4d'];
   // Hair styles for each kid; the first one of each list is that kid's default. LOOKS.hair = every style.
-  const HAIR_FOR = { boy: ['short', 'curly', 'spiky', 'buzz', 'sidepart', 'wavy'], girl: ['ponytail', 'hijab', 'long', 'pigtails', 'bun', 'braid'] };
-  const LOOKS = { skin: SKIN.slice(), hair: HAIR_FOR.boy.concat(HAIR_FOR.girl), hairFor: HAIR_FOR, hairColor: HAIRC.slice(), hijabColor: HIJABC.slice(), kid: ['boy', 'girl'] };
+  // 'bald' is for everyone (some children have no hair, and should find themselves here too)
+  const HAIR_FOR = { boy: ['short', 'curly', 'spiky', 'buzz', 'sidepart', 'wavy', 'bald'], girl: ['ponytail', 'hijab', 'long', 'pigtails', 'bun', 'braid', 'bald'] };
+  const LOOKS = { skin: SKIN.slice(), hair: HAIR_FOR.boy.concat(HAIR_FOR.girl.filter((h) => HAIR_FOR.boy.indexOf(h) < 0)), hairFor: HAIR_FOR, hairColor: HAIRC.slice(), hijabColor: HIJABC.slice(), kid: ['boy', 'girl'] };
   // boy or girl: chosen by the grown-up; until then any girl's hair style (ponytail, hijab, ...) means girl
-  const isGirl = (look) => !!look && (look.kid === 'girl' || (look.kid !== 'boy' && HAIR_FOR.girl.indexOf(look.hair) >= 0));
+  const isGirl = (look) => !!look && (look.kid === 'girl' || (look.kid !== 'boy' && HAIR_FOR.girl.indexOf(look.hair) >= 0 && HAIR_FOR.boy.indexOf(look.hair) < 0));
 
   // Body geometry (front view; the character's right side is on the viewer's left).
   const MIR = ' transform="matrix(-1 0 0 1 184 0)"'; // mirror around x = 92
@@ -373,6 +374,12 @@
    *   bun           a part that hides under a hat (crowns and tiaras leave it showing)
    * The hijab is drawn on its own (headFront / headBack). */
   const HAIRS = {
+    // no hair: just a soft shine on the head
+    bald: {
+      hat: [3, 0.97],
+      front: (hc, sk) => L('M60 92Q64 76 80 70', lt(sk, 0.55), 4.5, ' opacity=".7"') + L('M90 66Q96 65 101 66', lt(sk, 0.55), 3.2, ' opacity=".55"'),
+      back: (hc, sk) => L('M58 86Q66 72 82 68', lt(sk, 0.55), 4.5, ' opacity=".7"'),
+    },
     short: {
       hat: [0, 1],
       front: (hc) => S(HAIR.short, hc, HAIR.shortSh) + L('M57 82Q69 70 87 67', lt(hc, 0.32), 4.5, ' opacity=".75"') + P('M86 64Q87 52 100 53Q93 58 96 64Z', hc),
@@ -557,6 +564,7 @@
     ['basic-pants', 'pants', 'Comfy pants', 0, null],
     ['basic-shoes', 'shoes', 'Little shoes', 0, null],
     ['twig', 'stick', 'Walking stick', 0, null],
+    ['everyday-glasses', 'glasses', 'Everyday glasses', 0, null], // owned from the start, worn only when chosen
     ['explorer-cap', 'hat', 'Explorer cap', 1, 114],
     ['sunrise-shades', 'glasses', 'Sunrise glasses', 1, 113],
     ['little-backpack', 'bag', 'Little backpack', 1, 112],
@@ -841,6 +849,7 @@
         S('M45 88Q92 80 139 88L139 100Q92 92 45 100Z', dk(c, 0.15)) + L('M58 86L58 97M72 84L72 95M86 83L86 94M100 83L100 94M114 84L114 95M128 86L128 97', dk(c, 0.35), 1.4) + ball(92, 44, 9, 9, '#ffffff', { shc: '#e3e6f0' });
     },
   };
+  ART['everyday-glasses'] = { box: [44, 102, 140, 134], ex: (v) => (v === 'back' ? '' : glassesBase('#3d3a5c', '#e8f6ff', 0.22, 'sq')) };
   ART['round-specs'] = { box: [44, 102, 140, 134], ex: (v) => (v === 'back' ? '' : glassesBase('#c99a3a', '#e8f6ff', 0.25)) };
   ART['goggles'] = {
     box: [42, 100, 142, 136],
@@ -1551,7 +1560,9 @@
     const otherHand = G(hand, MIR) + (o.shield ? ART[o.shield].ex() : ''); // the free hand, on the other side from the staff
     const mirIf = (m, yes) => (yes ? G(m, MIR) : m);
     const armsEarly = G(mirIf(sleeve, back), cls('ex-arm-r')) + G(mirIf(sleeve, !back), cls('ex-arm-l'));
-    const armsLate = G(mirIf(stickHand, back), cls('ex-arm-r')) + G(back ? G(hand, MIR) + G(o.shield ? ART[o.shield].ex() : '', MIR) : otherHand, cls('ex-arm-l'));
+    // seen from the back the free arm is on the viewer's left, so its hand is too (not mirrored, unlike the
+    // front view); drawing it mirrored left a second hand on the stick whenever the stick arm moved
+    const armsLate = G(mirIf(stickHand, back), cls('ex-arm-r')) + G(back ? hand + G(o.shield ? ART[o.shield].ex() : '', MIR) : otherHand, cls('ex-arm-l'));
     const torso = S(TORSO, top.c, TORSO_SH, TORSO_HL) + (back ? top.bk() : top.fr()) + fxOf('top') + (mess ? mess.dust : '');
     const cape = o.cape ? G(ART[o.cape].ex(v) + fxOf('cape'), cls('ex-cape')) : '';
     const bag = o.bag ? ART[o.bag].ex(v) + fxOf('bag') : '';

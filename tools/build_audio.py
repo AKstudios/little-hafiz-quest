@@ -6,6 +6,7 @@ Usage (from the project folder):
     python3 tools/build_audio.py --all                 # build every reciter in RECITERS
     python3 tools/build_audio.py --list                # show the reciters you can build
     python3 tools/build_audio.py --index-only          # only rewrite audio/reciters.json
+    python3 tools/build_audio.py --snap-only --all     # re-cut the word timings of the files already built
 
 Options:
     --ffmpeg PATH   the ffmpeg program (default: $FFMPEG, else `ffmpeg` on your PATH).
@@ -36,6 +37,11 @@ spelling in a few places, so the word counts can differ. Where they match, timin
 Where they don't, both texts are reduced to bare letters and lined up letter by letter; each
 game word then takes the time span of its letters (time inside a Quran.com word is shared out in
 proportion to letter count). Every such āyah is printed during the build.
+
+Clean single words: the game plays one word when it is tapped. Quran.com's boundary between two
+words sits where the first word's closure begins, so cutting there clips that word and the next one
+bleeds in. snap_words moves each boundary between two words to the quietest moment close to it (in
+the final audio), so a tapped word is that word alone. timings.json records "snapped": true.
 
 Only the Python standard library is used, plus the ffmpeg program.
 """
@@ -90,6 +96,11 @@ LEAD, GAP, TAIL = 0.25, 0.45, 0.3        # seconds of silence: before, between, 
 # Quran.com's own; change it here and rebuild if single words sound clipped.
 WORD_SHIFT = 0.0
 MAX_PARALLEL = 4                         # downloads at once (be kind to the servers)
+# Where to look for the quietest moment between two words, around Quran.com's boundary (seconds):
+# from SNAP_BEFORE before it to SNAP_AFTER after it, never closer than SNAP_KEEP to either word's
+# other end. The loudness is measured over SNAP_FRAME, every SNAP_HOP.
+SNAP_BEFORE, SNAP_AFTER, SNAP_KEEP = 0.06, 0.16, 0.08
+SNAP_FRAME, SNAP_HOP = 0.02, 0.005
 USER_AGENT = 'LittleHafizQuest-audio-builder/2 (+https://github.com/akramali/little-hafiz-quest)'
 
 
@@ -236,6 +247,65 @@ def encode(ffmpeg, pcm, dest):
 
 def silence(seconds):
     return b'\x00\x00' * round(seconds * RATE)
+
+
+def snap_words(pcm, ayat):
+    """Move every boundary between two words of an āyah to the quietest moment near it.
+    pcm: the sūrah's final 16-bit mono PCM (bytes). ayat: [[start, end, [[ws, we], …]], …] in seconds,
+    changed in place. Returns (boundaries, loudness at the old cuts, loudness at the new cuts)."""
+    import array
+    x = array.array('h')
+    x.frombytes(pcm)
+    if sys.byteorder == 'big':
+        x.byteswap()
+    half, hop = round(SNAP_FRAME * RATE / 2), round(SNAP_HOP * RATE)
+
+    def loudness(i):     # mean square around sample i
+        seg = x[max(0, i - half):i + half]
+        return sum(v * v for v in seg) / max(1, len(seg))
+
+    count, old, new = 0, 0.0, 0.0
+    for _start, _end, words in ayat:
+        for k in range(len(words) - 1):
+            b = words[k][1]
+            lo = max(b - SNAP_BEFORE, words[k][0] + SNAP_KEEP)
+            hi = min(b + SNAP_AFTER, words[k + 1][1] - SNAP_KEEP)
+            if hi <= lo:
+                continue
+            best_i, best_e = None, None
+            for i in range(round(lo * RATE), round(hi * RATE) + 1, hop):
+                e = loudness(i)
+                if best_e is None or e < best_e:
+                    best_i, best_e = i, e
+            q = round(best_i / RATE, 3)
+            count += 1
+            old += loudness(round(b * RATE)) ** 0.5
+            new += best_e ** 0.5
+            words[k][1] = q
+            words[k + 1][0] = round(q + 0.01, 3)
+    return count, old, new
+
+
+def snap_reciter(slug, ffmpeg):
+    """Re-cut the word timings of a reciter already built (decodes the sūrah files in audio/)."""
+    path = os.path.join(AUDIO_DIR, slug, 'timings.json')
+    with open(path, encoding='utf-8') as f:
+        data = json.load(f)
+    if data.get('snapped'):
+        print(f'{slug}: word timings are already snapped')
+        return
+    total = [0, 0.0, 0.0]
+    for n, ayat in data['surahs'].items():
+        pcm = decode(ffmpeg, os.path.join(AUDIO_DIR, slug, f'{int(n):03d}.mp3'))
+        c, o, w = snap_words(pcm, ayat)
+        total = [total[0] + c, total[1] + o, total[2] + w]
+    data['snapped'] = True
+    with open(path, 'w', encoding='utf-8') as f:
+        json.dump(data, f, separators=(',', ':'), ensure_ascii=False)
+        f.write('\n')
+    c, o, w = total
+    print(f'{slug}: {c} word boundaries moved to the quietest moment; average loudness at the cut '
+          f'{o / max(1, c):.0f} → {w / max(1, c):.0f}')
 
 
 # ---------------------------------------------------------------- word timings
@@ -473,12 +543,14 @@ def build_reciter(slug, ffmpeg, cache, game):
             ayat.append([round(start, 3), round(end, 3), wspans])
         pcm.append(silence(TAIL))
         pos += round(TAIL * RATE)
-        encode(ffmpeg, b''.join(pcm), os.path.join(out_dir, f'{n:03d}.mp3'))
+        dest = os.path.join(out_dir, f'{n:03d}.mp3')
+        encode(ffmpeg, b''.join(pcm), dest)
+        snap_words(decode(ffmpeg, dest), ayat)     # clean single words, measured on the final file
         timings[str(n)] = ayat
         print(f'   {n:03d}.mp3  {len(ayat)} āyāt, {pos / RATE:.1f} s')
 
     with open(os.path.join(out_dir, 'timings.json'), 'w', encoding='utf-8') as f:
-        json.dump({'reciter': slug, 'name': name, 'kbps': KBPS, 'surahs': timings}, f,
+        json.dump({'reciter': slug, 'name': name, 'kbps': KBPS, 'snapped': True, 'surahs': timings}, f,
                   separators=(',', ':'), ensure_ascii=False)
         f.write('\n')
     if mismatches:
@@ -512,6 +584,8 @@ if __name__ == '__main__':
     p.add_argument('--all', action='store_true', help='build every reciter in RECITERS')
     p.add_argument('--list', action='store_true', help='list the reciters and exit')
     p.add_argument('--index-only', action='store_true', help='only rewrite audio/reciters.json')
+    p.add_argument('--snap-only', action='store_true',
+                   help='only re-cut the word timings of reciters already built (see snap_words)')
     p.add_argument('--ffmpeg', default=os.environ.get('FFMPEG', 'ffmpeg'))
     p.add_argument('--cache', default=os.environ.get('LHQ_AUDIO_CACHE', os.path.join(
         os.path.expanduser('~'), '.cache', 'little-hafiz-quest-audio')))
@@ -531,6 +605,10 @@ if __name__ == '__main__':
         ffmpeg = shutil.which(args.ffmpeg) or args.ffmpeg
         if not os.path.isfile(ffmpeg):
             sys.exit(f'ffmpeg not found ({args.ffmpeg}). Use --ffmpeg PATH or set FFMPEG.')
+        if args.snap_only:
+            for slug in slugs:
+                snap_reciter(slug, ffmpeg)
+            sys.exit()
         game = load_game_text()
         for slug in slugs:
             build_reciter(slug, ffmpeg, os.path.abspath(args.cache), game)

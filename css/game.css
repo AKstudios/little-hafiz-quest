@@ -539,7 +539,7 @@ body::before {
   padding: 0 5px;
   border-radius: 99px;
   background: var(--c);
-  color: #fff;
+  color: var(--con, #fff);
   font-size: 15px;
   font-weight: 800;
   line-height: 1;
@@ -739,7 +739,7 @@ body::before {
 }
 .dot.cur {
   background: var(--gold2);
-  color: #fff;
+  color: #2b2340;
   transform: scale(1.18);
   box-shadow:
     0 3px 0 #c46a00,
@@ -5624,11 +5624,6 @@ body {
 .mtools b {
   color: var(--ink);
 }
-.mtools .loopbtn {
-  position: static;
-  flex: none;
-  box-shadow: 0 3px 0 var(--shd);
-}
 .card.mushaf {
   padding: 16px 16px 20px;
   -webkit-user-select: none;
@@ -5948,16 +5943,6 @@ body {
 .ex.mv-look .ex-eyes {
   animation: mvLookEyes 1.6s ease-in-out;
 }
-.ex.mv-stretch .ex-arm-r {
-  animation: mvStretchR 1.6s ease-in-out;
-}
-.ex.mv-stretch .ex-arm-l {
-  animation: mvStretchL 1.6s ease-in-out;
-}
-.ex.mv-stretch .ex-all {
-  transform-origin: 92px 290px;
-  animation: mvTall 1.6s ease-in-out;
-}
 .ex.mv-march .ex-leg-l {
   animation: mvStep 0.4s ease-in-out 4;
 }
@@ -6010,18 +5995,6 @@ body {
   0%, 100% { transform: none; }
   25%, 40% { transform: translateX(-4px); }
   60%, 80% { transform: translateX(4px); }
-}
-@keyframes mvStretchR {
-  0%, 100% { transform: none; }
-  30%, 70% { transform: rotate(150deg); }
-}
-@keyframes mvStretchL {
-  0%, 100% { transform: none; }
-  30%, 70% { transform: rotate(-150deg); }
-}
-@keyframes mvTall {
-  0%, 100% { transform: none; }
-  30%, 70% { transform: scale(0.97, 1.05); }
 }
 @keyframes mvStep {
   0%, 100% { transform: none; }
@@ -6084,18 +6057,6 @@ body {
   left: -9px;
   top: -10px;
 }
-.hud-hanger {
-  position: absolute;
-  bottom: -5px;
-  right: -5px;
-  font-style: normal;
-  font-size: 15px;
-  line-height: 1;
-  background: var(--card);
-  border-radius: 50%;
-  padding: 2px;
-  box-shadow: 0 1px 0 var(--shd);
-}
 
 /* ---------- v2.4.1: "My look" in My Explorer's top bar ---------- */
 .mebtn {
@@ -6123,7 +6084,7 @@ body {
 }
 .wd-side.wd-show {
   right: 8%;
-  bottom: 78px;
+  bottom: 14px;
   background: var(--gold);
   color: #2b2340;
 }
@@ -6189,4 +6150,133 @@ body {
 }
 .ach:last-child:nth-child(odd) {
   grid-column: span 2;
+}
+
+/* ---------- v2.4.2: readable on every world, in both themes ---------- */
+/* Text that sits right on the world's sky: dark ink on a light sky, light ink on a dark one (set from the
+   sky's colors in setScene), with a soft glow so it stays clear over the scenery. */
+:root[data-scn='light'] {
+  --on: #2b2340;
+  --on-soft: #463e60;
+  --on-halo: rgba(255, 255, 255, 0.8);
+}
+:root[data-scn='dark'] {
+  --on: #ffffff;
+  --on-soft: #f0ecff;
+  --on-halo: rgba(18, 14, 46, 0.78);
+}
+.hero-en,
+.screen > .h2,
+.qsep,
+.wlabel,
+.mtools,
+.donescr > h2,
+.donescr > p,
+.screen > .saveinfo {
+  color: var(--on, var(--ink));
+  text-shadow:
+    0 0 2px var(--on-halo, transparent),
+    0 0 6px var(--on-halo, transparent),
+    0 0 12px var(--on-halo, transparent);
+}
+.screen > .h2 small,
+.qsep small,
+.qsep span,
+.mtools b {
+  color: var(--on-soft, var(--soft));
+}
+.mtools b {
+  color: var(--on, var(--ink));
+}
+.screen > .h2 .bismbtn small {
+  color: var(--soft);
+  text-shadow: none;
+}
+.hero-ar,
+.mtitle,
+.mnum,
+.qn {
+  color: var(--ct, var(--cd));
+}
+.wpic .num {
+  color: var(--con, #fff);
+}
+
+/* ---------- v2.4.2 ---------- */
+/* the muṣḥaf's loop button floats in the corner, always in reach while reading */
+.mfloat .loopbtn {
+  position: fixed;
+  top: auto;
+  right: max(16px, env(safe-area-inset-right, 0px));
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
+  z-index: 30;
+  width: 60px;
+  height: 60px;
+  box-shadow:
+    0 4px 0 var(--shd),
+    0 8px 22px rgba(0, 0, 0, 0.22);
+}
+.mfloat .loopbtn svg {
+  width: 54px;
+  height: 54px;
+}
+.mushafscr {
+  padding-bottom: 96px; /* room to read the last line above the loop button */
+}
+/* colored words: tidy boxes that neither overlap nor push the lines apart */
+.mw {
+  display: inline-block;
+  line-height: 1.5;
+  padding: 0 4px;
+  margin: 0 1px;
+  border-bottom-width: 3px;
+  vertical-align: baseline;
+}
+/* the puzzle: the place a piece didn't fit blinks red */
+.pz-holes g.bad .pz-hole {
+  animation: pzbad 0.9s ease-in-out;
+}
+@keyframes pzbad {
+  0%,
+  40%,
+  80% {
+    stroke: #ff3b4e;
+    stroke-dasharray: none;
+    stroke-width: 5;
+    fill: rgba(255, 59, 78, 0.18);
+  }
+  20%,
+  60%,
+  100% {
+    stroke: var(--soft);
+  }
+}
+/* Listen ↔ Stop: pressing keeps the button's own dark edge (golden while playing) */
+.listen.playing:active {
+  transform: translateY(4px);
+  box-shadow: 0 1px 0 #b88400;
+}
+.listen {
+  transition:
+    transform 0.08s,
+    box-shadow 0.08s;
+}
+/* My Explorer: Comfy and Turn on one side, Awards on the other */
+.wd-side.wd-turn {
+  right: auto;
+  left: 8%;
+  bottom: 78px;
+}
+/* the share picture, with Share and Save */
+.sharecard {
+  text-align: center;
+}
+.shareimg {
+  display: block;
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto 6px;
+  border-radius: 18px;
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18);
+  -webkit-touch-callout: default;
 }

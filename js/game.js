@@ -37,7 +37,7 @@
 (function () {
   'use strict';
 
-  const VERSION = '2.4.1';
+  const VERSION = '2.4.2';
   const DATA = window.LHQ_DATA;
   if (!DATA || !Array.isArray(DATA.surahs)) throw new Error('Little Hafiz Quest: js/data.js did not load.');
   const ART = window.LHQ_ART;
@@ -75,6 +75,7 @@
     if (it.from) (it.gold ? GOLD_ITEM : SURAH_ITEM)[it.from] = it;
   });
   const starter = (it) => !it.from && !it.feat && !it.track; // the comfy clothes everyone starts with
+  const wornByDefault = (it) => starter(it) && ART.DEFAULTS[it.slot] === it.id; // the everyday glasses are owned, not worn
   const TRACK = ITEMS.filter((it) => it.track).sort((a, b) => a.track - b.track); // a prize every few stars
   const FEAT_ITEM = Object.create(null); // 'once' | 'three' | 'all' -> the summit reward
   ITEMS.forEach((it) => {
@@ -117,9 +118,19 @@
       y = hexRgb(b);
     return '#' + x.map((v, j) => Math.round(v + (y[j] - v) * t).toString(16).padStart(2, '0')).join('');
   }
+  // how light a color is (0 black … 1 white), as the eye sees it
+  function lumHex(h) {
+    return hexRgb(h)
+      .map((v) => ((v /= 255) <= 0.03928 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4)))
+      .reduce((t, v, j) => t + v * [0.2126, 0.7152, 0.0722][j], 0);
+  }
+  /* a sūrah's colors: --c and its tints, --cd a darker shade, --ct the color for text on a card (darker
+     on light cards, lighter on dim ones, always readable), --con the text color on a --c background */
   function cv(h) {
+    const ct = isNight() ? mixHex(h, '#ffffff', 0.45) : lumHex(h) > 0.3 ? shade(h, 0.55) : shade(h, 0.76);
     return (
-      '--c:' + h + ';--c14:' + rgba(h, 0.14) + ';--c18:' + rgba(h, 0.18) + ';--c30:' + rgba(h, 0.3) + ';--c35:' + rgba(h, 0.35) + ';--cd:' + shade(h, 0.76)
+      '--c:' + h + ';--c14:' + rgba(h, 0.14) + ';--c18:' + rgba(h, 0.18) + ';--c30:' + rgba(h, 0.3) + ';--c35:' + rgba(h, 0.35) + ';--cd:' + shade(h, 0.76) +
+      ';--ct:' + ct + ';--con:' + (1.05 / (lumHex(h) + 0.05) >= (lumHex(h) + 0.05) / 0.073 ? '#ffffff' : '#2b2340') // whichever stands out more
     );
   }
   function wv(h) {
@@ -800,10 +811,11 @@
           stopAudio();
           return;
         }
-        // Quran.com word boundaries sit ~50 ms before the quietest cut point; the last word fades out
-        // after its stated end, so play it to the end of the āyah.
+        // The word timings are cut at the quietest moment between two words (tools/build_audio.py,
+        // snap_words), so a word plays from its start to its end and no further. The last word fades out
+        // after its stated end, so it plays to the end of the āyah.
         const lastW = it[2] === ay[2].length - 1;
-        seg = { start: Math.max(0, w[0] + (it[2] === 0 ? -0.03 : 0.03)), end: (lastW ? ay[1] : w[1] + 0.05) + 0.06 };
+        seg = { start: Math.max(0, w[0] - (it[2] === 0 ? 0.03 : 0)), end: lastW ? ay[1] + 0.06 : w[1], word: !lastW };
       } else seg = { start: Math.max(0, ay[0] - 0.05), end: ay[1] + 0.15 };
       curSeg = seg;
       markNow(it);
@@ -830,7 +842,10 @@
         // a timer is more precise than 'timeupdate' (~4 per second)
         if (!playing || !curSeg) return;
         if (!player.seeking && player.currentTime >= curSeg.start - 0.1) player.muted = false;
-        if (player.currentTime >= curSeg.end && player.currentTime < curSeg.end + 2) {
+        // a single word stops a moment early: the check runs every 30 ms and the sound already on its way
+        // out still plays, so the next word never slips in
+        const stopAt = curSeg.end - (curSeg.word ? 0.03 : 0);
+        if (player.currentTime >= stopAt && player.currentTime < curSeg.end + 2) {
           player.pause();
           finishSeg();
         }
@@ -880,7 +895,8 @@
     if (curSeg && player.currentTime >= curSeg.start - 0.1) player.muted = false;
   });
   player.addEventListener('ended', () => {
-    if (playing) finishSeg();
+    // only the end of a recitation segment moves on (not the moment of silence that unlocks playback)
+    if (playing && curSeg) finishSeg();
   });
   player.addEventListener('error', () => {
     if (playing && player.getAttribute('src')) {
@@ -1219,6 +1235,9 @@
   /* the living background behind lessons: the world's sky, a strip of ground with props, gentle motion */
   function setScene(wi) {
     const night = isNight();
+    // text that sits right on the world (not on a card) is dark on a light sky and light on a dark one
+    const sky = wi == null ? null : night && ART.WORLDS[wi].dim ? ART.WORLDS[wi].dim.sky : ART.WORLDS[wi].sky;
+    document.documentElement.dataset.scn = (sky ? (lumHex(sky[0]) + lumHex(sky[1])) / 2 < 0.36 : night) ? 'dark' : 'light';
     const key = wi == null ? 'none' : wi + (night ? 'n' : 'd');
     if (key === sceneKeyNow) return;
     sceneKeyNow = key;
@@ -1431,7 +1450,7 @@
       <button class="hud-stars hud-sur" data-act="progress" data-t="surahs" aria-label="Sūrahs done: ${doneSurahs()} of ${S.length}">📖 <b>${doneSurahs()}</b><small>/${S.length}</small></button>
       <button class="hud-stars" data-act="progress" data-t="stars" aria-label="Stars: ${totalStars()} of ${MAX_STARS}">⭐ <b>${totalStars()}</b><small>/${MAX_STARS}</small></button>
       ${giftIcon(prof)}
-      <button class="icon-btn hud-bag hud-me" data-act="bag" aria-label="My explorer: dress up, collection and achievements"><span class="phead">${explorer({ cls: 'mini' })}</span><i class="hud-hanger" aria-hidden="true">👕</i>${prof.fresh.length ? NEWDOT : ''}</button>
+      <button class="icon-btn hud-bag hud-me" data-act="bag" aria-label="My explorer: dress up, collection and achievements"><span class="phead">${explorer({ cls: 'mini' })}</span>${prof.fresh.length ? NEWDOT : ''}</button>
       <button class="icon-btn" data-act="settings" aria-label="Grown-up corner">${ICON.gear}</button>
     </div>
     <div id="map" class="mroot"></div>
@@ -1699,13 +1718,14 @@
       .join(' ');
     return `<div class="screen mushafscr" style="${cv(s.color)}" data-act="mclear">
     ${bar(`📖 ${s.name}`, `${s.ayat.length} āyāt · ${st.sel != null ? `āyah ${st.sel + 1} chosen` : 'the whole sūrah'}`, 'surah')}
-    <div class="mtools"><span>${st.sel != null ? 'Listen plays this āyah. Tap anywhere to clear the colors.' : '<b>Hold an āyah</b> to color its words, like Word Steps.'}</span>${loopBtn()}</div>
+    <div class="mtools"><span>${st.sel != null ? 'Listen plays this āyah. Tap anywhere to clear the colors.' : '<b>Hold an āyah</b> to color its words, like Word Steps.'}</span></div>
     <div class="card mushaf">
       <div class="mtitle" lang="ar">سُورَةُ ${s.ar}</div>
       <div class="mbism" lang="ar">${BISM}</div>
       <div class="mtext" lang="ar" dir="rtl">${ayat}</div>
     </div>
-  </div>`;
+  </div>
+  <div class="mfloat">${loopBtn()}</div>`;
   };
   // hold an āyah (about half a second) to choose it
   let hold = null;
@@ -2040,7 +2060,7 @@
     const pct = (v, of) => ((v / of) * 100).toFixed(3) + '%';
     const box = (c, r, pad) => `left:${pct(c * 100 + pad, J.W)};top:${pct(r * 100 + pad, J.H)};width:${pct(100 + 2 * (PZ_M - pad), J.W)};height:${pct(100 + 2 * (PZ_M - pad), J.H)}`;
     const outlines = J.cells
-      .map((cl, j) => (st.placed[j] ? '' : `<g transform="translate(${cl.c * 100} ${cl.r * 100})"><path class="pz-hole" d="${cl.path}"/><text x="50" y="62" text-anchor="middle">${big ? j + 1 : range(ctx())[j] + 1}</text></g>`))
+      .map((cl, j) => (st.placed[j] ? '' : `<g data-j="${j}" transform="translate(${cl.c * 100} ${cl.r * 100})"><path class="pz-hole" d="${cl.path}"/><text x="50" y="62" text-anchor="middle">${big ? j + 1 : range(ctx())[j] + 1}</text></g>`))
       .join('');
     const slots = J.cells
       .map((cl, j) =>
@@ -2175,7 +2195,7 @@
       ${st.nextAct ? `<button class="btn go wide" data-act="${st.nextAct}" ${st.nextL ? `data-l="${st.nextL}"` : ''} ${st.nextP != null ? `data-p="${st.nextP}"` : ''}>${st.nextLabel}</button>` : ''}
       <button class="btn wide" data-act="back" data-to="surah">🧭 Back to ${s.name}</button>
     </div>
-    <div class="row"><button class="btn small" data-act="back" data-to="map">🗺️ Map</button></div>
+    <div class="row"><button class="btn small" data-act="back" data-to="map">🗺️ Map</button>${g ? '<button class="btn small" data-act="savefile">💾 Save progress</button>' : ''}</div>
   </div>`;
   };
 
@@ -2185,7 +2205,7 @@
   function itemCell(it, prof, worn) {
     const owned = starter(it) || prof.items.includes(it.id);
     const lost = prof.lost.find((x) => x.id === it.id);
-    const on = worn[it.slot] === it.id || (!worn[it.slot] && starter(it));
+    const on = worn[it.slot] === it.id || (!worn[it.slot] && wornByDefault(it));
     if (lost)
       return `<button class="icell lost" data-act="goto" data-i="${BYN[lost.n].idx}"><span class="iart">${itemPic(it.id)}</span><span class="lostbadge">${ART.lostMarker()}</span><small>Lost at ${BYN[lost.n].name}!</small></button>`;
     if (owned)
@@ -2358,23 +2378,33 @@
     cv2.getContext('2d').drawImage(img, 0, 0, X, Y);
     const blob = await new Promise((res) => cv2.toBlob(res, 'image/png'));
     const name = `${(prof.name || 'explorer').replace(/[^\w-]+/g, '-')}-little-hafiz-quest.png`;
-    const file = new File([blob], name, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: 'Little Hafiz Quest', text: `${prof.name || 'My explorer'} on Little Hafiz Quest` });
-      } catch (e) {} // closed the share sheet
-      return 'shared';
-    }
-    const u = URL.createObjectURL(blob);
+    card = { blob, name, file: new File([blob], name, { type: 'image/png' }), url: cv2.toDataURL('image/png') };
+    const canShare = !!(navigator.canShare && navigator.canShare({ files: [card.file] }));
+    const m = document.getElementById('modal');
+    m.innerHTML = `<div class="card sharecard"><img class="shareimg" src="${card.url}" alt="${esc(prof.name || 'My explorer')} on Little Hafiz Quest">
+      <p class="saveinfo center">Share it with family, or save the picture. On a phone you can also press and hold the picture to save it to your photos.</p>
+      <div class="row">${canShare ? '<button class="btn go wide" data-act="sharego">📤 Share</button>' : ''}<button class="btn wide ${canShare ? '' : 'go'}" data-act="sharesave">⬇️ Save picture</button></div>
+      <div class="row"><button class="btn small" data-act="cno">Close</button></div></div>`;
+    m.classList.add('show');
+  }
+  let card = null; // the last picture made for sharing
+  async function shareGo() {
+    if (!card) return;
+    try {
+      await navigator.share({ files: [card.file], title: 'Little Hafiz Quest', text: `${P().name || 'My explorer'} on Little Hafiz Quest` });
+    } catch (e) {} // the share sheet was closed
+  }
+  function shareSave() {
+    if (!card) return;
+    const u = URL.createObjectURL(card.blob);
     const aEl = document.createElement('a');
     aEl.href = u;
-    aEl.download = name;
+    aEl.download = card.name;
     document.body.appendChild(aEl);
     aEl.click();
     aEl.remove();
     setTimeout(() => URL.revokeObjectURL(u), 4000);
-    toast('Saved the picture to your downloads');
-    return 'saved';
+    toast('Picture saved to your downloads');
   }
 
   /* ---------- GROWN-UP CORNER ---------- */
@@ -3148,7 +3178,7 @@
         sfx.pop();
         P().stash = null;
         const o = P().outfit;
-        if (starter(it) || o[it.slot] === id) delete o[it.slot];
+        if (wornByDefault(it) || o[it.slot] === id) delete o[it.slot];
         else o[it.slot] = id;
         save();
         const y = scrollY;
@@ -3290,6 +3320,14 @@
         shareCard()
           .catch(() => toast("The picture couldn't be made on this device."))
           .then(() => (b.disabled = false));
+        break;
+      case 'sharego':
+        sfx.tap();
+        shareGo();
+        break;
+      case 'sharesave':
+        sfx.tap();
+        shareSave();
         break;
       case 'savefile':
         sfx.tap();
@@ -3765,7 +3803,6 @@
     dance: { run: () => sfx.dance() },
     spin: { run: () => sfx.whoosh(), noPet: true },
     look: { run: () => sfx.chime(), front: true }, // looks around
-    stretch: { run: () => sfx.whoosh(), noShield: true }, // both arms up: a shield would cover the face
     march: { run: () => sfx.hop() },
     pethop: { run: () => sfx.pop(), needs: 'pet' },
     petrun: { run: () => sfx.rustle(), needs: 'pet' }, // the buddy runs a lap and comes back
@@ -4016,9 +4053,22 @@
         }, 1500);
       }
     } else {
+      // it doesn't fit: the outline of that place blinks red and the piece wiggles back in the pile
       sfx.boop();
-      wobble(slotEl);
-      if (!loseHeart()) toast("That piece doesn't fit there. Try another place!");
+      if (st.sel != null) {
+        st.sel = null;
+        render();
+      }
+      const hole = $app.querySelector(`.pz-holes g[data-j="${j}"]`),
+        piece = $app.querySelector(`.pcard[data-k="${k}"]`);
+      if (hole) {
+        hole.classList.remove('bad');
+        void hole.getBoundingClientRect();
+        hole.classList.add('bad');
+        setTimeout(() => hole.classList.remove('bad'), 900);
+      }
+      wobble(piece);
+      loseHeart();
     }
   }
   function slotAt(x, y) {
